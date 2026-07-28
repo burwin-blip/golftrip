@@ -1,0 +1,121 @@
+---
+import Base from '../layouts/Base.astro';
+import TeamLogo from '../components/TeamLogo.astro';
+import { teamById, playerById } from '../lib/data.js';
+import {
+  latestTournament, momentsForTournament, awardsForTournament,
+} from '../lib/stats.js';
+import { fullName } from '../lib/format.js';
+
+const t = latestTournament();
+const moments = momentsForTournament(t.id);
+const awards = awardsForTournament(t.id);
+const bright = { woodpeckers: 'var(--wp-bright)', 'silver-spoons': 'var(--ss-bright)' };
+
+// group moments by round
+const rounds = t.rounds;
+const byRound = rounds.map((r) => ({
+  round: r,
+  moments: moments.filter((m) => m.roundNumber === r.number),
+})).filter((g) => g.moments.length);
+
+const awardWinner = (a) => {
+  if (a.winnerType === 'team') return { name: teamById[a.winnerTeamId].name, href: `/tournaments/${t.id}`, team: a.winnerTeamId };
+  if (a.winnerType === 'players') return {
+    players: a.winnerPlayerIds.map((id) => ({ name: playerById[id].name, slug: playerById[id].slug })),
+  };
+  return { name: a.winnerText };
+};
+const isGold = (a) => /champion/i.test(a.name);
+---
+<Base active="lore" title="Lore" description="The moments, the stories and the awards of The Annual — the record beyond the numbers.">
+
+  <section class="section">
+    <div class="wrap read">
+      <p class="eyebrow gold">Beyond the Numbers</p>
+      <h1 class="display" style="font-size:clamp(2.1rem,6vw,3.6rem);margin:.3rem 0 .5rem">The Lore</h1>
+      <p class="lede">Scorecards remember the result. This page remembers everything else — the swings, the ace, and the awards nobody wanted.</p>
+    </div>
+  </section>
+
+  <!-- MOMENTS TIMELINE -->
+  <section class="section" style="padding-top:0">
+    <div class="wrap">
+      <div class="section-head"><div><p class="eyebrow">{t.shortName}</p><h2>Moments of the tournament</h2></div></div>
+      <div class="timeline">
+        {byRound.map((g) => (
+          <div class="tl-round">
+            <div class="tl-round__label">
+              <span class="tl-no mono-nums">R{g.round.number}</span>
+              <span class="faint">{g.round.day} · {g.round.format}</span>
+            </div>
+            <div class="tl-items">
+              {g.moments.map((m) => (
+                <article class="tl-item card card--pad" style={m.subjectTeamId ? `--accent:${teamById[m.subjectTeamId].color};--accent-bright:${bright[m.subjectTeamId]}` : '--accent:var(--gold-bright);--accent-bright:var(--gold-bright)'}>
+                  <div class="tl-cat">{m.subjectTeamId && <TeamLogo teamId={m.subjectTeamId} size={22} />}<span class="pill">{m.category}</span></div>
+                  <h3 class="tl-title">{m.title}</h3>
+                  <p class="muted">{m.description}</p>
+                  {m.subjectPlayerIds && (
+                    <div class="chips" style="margin-top:.7rem">
+                      {m.subjectPlayerIds.map((id) => <a class="pill" href={`/players/${playerById[id].slug}`}>{fullName(id)}</a>)}
+                    </div>
+                  )}
+                </article>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- AWARDS CEREMONY -->
+  <section class="section" style="padding-top:0">
+    <div class="wrap">
+      <div class="section-head"><div><p class="eyebrow gold">The Ceremony</p><h2>Awards &amp; dishonours</h2></div><span class="faint">{awards.length} presented</span></div>
+      <div class="awards">
+        {awards.map((a) => {
+          const w = awardWinner(a);
+          return (
+            <div class="award card" class:list={[{ 'award--gold': isGold(a) }]}>
+              <div class="award__name">{isGold(a) && <span class="gold">♛ </span>}{a.name}</div>
+              <div class="award__winner">
+                {w.players ? w.players.map((pl, idx) => <Fragment>{idx > 0 && <span class="faint"> &amp; </span>}<a href={`/players/${pl.slug}`}>{pl.name}</a></Fragment>)
+                  : w.href ? <a href={w.href}>{w.name}</a> : <span>{w.name}</span>}
+              </div>
+              {a.notes && <p class="award__note faint">“{a.notes}”</p>}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  </section>
+
+  <!-- ARCHIVE INTEGRITY -->
+  <section class="section" style="padding-top:0">
+    <div class="wrap read">
+      <div class="card card--pad">
+        <p class="eyebrow">Archive Integrity</p>
+        <h3 style="font-size:1.3rem;margin:.35rem 0 .7rem">How this record was built</h3>
+        <p class="muted" style="font-size:.95rem">Every result here was reconstructed from the official scoreboard photograph, the Squabbit tournament screenshots and the detailed round scorecards, then cross-checked against a written account. Where a recollection disagreed with the scorecard, the scorecard won — and the conflict was noted rather than smoothed over. Nothing has been invented: unverified stories, weather beyond what was recorded, and the reasons behind certain joke awards are simply left out until someone can confirm them.</p>
+      </div>
+    </div>
+  </section>
+</Base>
+
+<style>
+  .timeline { margin-top:1.4rem; display:flex; flex-direction:column; gap:2rem; }
+  .tl-round__label { display:flex; align-items:baseline; gap:.7rem; margin-bottom:.9rem; padding-bottom:.6rem; border-bottom:1px solid var(--line); }
+  .tl-no { font-family:var(--serif); font-size:1.2rem; color:var(--gold); }
+  .tl-items { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:1rem; }
+  .tl-item { border-left:3px solid var(--accent-bright); }
+  .tl-cat { margin-bottom:.5rem; display:flex; align-items:center; gap:.5rem; }
+  .tl-title { font-size:1.15rem; margin-bottom:.4rem; }
+  .awards { margin-top:1.4rem; display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:.8rem; }
+  .award { padding:1.1rem 1.2rem; display:flex; flex-direction:column; gap:.3rem; }
+  .award--gold { border-color:color-mix(in srgb,var(--gold) 40%,var(--line)); background:linear-gradient(180deg,color-mix(in srgb,var(--gold) 7%,var(--panel)),var(--panel)); }
+  .award__name { font-family:var(--serif); font-size:1.02rem; line-height:1.2; }
+  .award__winner { font-weight:700; }
+  .award--gold .award__winner { color:var(--gold-bright); }
+  .award__note { font-size:.85rem; font-style:italic; margin-top:.2rem; }
+</style>

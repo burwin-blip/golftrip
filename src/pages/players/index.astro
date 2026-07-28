@@ -1,0 +1,96 @@
+---
+import Base from '../../layouts/Base.astro';
+import TeamLogo from '../../components/TeamLogo.astro';
+import { playersComparison } from '../../lib/stats.js';
+import { num, pctText } from '../../lib/format.js';
+
+const rows = playersComparison();
+---
+<Base active="players" title="Players" description="Every player in The Annual, compared — points, win %, handicap and draft position. Sortable for sizing up the field.">
+  <section class="section">
+    <div class="wrap">
+      <p class="eyebrow gold">The Field</p>
+      <h1 class="display" style="font-size:clamp(2.1rem,6vw,3.6rem);margin:.3rem 0 .4rem">Players</h1>
+      <p class="lede">Career totals across every edition. Tap a column to sort — points, win %, handicap or draft slot — then open a profile for the full scouting report.</p>
+
+      <div class="table-scroll" style="margin-top:1.4rem">
+        <table class="data sortable" id="ptable">
+          <thead>
+            <tr>
+              <th data-k="name" data-type="txt">Player</th>
+              <th>Team</th>
+              <th class="num" data-k="played" data-type="n">P</th>
+              <th data-k="record" data-type="rec">W–H–L</th>
+              <th class="num sort-active" data-k="pointsEarned" data-type="n" data-dir="desc">Pts</th>
+              <th class="num" data-k="pointPct" data-type="n">Pt %</th>
+              <th class="num" data-k="matchPct" data-type="n">Win %</th>
+              <th class="num" data-k="handicap" data-type="n">Hcp</th>
+              <th class="num" data-k="draft" data-type="n">Draft</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => (
+              <tr
+                data-name={r.player.name}
+                data-played={r.played}
+                data-record={r.w * 100 + r.h}
+                data-pointsearned={r.pointsEarned}
+                data-pointpct={r.pointPct}
+                data-matchpct={r.matchPct}
+                data-handicap={r.handicap}
+                data-draft={r.draftPick ?? 99}
+              >
+                <td class="name"><a href={`/players/${r.player.slug}`}>{r.player.name}</a></td>
+                <td><TeamLogo teamId={r.teamId} size={20} /></td>
+                <td class="num tabnums">{r.played}</td>
+                <td class="num tabnums">{r.w}–{r.h}–{r.l}</td>
+                <td class="num tabnums gold">{num(r.pointsEarned)}</td>
+                <td class="num tabnums">{pctText(r.pointPct)}</td>
+                <td class="num tabnums">{pctText(r.matchPct)}</td>
+                <td class="num tabnums">{r.handicap.toFixed(1)}</td>
+                <td class="num tabnums">{r.isCaptain ? 'C' : `#${r.draftPick}`}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p class="faint" style="font-size:.78rem;margin-top:.7rem">Pts = tournament points earned (Scramble &amp; Shamble worth 1; Best Ball, Stableford &amp; Singles worth 2). Pt % = points ÷ available. Win % = wins + ½ halves ÷ matches. “C” = team captain (undrafted).</p>
+    </div>
+  </section>
+</Base>
+
+<style>
+  table.sortable thead th[data-k] { cursor: pointer; user-select: none; white-space: nowrap; }
+  table.sortable thead th[data-k]:hover { color: var(--text); }
+  table.sortable thead th.sort-active { color: var(--text); }
+  table.sortable thead th.sort-active::after { content: attr(data-arrow); margin-left: .3rem; color: var(--gold); }
+</style>
+
+<script is:inline>
+  (() => {
+    const table = document.getElementById('ptable');
+    if (!table) return;
+    const tbody = table.querySelector('tbody');
+    const heads = [...table.querySelectorAll('th[data-k]')];
+    function sortBy(th) {
+      const k = th.dataset.k, type = th.dataset.type;
+      let dir = th.dataset.dir === 'desc' ? 'asc' : 'desc';
+      heads.forEach((h) => { h.classList.remove('sort-active'); h.removeAttribute('data-arrow'); delete h.dataset.dir; });
+      th.classList.add('sort-active'); th.dataset.dir = dir; th.setAttribute('data-arrow', dir === 'desc' ? '▾' : '▴');
+      const rows = [...tbody.querySelectorAll('tr')];
+      const val = (tr) => {
+        if (k === 'name') return tr.dataset.name.toLowerCase();
+        return parseFloat(tr.dataset[k.toLowerCase()]);
+      };
+      rows.sort((a, b) => {
+        const av = val(a), bv = val(b);
+        let c = type === 'txt' ? String(av).localeCompare(String(bv)) : av - bv;
+        return dir === 'desc' ? -c : c;
+      });
+      rows.forEach((r) => tbody.appendChild(r));
+    }
+    heads.forEach((th) => th.addEventListener('click', () => sortBy(th)));
+    const init = table.querySelector('th.sort-active');
+    if (init) { delete init.dataset.dir; sortBy(init); }
+  })();
+</script>

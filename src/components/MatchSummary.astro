@@ -1,0 +1,32 @@
+---
+// Collapsible written summary shown under a match (from the scorecard PDF).
+// Renders nothing if the match has no summary.
+const { match } = Astro.props;
+---
+{match.summary && (
+  <details class="msum">
+    <summary class="msum__toggle">
+      <span class="msum__chev" aria-hidden="true">›</span>
+      <span>Match summary</span>
+    </summary>
+    <div class="msum__body">
+      <p class="msum__text">{match.summary}</p>
+      {match.standout && (
+        <p class="msum__standout"><span class="msum__slabel">Standout</span>{match.standout}</p>
+      )}
+    </div>
+  </details>
+)}
+
+<style>
+  .msum { border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--panel); margin-top: .5rem; }
+  .msum__toggle { cursor: pointer; list-style: none; padding: .5rem .8rem; font-size: .76rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--faint); display: flex; align-items: center; gap: .5rem; user-select: none; }
+  .msum__toggle::-webkit-details-marker { display: none; }
+  .msum__toggle:hover { color: var(--muted); }
+  .msum__chev { display: inline-block; transition: transform .2s var(--ease); font-size: 1rem; color: var(--gold); }
+  .msum[open] .msum__chev { transform: rotate(90deg); }
+  .msum__body { padding: 0 .9rem .9rem 1.7rem; }
+  .msum__text { font-size: .9rem; line-height: 1.62; color: var(--muted); }
+  .msum__standout { margin-top: .75rem; font-size: .85rem; line-height: 1.5; color: var(--text); background: var(--gold-soft); border-left: 3px solid var(--gold-bright); border-radius: 4px; padding: .55rem .75rem; }
+  .msum__slabel { display: inline-block; font-weight: 800; color: var(--gold); text-transform: uppercase; letter-spacing: .09em; font-size: .64rem; margin-right: .45rem; }
+</style>

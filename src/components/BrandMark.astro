@@ -1,0 +1,14 @@
+---
+// The Annual's permanent site mark: a classic golf-club seal — an "A" monogram
+// with a gold flag, ringed like a club crest. This is the SITE identity; team
+// logos are only used where they represent a team.
+const { size = 32 } = Astro.props;
+---
+<svg class="brandmark" width={size} height={size} viewBox="0 0 48 48" aria-hidden="true" style={`width:${size}px;height:${size}px`}>
+  <circle cx="24" cy="24" r="21.4" fill="none" stroke="var(--wp)" stroke-width="1.6" />
+  <circle cx="24" cy="24" r="18.2" fill="none" stroke="var(--gold-bright)" stroke-width="0.9" />
+  <path d="M14 34 L24 13 L34 34" fill="none" stroke="var(--wp)" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" />
+  <path d="M17.6 27 L30.4 27" stroke="var(--wp)" stroke-width="2.8" stroke-linecap="round" />
+  <path d="M24 13.3 L24 9" stroke="var(--gold-bright)" stroke-width="1.5" stroke-linecap="round" />
+  <path d="M24 9.4 L29.6 11 L24 12.6 Z" fill="var(--gold-bright)" />
+</svg>

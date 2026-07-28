@@ -1,0 +1,4 @@
+# The Annual is a private record for tournament participants only.
+# Please do not index or crawl any part of this site.
+User-agent: *
+Disallow: /

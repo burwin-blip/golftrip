@@ -1,0 +1,37 @@
+---
+// A compact per-match row: winner's side tints in team colour, logos alongside.
+import { teamById } from '../lib/data.js';
+import { fullName, num } from '../lib/format.js';
+import TeamLogo from './TeamLogo.astro';
+
+const { match } = Astro.props;
+
+const sideA = match.players.filter((p) => p.side === 'A');
+const sideB = match.players.filter((p) => p.side === 'B');
+const teamA = teamById[sideA[0].teamId];
+const teamB = teamById[sideB[0].teamId];
+const aWon = match.winnerTeamId === teamA.id;
+const bWon = match.winnerTeamId === teamB.id;
+
+const names = (side) => side.map((p) => fullName(p.playerId)).join(' & ');
+---
+<div class="mrow">
+  <div class:list={["mrow__side", "mrow__side--a", { win: aWon }]} style={`--accent:${teamA.color}`}>
+    <TeamLogo teamId={teamA.id} size={26} className="mrow__logo" />
+    <div class="mrow__body">
+      <div class="mrow__names">{names(sideA)}</div>
+      <div class="mrow__tag">{teamA.name}</div>
+    </div>
+  </div>
+  <div class="mrow__center">
+    <div class:list={["mrow__margin", { halved: match.halved }]}>{match.halved ? 'AS' : match.margin}</div>
+    <div class="mrow__pts">{match.halved ? '½ + ½' : `${num(match.pointsAvailable)} pt${match.pointsAvailable === 1 ? '' : 's'}`}</div>
+  </div>
+  <div class:list={["mrow__side", "mrow__side--b", { win: bWon }]} style={`--accent:${teamB.color}`}>
+    <TeamLogo teamId={teamB.id} size={26} className="mrow__logo" />
+    <div class="mrow__body">
+      <div class="mrow__names">{names(sideB)}</div>
+      <div class="mrow__tag">{teamB.name}</div>
+    </div>
+  </div>
+</div>

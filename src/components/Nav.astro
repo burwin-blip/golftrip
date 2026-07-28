@@ -1,0 +1,39 @@
+---
+import BrandMark from './BrandMark.astro';
+const { active } = Astro.props;
+const links = [
+  { href: '/', label: 'Home', key: 'home' },
+  { href: '/tournaments/st-george-2026', label: 'St George 2026', key: 'tournament' },
+  { href: '/players', label: 'Players', key: 'players' },
+  { href: '/matches', label: 'Matches', key: 'matches' },
+  { href: '/records', label: 'Records', key: 'records' },
+  { href: '/lore', label: 'Lore', key: 'lore' },
+];
+---
+<header class="masthead" id="nav">
+  <div class="wrap masthead__inner">
+    <a class="brand" href="/" aria-label="The Annual — home">
+      <BrandMark size={32} />
+      <span class="brand__name">The <span class="gold">Annual</span></span>
+    </a>
+    <button class="nav-toggle" aria-label="Toggle menu" aria-expanded="false">Menu</button>
+    <nav class="nav" aria-label="Primary">
+      {links.map((l) => (
+        <a href={l.href} aria-current={active === l.key ? 'page' : undefined}>{l.label}</a>
+      ))}
+    </nav>
+  </div>
+</header>
+<script is:inline>
+  (() => {
+    const btn = document.querySelector('.nav-toggle');
+    const nav = document.querySelector('.nav');
+    if (!btn || !nav) return;
+    btn.addEventListener('click', () => {
+      const open = nav.classList.toggle('open');
+      btn.setAttribute('aria-expanded', String(open));
+    });
+    nav.querySelectorAll('a').forEach((a) =>
+      a.addEventListener('click', () => { nav.classList.remove('open'); btn.setAttribute('aria-expanded', 'false'); }));
+  })();
+</script>

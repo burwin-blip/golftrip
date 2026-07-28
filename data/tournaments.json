@@ -1,0 +1,622 @@
+[
+  {
+    "id": "st-george-2026",
+    "name": "St George Ryder Cup 2026",
+    "shortName": "St George 2026",
+    "year": 2026,
+    "edition": 1,
+    "startDate": "2026-03-13",
+    "endDate": "2026-03-15",
+    "location": "St George, Utah",
+    "finalRoundLocation": "Falcon Ridge, Mesquite, Nevada",
+    "status": "Complete",
+    "pointsAvailable": 30,
+    "finalScore": "16.5-13.5",
+    "winningTeamId": "woodpeckers",
+    "championPlayerId": "michael-herring",
+    "notes": "Inaugural event; 30 total points.",
+    "teams": [
+      {
+        "id": "woodpeckers",
+        "name": "Woodpeckers",
+        "captainId": "tom-brunskill",
+        "color": "#2E6B43",
+        "finalPoints": 16.5,
+        "champion": true
+      },
+      {
+        "id": "silver-spoons",
+        "name": "Silver Spoons",
+        "captainId": "anthony-herring",
+        "color": "#2E4B70",
+        "finalPoints": 13.5,
+        "champion": false
+      }
+    ],
+    "courses": [
+      {
+        "id": "sunbrook-blackrock",
+        "name": "Sunbrook Golf Club",
+        "nine": "Blackrock",
+        "location": "St George, Utah"
+      },
+      {
+        "id": "the-ledges",
+        "name": "The Ledges",
+        "nine": null,
+        "location": "St George, Utah"
+      },
+      {
+        "id": "sand-hollow-links",
+        "name": "Sand Hollow Links",
+        "nine": null,
+        "location": "Hurricane, Utah"
+      },
+      {
+        "id": "sand-hollow-championship",
+        "name": "Sand Hollow Championship",
+        "nine": null,
+        "location": "Hurricane, Utah"
+      },
+      {
+        "id": "falcon-ridge",
+        "name": "Falcon Ridge",
+        "nine": null,
+        "location": "Mesquite, Nevada"
+      }
+    ],
+    "rounds": [
+      {
+        "id": "st-george-2026-r1",
+        "number": 1,
+        "day": "Friday",
+        "date": "2026-03-13",
+        "courseId": "sunbrook-blackrock",
+        "format": "Scramble",
+        "holes": 9,
+        "pointsPerMatch": 1.0,
+        "matchCount": 3
+      },
+      {
+        "id": "st-george-2026-r2",
+        "number": 2,
+        "day": "Friday",
+        "date": "2026-03-13",
+        "courseId": "the-ledges",
+        "format": "Best Ball Match Play (NET)",
+        "holes": 18,
+        "pointsPerMatch": 2.0,
+        "matchCount": 3
+      },
+      {
+        "id": "st-george-2026-r3",
+        "number": 3,
+        "day": "Saturday",
+        "date": "2026-03-14",
+        "courseId": "sand-hollow-links",
+        "format": "9-hole Shamble",
+        "holes": 9,
+        "pointsPerMatch": 1.0,
+        "matchCount": 3
+      },
+      {
+        "id": "st-george-2026-r4",
+        "number": 4,
+        "day": "Saturday",
+        "date": "2026-03-14",
+        "courseId": "sand-hollow-championship",
+        "format": "Team Average Stableford",
+        "holes": 18,
+        "pointsPerMatch": 2.0,
+        "matchCount": 3
+      },
+      {
+        "id": "st-george-2026-r5",
+        "number": 5,
+        "day": "Sunday",
+        "date": "2026-03-15",
+        "courseId": "falcon-ridge",
+        "format": "Singles Match Play",
+        "holes": 18,
+        "pointsPerMatch": 2.0,
+        "matchCount": 6
+      }
+    ],
+    "roster": [
+      {
+        "playerId": "alan-lozer",
+        "teamId": "silver-spoons",
+        "handicapIndex": 6.6
+      },
+      {
+        "playerId": "anthony-herring",
+        "teamId": "silver-spoons",
+        "handicapIndex": 12.3
+      },
+      {
+        "playerId": "ed-nelson",
+        "teamId": "silver-spoons",
+        "handicapIndex": 14.0
+      },
+      {
+        "playerId": "miles-honens",
+        "teamId": "silver-spoons",
+        "handicapIndex": 14.0
+      },
+      {
+        "playerId": "scott-b",
+        "teamId": "silver-spoons",
+        "handicapIndex": 2.8
+      },
+      {
+        "playerId": "steve-urwin",
+        "teamId": "silver-spoons",
+        "handicapIndex": 18.8
+      },
+      {
+        "playerId": "ben-urwin",
+        "teamId": "woodpeckers",
+        "handicapIndex": 7.4
+      },
+      {
+        "playerId": "chase-hellmers",
+        "teamId": "woodpeckers",
+        "handicapIndex": 21.0
+      },
+      {
+        "playerId": "colton-mckivitz",
+        "teamId": "woodpeckers",
+        "handicapIndex": 14.0
+      },
+      {
+        "playerId": "michael-herring",
+        "teamId": "woodpeckers",
+        "handicapIndex": 12.6
+      },
+      {
+        "playerId": "rupert-pedler",
+        "teamId": "woodpeckers",
+        "handicapIndex": 20.2
+      },
+      {
+        "playerId": "tom-brunskill",
+        "teamId": "woodpeckers",
+        "handicapIndex": 14.9
+      }
+    ],
+    "scores": [
+      {
+        "roundId": "st-george-2026-r2",
+        "playerId": "alan-lozer",
+        "net": 85,
+        "stableford": null,
+        "result": null,
+        "completeRound": true,
+        "note": "Best Ball individual net."
+      },
+      {
+        "roundId": "st-george-2026-r3",
+        "playerId": "alan-lozer",
+        "net": 40,
+        "stableford": null,
+        "result": null,
+        "completeRound": true,
+        "note": "Nine-hole Shamble individual net."
+      },
+      {
+        "roundId": "st-george-2026-r4",
+        "playerId": "alan-lozer",
+        "net": null,
+        "stableford": 26,
+        "result": null,
+        "completeRound": true,
+        "note": "Stableford points."
+      },
+      {
+        "roundId": "st-george-2026-r5",
+        "playerId": "alan-lozer",
+        "net": 77,
+        "stableford": null,
+        "result": "Win 2&1",
+        "completeRound": true,
+        "note": "R5 net from Tom/Alan scorecard."
+      },
+      {
+        "roundId": "st-george-2026-r2",
+        "playerId": "anthony-herring",
+        "net": 74,
+        "stableford": null,
+        "result": null,
+        "completeRound": true,
+        "note": "Best Ball individual net."
+      },
+      {
+        "roundId": "st-george-2026-r3",
+        "playerId": "anthony-herring",
+        "net": 34,
+        "stableford": null,
+        "result": null,
+        "completeRound": true,
+        "note": "Nine-hole Shamble individual net."
+      },
+      {
+        "roundId": "st-george-2026-r4",
+        "playerId": "anthony-herring",
+        "net": null,
+        "stableford": 30,
+        "result": null,
+        "completeRound": true,
+        "note": "Stableford points."
+      },
+      {
+        "roundId": "st-george-2026-r5",
+        "playerId": "anthony-herring",
+        "net": 98,
+        "stableford": null,
+        "result": "Loss 4&2",
+        "completeRound": true,
+        "note": "Championship match."
+      },
+      {
+        "roundId": "st-george-2026-r2",
+        "playerId": "ben-urwin",
+        "net": 80,
+        "stableford": null,
+        "result": null,
+        "completeRound": true,
+        "note": "Best Ball individual net."
+      },
+      {
+        "roundId": "st-george-2026-r3",
+        "playerId": "ben-urwin",
+        "net": 35,
+        "stableford": null,
+        "result": null,
+        "completeRound": true,
+        "note": "Nine-hole Shamble individual net."
+      },
+      {
+        "roundId": "st-george-2026-r4",
+        "playerId": "ben-urwin",
+        "net": null,
+        "stableford": 27,
+        "result": null,
+        "completeRound": true,
+        "note": "Stableford points."
+      },
+      {
+        "roundId": "st-george-2026-r5",
+        "playerId": "ben-urwin",
+        "net": null,
+        "stableford": null,
+        "result": "Win 4&3",
+        "completeRound": false,
+        "note": "Singles round ended by concession; no complete net."
+      },
+      {
+        "roundId": "st-george-2026-r2",
+        "playerId": "chase-hellmers",
+        "net": 80,
+        "stableford": null,
+        "result": null,
+        "completeRound": true,
+        "note": "Best Ball individual net."
+      },
+      {
+        "roundId": "st-george-2026-r3",
+        "playerId": "chase-hellmers",
+        "net": 31,
+        "stableford": null,
+        "result": null,
+        "completeRound": true,
+        "note": "Nine-hole Shamble individual net."
+      },
+      {
+        "roundId": "st-george-2026-r4",
+        "playerId": "chase-hellmers",
+        "net": null,
+        "stableford": 30,
+        "result": null,
+        "completeRound": true,
+        "note": "Stableford points."
+      },
+      {
+        "roundId": "st-george-2026-r5",
+        "playerId": "chase-hellmers",
+        "net": 110,
+        "stableford": null,
+        "result": "Loss 2&1",
+        "completeRound": true,
+        "note": "Net 110 shown."
+      },
+      {
+        "roundId": "st-george-2026-r2",
+        "playerId": "colton-mckivitz",
+        "net": 92,
+        "stableford": null,
+        "result": null,
+        "completeRound": true,
+        "note": "Best Ball individual net."
+      },
+      {
+        "roundId": "st-george-2026-r3",
+        "playerId": "colton-mckivitz",
+        "net": 37,
+        "stableford": null,
+        "result": null,
+        "completeRound": true,
+        "note": "Nine-hole Shamble individual net."
+      },
+      {
+        "roundId": "st-george-2026-r4",
+        "playerId": "colton-mckivitz",
+        "net": null,
+        "stableford": 26,
+        "result": null,
+        "completeRound": true,
+        "note": "Stableford points."
+      },
+      {
+        "roundId": "st-george-2026-r5",
+        "playerId": "colton-mckivitz",
+        "net": null,
+        "stableford": null,
+        "result": "Loss 4&3",
+        "completeRound": false,
+        "note": "Singles ended at 15; full net unavailable."
+      },
+      {
+        "roundId": "st-george-2026-r2",
+        "playerId": "ed-nelson",
+        "net": 85,
+        "stableford": null,
+        "result": null,
+        "completeRound": true,
+        "note": "Best Ball individual net."
+      },
+      {
+        "roundId": "st-george-2026-r3",
+        "playerId": "ed-nelson",
+        "net": 34,
+        "stableford": null,
+        "result": null,
+        "completeRound": true,
+        "note": "Nine-hole Shamble individual net."
+      },
+      {
+        "roundId": "st-george-2026-r4",
+        "playerId": "ed-nelson",
+        "net": null,
+        "stableford": 30,
+        "result": null,
+        "completeRound": true,
+        "note": "Stableford points."
+      },
+      {
+        "roundId": "st-george-2026-r5",
+        "playerId": "ed-nelson",
+        "net": null,
+        "stableford": null,
+        "result": "Win 4&3",
+        "completeRound": false,
+        "note": "Singles ended at 15; full net unavailable."
+      },
+      {
+        "roundId": "st-george-2026-r2",
+        "playerId": "michael-herring",
+        "net": 75,
+        "stableford": null,
+        "result": null,
+        "completeRound": true,
+        "note": "Best Ball individual net."
+      },
+      {
+        "roundId": "st-george-2026-r3",
+        "playerId": "michael-herring",
+        "net": 38,
+        "stableford": null,
+        "result": null,
+        "completeRound": true,
+        "note": "Nine-hole Shamble individual net."
+      },
+      {
+        "roundId": "st-george-2026-r4",
+        "playerId": "michael-herring",
+        "net": null,
+        "stableford": 28,
+        "result": null,
+        "completeRound": true,
+        "note": "Stableford points."
+      },
+      {
+        "roundId": "st-george-2026-r5",
+        "playerId": "michael-herring",
+        "net": 92,
+        "stableford": null,
+        "result": "Win 4&2",
+        "completeRound": true,
+        "note": "Champion Golfer."
+      },
+      {
+        "roundId": "st-george-2026-r2",
+        "playerId": "miles-honens",
+        "net": 88,
+        "stableford": null,
+        "result": null,
+        "completeRound": true,
+        "note": "Best Ball individual net."
+      },
+      {
+        "roundId": "st-george-2026-r3",
+        "playerId": "miles-honens",
+        "net": 36,
+        "stableford": null,
+        "result": null,
+        "completeRound": true,
+        "note": "Nine-hole Shamble individual net."
+      },
+      {
+        "roundId": "st-george-2026-r4",
+        "playerId": "miles-honens",
+        "net": null,
+        "stableford": 26,
+        "result": null,
+        "completeRound": true,
+        "note": "Stableford points."
+      },
+      {
+        "roundId": "st-george-2026-r5",
+        "playerId": "miles-honens",
+        "net": 98,
+        "stableford": null,
+        "result": "Loss",
+        "completeRound": true,
+        "note": "Full net shown."
+      },
+      {
+        "roundId": "st-george-2026-r2",
+        "playerId": "rupert-pedler",
+        "net": 78,
+        "stableford": null,
+        "result": null,
+        "completeRound": true,
+        "note": "Best Ball individual net."
+      },
+      {
+        "roundId": "st-george-2026-r3",
+        "playerId": "rupert-pedler",
+        "net": 38,
+        "stableford": null,
+        "result": null,
+        "completeRound": true,
+        "note": "Nine-hole Shamble individual net."
+      },
+      {
+        "roundId": "st-george-2026-r4",
+        "playerId": "rupert-pedler",
+        "net": null,
+        "stableford": 30,
+        "result": null,
+        "completeRound": true,
+        "note": "Stableford points."
+      },
+      {
+        "roundId": "st-george-2026-r5",
+        "playerId": "rupert-pedler",
+        "net": 92,
+        "stableford": null,
+        "result": "Win",
+        "completeRound": true,
+        "note": "Full net shown."
+      },
+      {
+        "roundId": "st-george-2026-r2",
+        "playerId": "scott-b",
+        "net": 76,
+        "stableford": null,
+        "result": null,
+        "completeRound": true,
+        "note": "Best Ball individual net."
+      },
+      {
+        "roundId": "st-george-2026-r3",
+        "playerId": "scott-b",
+        "net": 38,
+        "stableford": null,
+        "result": null,
+        "completeRound": true,
+        "note": "Nine-hole Shamble individual net."
+      },
+      {
+        "roundId": "st-george-2026-r4",
+        "playerId": "scott-b",
+        "net": null,
+        "stableford": 35,
+        "result": null,
+        "completeRound": true,
+        "note": "Stableford points."
+      },
+      {
+        "roundId": "st-george-2026-r5",
+        "playerId": "scott-b",
+        "net": null,
+        "stableford": null,
+        "result": "Loss 4&3",
+        "completeRound": false,
+        "note": "Singles round ended by concession."
+      },
+      {
+        "roundId": "st-george-2026-r2",
+        "playerId": "steve-urwin",
+        "net": 85,
+        "stableford": null,
+        "result": null,
+        "completeRound": true,
+        "note": "Best Ball individual net."
+      },
+      {
+        "roundId": "st-george-2026-r3",
+        "playerId": "steve-urwin",
+        "net": 34,
+        "stableford": null,
+        "result": null,
+        "completeRound": true,
+        "note": "Nine-hole Shamble individual net."
+      },
+      {
+        "roundId": "st-george-2026-r4",
+        "playerId": "steve-urwin",
+        "net": null,
+        "stableford": 21,
+        "result": null,
+        "completeRound": true,
+        "note": "Stableford points."
+      },
+      {
+        "roundId": "st-george-2026-r5",
+        "playerId": "steve-urwin",
+        "net": 98,
+        "stableford": null,
+        "result": "Win 2&1",
+        "completeRound": true,
+        "note": "Full net shown."
+      },
+      {
+        "roundId": "st-george-2026-r2",
+        "playerId": "tom-brunskill",
+        "net": 80,
+        "stableford": null,
+        "result": null,
+        "completeRound": true,
+        "note": "Best Ball individual net."
+      },
+      {
+        "roundId": "st-george-2026-r3",
+        "playerId": "tom-brunskill",
+        "net": 38,
+        "stableford": null,
+        "result": null,
+        "completeRound": true,
+        "note": "Nine-hole Shamble individual net."
+      },
+      {
+        "roundId": "st-george-2026-r4",
+        "playerId": "tom-brunskill",
+        "net": null,
+        "stableford": 24,
+        "result": null,
+        "completeRound": true,
+        "note": "Stableford points."
+      },
+      {
+        "roundId": "st-george-2026-r5",
+        "playerId": "tom-brunskill",
+        "net": 86,
+        "stableford": null,
+        "result": "Loss 2&1",
+        "completeRound": true,
+        "note": "Full net shown."
+      }
+    ]
+  }
+]

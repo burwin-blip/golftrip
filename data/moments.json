@@ -1,0 +1,92 @@
+[
+  {
+    "id": "st-george-2026-moment-1",
+    "tournamentId": "st-george-2026",
+    "roundNumber": 1,
+    "category": "Session Result",
+    "subjectPlayerIds": null,
+    "subjectTeamId": "silver-spoons",
+    "title": "Silver Spoons draw first blood",
+    "description": "The Silver Spoons won two of the three opening Scramble matches to take a 2–1 lead on Friday morning."
+  },
+  {
+    "id": "st-george-2026-moment-2",
+    "tournamentId": "st-george-2026",
+    "roundNumber": 2,
+    "category": "Session Swing",
+    "subjectPlayerIds": null,
+    "subjectTeamId": "woodpeckers",
+    "title": "The Best Ball onslaught",
+    "description": "The Woodpeckers answered by taking five of six Best Ball points and closed Friday in front, 6–3."
+  },
+  {
+    "id": "st-george-2026-moment-3",
+    "tournamentId": "st-george-2026",
+    "roundNumber": 3,
+    "category": "Clutch",
+    "subjectPlayerIds": [
+      "ben-urwin"
+    ],
+    "subjectTeamId": "woodpeckers",
+    "title": "Birdie to steal a half",
+    "description": "Ben Urwin birdied the final hole to halve the opening Shamble match and deny the Silver Spoons a full point."
+  },
+  {
+    "id": "st-george-2026-moment-4",
+    "tournamentId": "st-george-2026",
+    "roundNumber": 4,
+    "category": "Captaincy",
+    "subjectPlayerIds": [
+      "tom-brunskill"
+    ],
+    "subjectTeamId": "woodpeckers",
+    "title": "The strokes gambit",
+    "description": "Tom Brunskill paired Chase Hellmers and Rupert Pedler against Alan Lozer and Scott B to squeeze every handicap stroke out of the Stableford round."
+  },
+  {
+    "id": "st-george-2026-moment-5",
+    "tournamentId": "st-george-2026",
+    "roundNumber": 4,
+    "category": "Deciding Finish",
+    "subjectPlayerIds": [
+      "chase-hellmers"
+    ],
+    "subjectTeamId": "woodpeckers",
+    "title": "Half a point of daylight",
+    "description": "Chase Hellmers needed three chips on the final hole as the Silver Spoons escaped by half a Stableford point, 30.5–30."
+  },
+  {
+    "id": "st-george-2026-moment-6",
+    "tournamentId": "st-george-2026",
+    "roundNumber": 5,
+    "category": "Hole-in-One",
+    "subjectPlayerIds": [
+      "ben-urwin"
+    ],
+    "subjectTeamId": "woodpeckers",
+    "title": "The rock-bounce ace",
+    "description": "Ben Urwin's tee shot at Falcon Ridge hit the rocks, returned to the green, rolled across it and dropped — a hole-in-one, and the Shot of the Tournament."
+  },
+  {
+    "id": "st-george-2026-moment-7",
+    "tournamentId": "st-george-2026",
+    "roundNumber": 5,
+    "category": "Weather",
+    "subjectPlayerIds": null,
+    "subjectTeamId": null,
+    "title": "The Wind Round",
+    "description": "Falcon Ridge was played in 30–40 mph wind gusts on Sunday — forever after 'The Wind Round'."
+  },
+  {
+    "id": "st-george-2026-moment-8",
+    "tournamentId": "st-george-2026",
+    "roundNumber": 5,
+    "category": "Championship",
+    "subjectPlayerIds": [
+      "michael-herring"
+    ],
+    "subjectTeamId": "woodpeckers",
+    "title": "The first Champion Golfer",
+    "description": "Michael Herring defeated Anthony Herring 4&2 in the Individual Championship match to become the first Champion Golfer in the history of The Annual."
+  }
+]

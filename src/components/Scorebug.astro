@@ -1,0 +1,40 @@
+---
+// The signature scorebug: two teams, colour-coded panels, official logos.
+// Winner panel is solid team colour; the other recedes to a soft tint.
+import { teamById } from '../lib/data.js';
+import { num } from '../lib/format.js';
+import TeamLogo from './TeamLogo.astro';
+
+const {
+  aId, bId, aScore, bScore,
+  winnerId = undefined,   // team id, or null for a tie, or undefined to infer
+  aMeta, bMeta, tag, big = false,
+} = Astro.props;
+
+const a = teamById[aId];
+const b = teamById[bId];
+const winner = winnerId !== undefined ? winnerId : (aScore === bScore ? null : (aScore > bScore ? aId : bId));
+const aWon = winner === aId;
+const bWon = winner === bId;
+const aLost = winner && !aWon;
+const bLost = winner && !bWon;
+const logoSize = big ? 64 : 48;
+---
+<div class="scorebug" role="group" aria-label={`${a.name} ${num(aScore)}, ${b.name} ${num(bScore)}`}>
+  <div class:list={["scorebug__side", "scorebug__side--a", { "is-loser": aLost }]} style={`--accent:${a.color}`}>
+    <TeamLogo teamId={a.id} size={logoSize} chip={true} className="scorebug__logo" />
+    <div class="scorebug__team">{aWon && <span class="crown" aria-label="Champions">♛</span>}{a.name}</div>
+    {aMeta && <div class="scorebug__meta">{aMeta}</div>}
+    <div class="scorebug__score mono-nums">{num(aScore)}</div>
+  </div>
+  <div class="scorebug__center">
+    <span class="vs">vs</span>
+    {tag && <span class="tag">{tag}</span>}
+  </div>
+  <div class:list={["scorebug__side", "scorebug__side--b", { "is-loser": bLost }]} style={`--accent:${b.color}`}>
+    <TeamLogo teamId={b.id} size={logoSize} chip={true} className="scorebug__logo" />
+    <div class="scorebug__team">{bWon && <span class="crown" aria-label="Champions">♛</span>}{b.name}</div>
+    {bMeta && <div class="scorebug__meta">{bMeta}</div>}
+    <div class="scorebug__score mono-nums">{num(bScore)}</div>
+  </div>
+</div>

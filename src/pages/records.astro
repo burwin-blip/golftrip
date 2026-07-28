@@ -1,0 +1,166 @@
+---
+import Base from '../layouts/Base.astro';
+import TeamLogo from '../components/TeamLogo.astro';
+import { teamById, playerById, roundById } from '../lib/data.js';
+import {
+  hallOfFame, records, playerLeaderboard, allPartnerships,
+} from '../lib/stats.js';
+import { fullName, num, pctText } from '../lib/format.js';
+
+const hof = hallOfFame();
+const rec = records();
+const board = playerLeaderboard();
+const pairs = allPartnerships();
+const bright = { woodpeckers: 'var(--wp-bright)', 'silver-spoons': 'var(--ss-bright)' };
+
+const sideNames = (match, teamId) =>
+  match.players.filter((p) => p.teamId === teamId).map((p) => fullName(p.playerId)).join(' & ');
+
+// Assemble the record book from computed values (nothing hardcoded).
+const recordCards = [
+  rec.biggest && {
+    k: 'Largest margin of victory', v: rec.biggest.match.margin,
+    who: sideNames(rec.biggest.match, rec.biggest.match.winnerTeamId),
+    sub: `${roundById[rec.biggest.match.roundId].format}`,
+  },
+  rec.swing && {
+    k: 'Biggest session swing', v: `+${num(rec.swing.gap)}`,
+    who: teamById[rec.swing.leaderTeamId].name,
+    sub: `${rec.swing.round.format} · ${num(rec.swing.scores[rec.swing.leaderTeamId])}–${num(Object.entries(rec.swing.scores).find(([id]) => id !== rec.swing.leaderTeamId)[1])}`,
+  },
+  rec.bestPct && {
+    k: 'Best points percentage', v: pctText(rec.bestPct.pointPct),
+    who: rec.bestPct.player.name, sub: `${rec.bestPct.w}–${rec.bestPct.h}–${rec.bestPct.l} · ${num(rec.bestPct.pointsEarned)}/${num(rec.bestPct.pointsAvailable)} pts`, gold: true,
+  },
+  rec.mostPoints && {
+    k: 'Most points', v: num(rec.mostPoints.pointsEarned),
+    who: rec.mostPoints.player.name, sub: `${rec.mostPoints.w}–${rec.mostPoints.h}–${rec.mostPoints.l} · from ${num(rec.mostPoints.pointsAvailable)} available`,
+  },
+  rec.bestPair && {
+    k: 'Top partnership', v: pctText(rec.bestPair.pointPct),
+    who: rec.bestPair.players.map(fullName).join(' + '), sub: `${rec.bestPair.w}–${rec.bestPair.l}–${rec.bestPair.h} together`,
+  },
+  rec.lowNet && {
+    k: 'Lowest round (net)', v: String(rec.lowNet.net),
+    who: fullName(rec.lowNet.playerId), sub: `${rec.lowNet.round.holes}-hole ${rec.lowNet.round.format}`,
+  },
+  rec.bestStbl && {
+    k: 'Best Stableford card', v: String(rec.bestStbl.stableford),
+    who: fullName(rec.bestStbl.playerId), sub: `${rec.bestStbl.round.format}`,
+  },
+  rec.narrowPoints && {
+    k: 'Narrowest decision', v: rec.narrowPoints.match.margin,
+    who: sideNames(rec.narrowPoints.match, rec.narrowPoints.match.winnerTeamId),
+    sub: `${roundById[rec.narrowPoints.match.roundId].format}`,
+  },
+].filter(Boolean);
+---
+<Base active="records" title="Records & Hall of Fame" description="The Annual record book and hall of fame — champions, career leaders and the marks to beat.">
+
+  <!-- HALL OF FAME -->
+  <section class="section">
+    <div class="wrap">
+      <p class="eyebrow gold">Immortals</p>
+      <h1 class="display" style="font-size:clamp(2.1rem,6vw,3.6rem);margin:.3rem 0 .5rem">Hall of Fame</h1>
+      <p class="lede">Every champion crowned in The Annual. The names carved first.</p>
+
+      <div class="hof">
+        {hof.champions.map((ch) => {
+          const team = teamById[ch.teamChampionId];
+          const player = playerById[ch.championPlayerId];
+          return (
+            <div class="hof__card card" style={`--accent:${team.color};--accent-bright:${bright[team.id]}`}>
+              <div class="hof__year">{ch.tournament.year}</div>
+              <div class="hof__body">
+                <p class="eyebrow">{ch.tournament.shortName} · {ch.finalScore}</p>
+                <div class="hof__teams">
+                  <a href={`/tournaments/${ch.tournament.id}`} class="hof__team"><TeamLogo teamId={team.id} size={30} /><span>{team.name}</span><span class="pill gold" style="margin-left:.2rem">♛ Team</span></a>
+                  <a href={`/players/${player.slug}`} class="hof__champ gold">{player.name} <span class="faint" style="font-weight:400">— Champion Golfer</span></a>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  </section>
+
+  <!-- RECORD BOOK -->
+  <section class="section" style="padding-top:0">
+    <div class="wrap">
+      <div class="section-head"><div><p class="eyebrow">Marks to Beat</p><h2>The record book</h2></div></div>
+      <div class="grid rec-grid">
+        {recordCards.map((r) => (
+          <div class="tile" class:list={[{ 'tile--gold': r.gold }]}>
+            <div class="tile__k">{r.k}</div>
+            <div class="tile__v mono-nums">{r.v}</div>
+            <div class="tile__sub"><b style="color:var(--text)">{r.who}</b> · {r.sub}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- CAREER LEADERBOARD -->
+  <section class="section" style="padding-top:0">
+    <div class="wrap">
+      <div class="section-head"><div><p class="eyebrow">Career</p><h2>Points leaderboard</h2></div><span class="faint">Win % = points ÷ matches</span></div>
+      <div class="table-scroll">
+        <table class="data">
+          <thead><tr><th>#</th><th>Player</th><th>Team</th><th class="num">P</th><th class="num">W–H–L</th><th class="num">Pts</th><th class="num">Win %</th><th class="num">Pt %</th></tr></thead>
+          <tbody>
+            {board.map((c, i) => {
+              const team = teamById[c.appearances[0].teamId];
+              return (
+                <tr>
+                  <td class="rank">{i + 1}</td>
+                  <td class="name"><a href={`/players/${c.player.slug}`}>{c.player.name}</a></td>
+                  <td><TeamLogo teamId={team.id} size={20} /></td>
+                  <td class="num tabnums">{c.played}</td>
+                  <td class="num tabnums">{c.w}–{c.h}–{c.l}</td>
+                  <td class="num tabnums gold">{num(c.pointsEarned)}</td>
+                  <td class="num tabnums">{pctText(c.matchPct)}</td>
+                  <td class="num tabnums">{pctText(c.pointPct)}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- PARTNERSHIPS -->
+  <section class="section" style="padding-top:0">
+    <div class="wrap">
+      <div class="section-head"><div><p class="eyebrow">Alliances</p><h2>Partnership records</h2></div></div>
+      <div class="table-scroll">
+        <table class="data">
+          <thead><tr><th>Pairing</th><th class="num">P</th><th class="num">W–H–L</th><th class="num">Pts</th><th class="num">Pt %</th></tr></thead>
+          <tbody>
+            {pairs.map((pr) => (
+              <tr>
+                <td class="name">{pr.players.map((id, idx) => <Fragment>{idx > 0 && <span class="faint"> + </span>}<a href={`/players/${playerById[id].slug}`}>{fullName(id)}</a></Fragment>)}</td>
+                <td class="num tabnums">{pr.played}</td>
+                <td class="num tabnums">{pr.w}–{pr.h}–{pr.l}</td>
+                <td class="num tabnums">{num(pr.earned)}</td>
+                <td class="num tabnums">{pctText(pr.pointPct)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+</Base>
+
+<style>
+  .hof { margin-top:1.6rem; display:flex; flex-direction:column; gap:1rem; }
+  .hof__card { display:grid; grid-template-columns:auto 1fr; overflow:hidden; border-color:color-mix(in srgb,var(--accent) 34%,var(--line)); }
+  .hof__year { font-family:var(--serif); font-size:clamp(2rem,1.4rem+3vw,3.4rem); font-weight:600; display:flex; align-items:center; justify-content:center; padding:0 clamp(1rem,3vw,1.8rem); background:linear-gradient(160deg,color-mix(in srgb,var(--accent) 26%,var(--panel)),var(--panel)); color:var(--accent-bright); border-right:1px solid var(--line); font-variant-numeric:tabular-nums; }
+  .hof__body { padding:clamp(1rem,3vw,1.4rem); }
+  .hof__teams { display:flex; flex-direction:column; gap:.5rem; margin-top:.5rem; }
+  .hof__team { display:flex; align-items:center; gap:.5rem; font-family:var(--serif); font-size:1.2rem; }
+  .hof__champ { font-family:var(--serif); font-size:1.05rem; }
+  .rec-grid { grid-template-columns: repeat(auto-fit, minmax(210px,1fr)); }
+</style>

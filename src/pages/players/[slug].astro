@@ -1,0 +1,265 @@
+---
+import Base from '../../layouts/Base.astro';
+import TeamLogo from '../../components/TeamLogo.astro';
+import { players, teamById, playerById, roundById, getCourse, tournamentById, moments } from '../../lib/data.js';
+import {
+  careerStats, formatRecords, partnershipsFor, opponentRecords,
+  handicapAnalysis, draftValue, scorecardIndex, ANALYTICS_CAVEAT,
+} from '../../lib/stats.js';
+import { fullName, num, pctText } from '../../lib/format.js';
+
+export function getStaticPaths() {
+  return players.map((p) => ({ params: { slug: p.slug }, props: { p } }));
+}
+const { p } = Astro.props;
+const c = careerStats(p.id);
+const app = c.appearances[c.appearances.length - 1];
+const team = teamById[app.teamId];
+const bright = { woodpeckers: 'var(--wp-bright)', 'silver-spoons': 'var(--ss-bright)' };
+const accentBright = bright[team.id];
+const fr = formatRecords(p.id);
+const pairs = partnershipsFor(p.id).sort((a, b) => b.pointPct - a.pointPct || b.earned - a.earned);
+const opps = opponentRecords(p.id);
+const t = tournamentById[app.tournament.id];
+
+// analytics context for each appearance (handicap-adjusted + draft value)
+const history = c.appearances.map((ap) => {
+  const ha = handicapAnalysis(ap.tournament.id).rows.find((r) => r.playerId === p.id);
+  const dv = draftValue(ap.tournament.id).find((r) => r.playerId === p.id);
+  const si = scorecardIndex(ap.tournament.id).byId[p.id];
+  return { ap, ha, dv, si };
+});
+const cur = history[history.length - 1];
+
+const myScores = (t.scores || []).filter((s) => s.playerId === p.id)
+  .sort((a, b) => roundById[a.roundId].number - roundById[b.roundId].number);
+const myMoments = moments.filter((m) => (m.subjectPlayerIds || []).includes(p.id));
+
+const FMT_SHORT = { 'Scramble': 'Scramble', 'Best Ball Match Play (NET)': 'Best Ball', '9-hole Shamble': 'Shamble',
+  'Team Average Stableford': 'Stableford', 'Singles Match Play': 'Singles', 'Individual Championship / Singles': 'Championship' };
+---
+<Base active="players" title={p.name} description={`Scouting report for ${p.name} — career record, format splits, partners, head-to-heads, handicap and draft value.`}>
+
+  <!-- HERO -->
+  <section class="section" style={`padding-bottom:clamp(1.2rem,3vw,1.8rem);--accent:${team.color};--accent-bright:${accentBright}`}>
+    <div class="wrap">
+      <a class="back-link" href="/players">← All players</a>
+      <div class="phero reveal">
+        <div class="phero__id">
+          <span class="tbadge" style="font-size:.95rem;color:color-mix(in srgb, var(--accent) 80%, #10130f)"><TeamLogo teamId={team.id} size={34} />{team.name}{p.id === team.captainId && <span class="pill" style="margin-left:.4rem;font-size:.6rem;padding:.1rem .4rem">Captain</span>}</span>
+          <h1 class="display" style="font-size:clamp(2.2rem,6vw,4rem);margin:.35rem 0 .1rem">{p.name}</h1>
+          <div class="chips" style="margin-top:.7rem">
+            {app.isChampion && <span class="pill gold">♛ Champion Golfer {t.year}</span>}
+            {app.wonTeamTitle && <span class="pill gold">Team Champion {t.year}</span>}
+            <span class="pill">Hcp {app.handicapIndex.toFixed(1)}</span>
+            {cur.ha && <span class="pill">{cur.ha.tier} handicap</span>}
+            {app.draftPick ? <span class="pill">Draft #{app.draftPick}</span> : <span class="pill">Captain</span>}
+            {cur.dv?.label && <span class:list={["pill", { gold: cur.dv.label !== 'Draft Miss' }]}>{cur.dv.label}</span>}
+          </div>
+        </div>
+        <div class="phero__record card card--pad">
+          <p class="eyebrow">Career record</p>
+          <div class="phero__wlh"><b class="mono-nums">{c.w}</b><i>–</i><b class="mono-nums">{c.h}</b><i>–</i><b class="mono-nums">{c.l}</b></div>
+          <div class="faint" style="font-size:.72rem;letter-spacing:.1em;text-transform:uppercase">Won · Halved · Lost</div>
+          <div class="form" style="margin-top:.8rem">
+            {c.log.map((e) => <b class={e.outcome === 'win' ? 'w' : e.outcome === 'loss' ? 'l' : 'h'} title={`Match ${e.match.number}: ${e.outcome}`}>{e.outcome === 'win' ? 'W' : e.outcome === 'loss' ? 'L' : 'H'}</b>)}
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- STAT TILES -->
+  <section class="section" style="padding-top:0">
+    <div class="wrap">
+      <div class="grid tiles">
+        <div class="tile"><div class="tile__k">Matches</div><div class="tile__v mono-nums">{c.played}</div></div>
+        <div class="tile tile--gold"><div class="tile__k">Points earned</div><div class="tile__v mono-nums">{num(c.pointsEarned)}<span class="faint" style="font-size:1rem"> / {num(c.pointsAvailable)}</span></div><div class="tile__sub">{pctText(c.pointPct)} of available</div></div>
+        <div class="tile"><div class="tile__k">Win rate</div><div class="tile__v mono-nums">{pctText(c.matchPct)}</div><div class="tile__sub">wins + ½ halves ÷ matches</div></div>
+        <div class="tile"><div class="tile__k">Titles</div><div class="tile__v mono-nums">{c.teamTitles + c.individualTitles}</div><div class="tile__sub">{c.individualTitles} individual · {c.teamTitles} team</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SCOUTING: format record + handicap/draft -->
+  <section class="section" style="padding-top:0">
+    <div class="wrap two-col">
+      <div>
+        <div class="section-head"><div><p class="eyebrow">Splits</p><h2>Format record</h2></div></div>
+        <div class="table-scroll">
+          <table class="data">
+            <thead><tr><th>Format</th><th class="num">P</th><th class="num">W–H–L</th><th class="num">Pts</th><th class="num">Pt %</th></tr></thead>
+            <tbody>
+              {fr.map((f) => (
+                <tr><td class="name">{FMT_SHORT[f.format] || f.format}</td><td class="num tabnums">{f.played}</td><td class="num tabnums">{f.w}–{f.h}–{f.l}</td><td class="num tabnums">{num(f.earned)}</td><td class="num tabnums">{pctText(f.pointPct)}</td></tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div>
+        <div class="section-head"><div><p class="eyebrow">Draft &amp; Handicap</p><h2>Value &amp; history</h2></div></div>
+        <div class="table-scroll">
+          <table class="data">
+            <thead><tr><th>Year</th><th class="num">Hcp</th><th class="num">Pick</th><th class="num">Over/Under</th><th class="num">Composite</th><th>Value</th></tr></thead>
+            <tbody>
+              {history.map((h) => (
+                <tr>
+                  <td class="name">{h.ap.tournament.year}</td>
+                  <td class="num tabnums">{h.ap.handicapIndex.toFixed(1)}</td>
+                  <td class="num tabnums">{h.ap.draftPick ? `#${h.ap.draftPick}` : 'C'}</td>
+                  <td class="num tabnums" style={h.ha && `color:${h.ha.overPoints >= 0 ? 'var(--wp)' : '#b4453a'};font-weight:600`}>{h.ha ? `${h.ha.overPoints > 0 ? '+' : ''}${num(Math.round(h.ha.overPoints * 10) / 10)}` : '—'}</td>
+                  <td class="num tabnums">{h.dv ? num(h.dv.composite) : '—'}</td>
+                  <td>{h.dv?.label ? <span class:list={["pill", { gold: h.dv.label !== 'Draft Miss' }]}>{h.dv.label}</span> : (h.ap.draftPick ? <span class="faint">—</span> : <span class="pill">Captain</span>)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p class="caveat">⚠ {ANALYTICS_CAVEAT}</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- BEST PARTNERS + HEAD TO HEAD -->
+  <section class="section" style="padding-top:0">
+    <div class="wrap two-col">
+      <div>
+        <div class="section-head"><div><p class="eyebrow">Alliances</p><h2>Best partners</h2></div></div>
+        <div class="table-scroll">
+          <table class="data">
+            <thead><tr><th>Partner</th><th class="num">P</th><th class="num">Record</th><th class="num">Pt %</th></tr></thead>
+            <tbody>
+              {pairs.map((pr) => (
+                <tr>
+                  <td class="name"><a href={`/players/${playerById[pr.partnerId].slug}`}>{playerById[pr.partnerId].name}</a></td>
+                  <td class="num tabnums">{pr.played}</td>
+                  <td class="num tabnums">{pr.w}–{pr.h}–{pr.l}</td>
+                  <td class="num tabnums">{pctText(pr.pointPct)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div>
+        <div class="section-head"><div><p class="eyebrow">Rivalries</p><h2>Head-to-head</h2></div><span class="faint">vs everyone faced</span></div>
+        <div class="table-scroll">
+          <table class="data">
+            <thead><tr><th>Opponent</th><th class="num">Mts</th><th class="num">W–H–L</th><th class="num">Pts</th></tr></thead>
+            <tbody>
+              {opps.map((o) => (
+                <tr>
+                  <td class="name"><a href={`/players/${o.opponent.slug}`}>{o.opponent.name}</a></td>
+                  <td class="num tabnums">{o.played}</td>
+                  <td class="num tabnums">{o.aWins}–{o.halved}–{o.bWins}</td>
+                  <td class="num tabnums">{num(o.aPoints)}–{num(o.bPoints)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SCORES -->
+  {myScores.length > 0 && (
+    <section class="section" style="padding-top:0">
+      <div class="wrap">
+        <div class="section-head"><div><p class="eyebrow">Cards</p><h2>Recorded scores</h2></div><span class="faint">{t.shortName}</span></div>
+        <div class="table-scroll">
+          <table class="data">
+            <thead><tr><th>Round</th><th>Course</th><th class="num">Net</th><th class="num">Stbl</th><th>Note</th></tr></thead>
+            <tbody>
+              {myScores.map((s) => {
+                const rnd = roundById[s.roundId];
+                return (
+                  <tr>
+                    <td class="name">R{rnd.number} · {rnd.holes}h</td>
+                    <td>{getCourse(rnd.courseId).name}</td>
+                    <td class="num tabnums">{s.net ?? '—'}</td>
+                    <td class="num tabnums">{s.stableford ?? '—'}</td>
+                    <td class="faint" style="white-space:normal;font-size:.8rem">{s.note || ''}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  )}
+
+  <!-- AWARDS + MOMENTS -->
+  <section class="section" style="padding-top:0">
+    <div class="wrap two-col">
+      <div>
+        <div class="section-head"><div><p class="eyebrow">Recognition</p><h2>Honours</h2></div></div>
+        {c.wonAwards.length ? (
+          <ul class="hairline-list">
+            {c.wonAwards.map((a) => (
+              <li>
+                <span style="font-size:1.2rem">{/champion|shot of/i.test(a.name) ? '🏆' : '🎖'}</span>
+                <div style="flex:1"><div class="name">{a.name}</div>{a.notes && <div class="faint" style="font-size:.8rem">{a.notes}</div>}</div>
+                <a class="pill gold" href={`/tournaments/${t.id}#awards`}>Cabinet</a>
+              </li>
+            ))}
+          </ul>
+        ) : <p class="muted">No individual awards on record — yet.</p>}
+      </div>
+      <div>
+        <div class="section-head"><div><p class="eyebrow">Signature</p><h2>Moments</h2></div></div>
+        {myMoments.length ? (
+          <ul class="hairline-list">
+            {myMoments.map((m) => (
+              <li><div style="flex:1"><div class="name">{m.title}</div><div class="faint" style="font-size:.82rem">{m.description}</div></div></li>
+            ))}
+          </ul>
+        ) : <p class="muted">No signature moments recorded — yet.</p>}
+      </div>
+    </div>
+  </section>
+
+  <!-- MATCH LOG -->
+  <section class="section" style="padding-top:0">
+    <div class="wrap">
+      <div class="section-head"><div><p class="eyebrow">The Record</p><h2>Every match</h2></div></div>
+      <div class="table-scroll">
+        <table class="data">
+          <thead><tr><th>#</th><th>Format</th><th>Partners</th><th>Opponents</th><th class="num">Result</th><th class="num">Pts</th></tr></thead>
+          <tbody>
+            {c.log.map((e) => (
+              <tr>
+                <td class="rank">{e.match.number}</td>
+                <td>{roundById[e.match.roundId].format}</td>
+                <td>{e.partners.length ? e.partners.map((id, idx) => <Fragment>{idx > 0 && ', '}<a href={`/players/${playerById[id].slug}`}>{fullName(id)}</a></Fragment>) : <span class="faint">Singles</span>}</td>
+                <td>{e.opponents.map((id, idx) => <Fragment>{idx > 0 && ', '}<a href={`/players/${playerById[id].slug}`}>{fullName(id)}</a></Fragment>)}</td>
+                <td class="num">
+                  <span class="result-dot" style={`background:${e.outcome === 'win' ? 'var(--wp)' : e.outcome === 'halve' ? 'var(--gold-bright)' : 'var(--faint)'}`}></span>
+                  <span class="tabnums" style="margin-left:.4rem">{e.outcome === 'halve' ? 'Halved' : e.match.margin}</span>
+                </td>
+                <td class="num tabnums">{num(e.pointsEarned)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+</Base>
+
+<style>
+  .phero { display: grid; grid-template-columns: 1fr auto; gap: 1.4rem; align-items: end; margin-top: 1rem; }
+  .phero__record { min-width: 230px; border-color: color-mix(in srgb, var(--accent) 34%, var(--line)); border-top: 4px solid var(--accent); }
+  .phero__wlh { display: flex; align-items: baseline; gap: .35rem; margin-top: .4rem; }
+  .phero__wlh b { font-family: var(--serif); font-size: clamp(2.2rem, 1.6rem + 3vw, 3.2rem); line-height: 1; color: var(--accent-bright); }
+  .phero__wlh i { font-style: normal; color: var(--faint); font-size: 1.6rem; }
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(1.4rem, 4vw, 2.4rem); align-items: start; }
+  .caveat { font-size: .76rem; color: var(--muted); margin-top: .7rem; background: var(--gold-soft); border: 1px solid color-mix(in srgb, var(--gold-bright) 30%, transparent); border-radius: var(--r-sm); padding: .5rem .7rem; }
+  @media (max-width: 780px) {
+    .phero { grid-template-columns: 1fr; align-items: start; }
+    .phero__record { min-width: 0; }
+    .two-col { grid-template-columns: 1fr; }
+  }
+</style>

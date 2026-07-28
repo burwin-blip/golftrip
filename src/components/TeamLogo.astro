@@ -1,0 +1,20 @@
+---
+// Renders a team's official logo. Used next to every team name across the site.
+const { teamId, size = 28, chip = false, className = '' } = Astro.props;
+const src = {
+  'woodpeckers': '/logos/woodpeckers.png',
+  'silver-spoons': '/logos/silver-spoons.png',
+}[teamId];
+const alt = {
+  'woodpeckers': 'Woodpeckers crest',
+  'silver-spoons': 'Silver Spoons badge',
+}[teamId];
+---
+<img
+  src={src}
+  alt={alt}
+  class:list={["tlogo", { "tlogo--chip": chip }, className]}
+  style={`height:${size}px`}
+  loading="lazy"
+  decoding="async"
+/>

@@ -1,0 +1,121 @@
+[
+  {
+    "id": "st-george-2026-award-stg-2026-01",
+    "tournamentId": "st-george-2026",
+    "name": "Team Champions",
+    "notes": "Won the inaugural event 16.5-13.5.",
+    "winnerType": "team",
+    "winnerPlayerIds": null,
+    "winnerTeamId": "woodpeckers",
+    "winnerText": null
+  },
+  {
+    "id": "st-george-2026-award-stg-2026-02",
+    "tournamentId": "st-george-2026",
+    "name": "Champion Golfer",
+    "notes": "Individual Champion.",
+    "winnerType": "players",
+    "winnerPlayerIds": [
+      "michael-herring"
+    ],
+    "winnerTeamId": null,
+    "winnerText": null
+  },
+  {
+    "id": "st-george-2026-award-stg-2026-03",
+    "tournamentId": "st-george-2026",
+    "name": "Shot of the Tournament",
+    "notes": "Hole-in-one at Falcon Ridge after a rock bounce.",
+    "winnerType": "players",
+    "winnerPlayerIds": [
+      "ben-urwin"
+    ],
+    "winnerTeamId": null,
+    "winnerText": null
+  },
+  {
+    "id": "st-george-2026-award-stg-2026-04",
+    "tournamentId": "st-george-2026",
+    "name": "Sandbagging Son of a Bitch",
+    "notes": null,
+    "winnerType": "players",
+    "winnerPlayerIds": [
+      "chase-hellmers"
+    ],
+    "winnerTeamId": null,
+    "winnerText": null
+  },
+  {
+    "id": "st-george-2026-award-stg-2026-05",
+    "tournamentId": "st-george-2026",
+    "name": "The Chiropractic Award",
+    "notes": "Carrying Alan all day.",
+    "winnerType": "players",
+    "winnerPlayerIds": [
+      "scott-b"
+    ],
+    "winnerTeamId": null,
+    "winnerText": null
+  },
+  {
+    "id": "st-george-2026-award-stg-2026-06",
+    "tournamentId": "st-george-2026",
+    "name": "Christopher Columbus Award (Most Challenging Expedition)",
+    "notes": null,
+    "winnerType": "players",
+    "winnerPlayerIds": [
+      "miles-honens"
+    ],
+    "winnerTeamId": null,
+    "winnerText": null
+  },
+  {
+    "id": "st-george-2026-award-stg-2026-07",
+    "tournamentId": "st-george-2026",
+    "name": "Victory Tour Award",
+    "notes": "So old, we don't know if they'll make it to next year.",
+    "winnerType": "players",
+    "winnerPlayerIds": [
+      "steve-urwin",
+      "michael-herring"
+    ],
+    "winnerTeamId": null,
+    "winnerText": null
+  },
+  {
+    "id": "st-george-2026-award-stg-2026-08",
+    "tournamentId": "st-george-2026",
+    "name": "Hiroshima Award (Biggest Bomb)",
+    "notes": null,
+    "winnerType": "players",
+    "winnerPlayerIds": [
+      "colton-mckivitz"
+    ],
+    "winnerTeamId": null,
+    "winnerText": null
+  },
+  {
+    "id": "st-george-2026-award-stg-2026-09",
+    "tournamentId": "st-george-2026",
+    "name": "He Might Actually Be Left Handed Award (Worst Player)",
+    "notes": null,
+    "winnerType": "players",
+    "winnerPlayerIds": [
+      "rupert-pedler"
+    ],
+    "winnerTeamId": null,
+    "winnerText": null
+  },
+  {
+    "id": "st-george-2026-award-stg-2026-10",
+    "tournamentId": "st-george-2026",
+    "name": "The Cockroach Award",
+    "notes": "Somehow survives every hole and refuses to die.",
+    "winnerType": "players",
+    "winnerPlayerIds": [
+      "tom-brunskill"
+    ],
+    "winnerTeamId": null,
+    "winnerText": null
+  }
+]

@@ -1,0 +1,171 @@
+---
+import Base from '../layouts/Base.astro';
+import Scorebug from '../components/Scorebug.astro';
+import TeamLogo from '../components/TeamLogo.astro';
+import { latestTournament, tournamentStandings } from '../lib/stats.js';
+import { teamById, playerById, matchesForTournament } from '../lib/data.js';
+import { fullName, dateRange, num } from '../lib/format.js';
+
+const t = latestTournament();
+const city = t.location.split(',')[0].trim(); // "St George, Utah" -> "St George"
+const champMatch = matchesForTournament(t.id).find((m) => /championship/i.test(m.format));
+const st = tournamentStandings(t.id);
+const teams = t.teams; // [woodpeckers, silver-spoons]
+const ptsOf = (id) => st.teams.find((x) => x.team.id === id).points;
+const champTeam = teamById[st.winnerTeamId];
+const champPlayer = playerById[t.championPlayerId];
+const bright = { woodpeckers: 'var(--wp-bright)', 'silver-spoons': 'var(--ss-bright)' };
+
+// Next trip — details pulled from the 2027 flyer.
+const next = {
+  destination: 'Palm Springs, California',
+  dates: 'March 25–28, 2027',
+  flyer: '/next-trip-2027.jpg',
+  flyerFull: '/next-trip-2027.png',
+};
+---
+<Base active="home" title={null} description="The official home of the annual boys' golf trip.">
+
+  <!-- 1 · HEADER / TITLE -->
+  <section class="section" style="padding-top: clamp(2.2rem,7vw,4rem); padding-bottom: clamp(1.4rem,4vw,2rem)">
+    <div class="wrap reveal" data-d="0">
+      <h1 class="display" style="margin:0">The&nbsp;Annual</h1>
+      <p class="tagline">The official home of the annual boys' golf trip.</p>
+    </div>
+  </section>
+
+  <!-- 2 · RESULTS -->
+  <section class="section home-sec" style="padding-top:clamp(1.6rem,4vw,2.4rem)">
+    <div class="wrap">
+      <p class="eyebrow gold home-tag reveal">{t.year} Results · {city}</p>
+      <div class="reveal" data-d="1">
+        <Scorebug
+          aId={teams[0].id} bId={teams[1].id}
+          aScore={ptsOf(teams[0].id)} bScore={ptsOf(teams[1].id)}
+          winnerId={st.winnerTeamId}
+          aMeta={`Captain · ${fullName(teams[0].captainId)}`}
+          bMeta={`Captain · ${fullName(teams[1].captainId)}`}
+          tag={`Final · ${t.pointsAvailable} pts`}
+          big={true}
+        />
+        <div class="hero-underbug">
+          <a class="pill gold" href={`/tournaments/${t.id}`}>{t.name} →</a>
+          <span class="faint">{dateRange(t.startDate, t.endDate)} · {t.location}</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3 · AWARDS -->
+  <section class="section home-sec">
+    <div class="wrap">
+      <div class="home-head">
+        <p class="eyebrow gold home-tag">Awards · {t.year}</p>
+        <h2>The silverware</h2>
+      </div>
+      <div class="grid champ-grid">
+        <a class="card card--pad champ" href={`/tournaments/${t.id}#awards`} style={`--accent:${champTeam.color};--accent-bright:${bright[champTeam.id]}`}>
+          <p class="eyebrow">Team Champions · {t.year}</p>
+          <div class="champ__title"><TeamLogo teamId={champTeam.id} size={44} /><span>{champTeam.name}</span></div>
+          <p class="muted">Won the inaugural edition, {t.finalScore}. Captained by {fullName(champTeam.captainId)}.</p>
+        </a>
+        <a class="card card--pad champ champ--gold" href={`/players/${champPlayer.slug}`}>
+          <p class="eyebrow gold">Champion Golfer · {t.year}</p>
+          <div class="champ__title gold">{champPlayer.name}</div>
+          <p class="muted">Took the Individual Championship {champMatch.margin} in the Sunday singles finale at Falcon Ridge.</p>
+        </a>
+      </div>
+      <p class="faint home-morelink"><a href={`/tournaments/${t.id}#awards`}>See all {t.year} awards, including the dishonours →</a></p>
+    </div>
+  </section>
+
+  <!-- 4 · NEXT TRIP -->
+  <section class="section band">
+    <div class="wrap">
+      <div class="home-head">
+        <p class="eyebrow gold home-tag" style="margin-bottom:0">Next trip · 2027</p>
+      </div>
+      <div class="next-grid">
+        <div class="next-copy">
+          <p class="eyebrow">The desert calls</p>
+          <p class="next-dest">{next.destination}</p>
+          <p class="next-dates mono-nums">{next.dates}</p>
+          <p class="muted" style="margin-top:.9rem">The second edition heads for the desert — four days of golf under the San Jacinto mountains. The Silver Spoons will be coming for the trophy.</p>
+          <div class="chips" style="margin-top:1.1rem">
+            <span class="pill gold">To be contested</span>
+            <span class="pill">Palm Springs, CA</span>
+          </div>
+        </div>
+        <a class="flyer" href={next.flyerFull} target="_blank" rel="noopener" aria-label="View the 2027 trip flyer full size">
+          <img src={next.flyer} width="480" height="680" alt={`The 2027 trip — ${next.destination}, ${next.dates}`} loading="lazy" decoding="async" />
+          <span class="flyer__cue">⤢ Enlarge</span>
+        </a>
+      </div>
+    </div>
+  </section>
+</Base>
+
+<div class="lightbox" id="lightbox" hidden aria-hidden="true">
+  <img id="lightbox-img" src="" alt="" />
+</div>
+
+<style>
+  .tagline { margin-top: .6rem; font-family: var(--serif); font-style: italic; font-size: clamp(1.05rem, .95rem + .6vw, 1.35rem); color: var(--muted); }
+
+  /* clear, repeating section-heading device */
+  .home-sec { border-top: 1px solid var(--line); }
+  .home-tag { margin-bottom: 1rem; }
+  .home-head { margin-bottom: 1.4rem; }
+  .home-head h2 { font-size: clamp(1.5rem, 1.2rem + 1.6vw, 2.1rem); margin-top: .1rem; }
+
+  .hero-underbug { display: flex; flex-wrap: wrap; align-items: center; gap: .7rem 1rem; margin-top: 1rem; font-size: .85rem; }
+
+  .champ-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .champ__title { display: flex; align-items: center; gap: .6rem; font-family: var(--serif); font-weight: 600; font-size: clamp(1.4rem, 1rem + 2vw, 2rem); margin: .5rem 0 .6rem; }
+  .champ { border-color: color-mix(in srgb, var(--accent) 40%, var(--line)); }
+  .champ--gold { border-color: color-mix(in srgb, var(--gold-bright) 40%, var(--line)); background: linear-gradient(180deg, var(--gold-soft), var(--panel)); }
+  .home-morelink { margin-top: 1.1rem; font-size: .85rem; }
+  .home-morelink a { box-shadow: inset 0 -1px 0 var(--line-strong); }
+  .home-morelink a:hover { color: var(--text); box-shadow: inset 0 -1px 0 var(--gold-bright); }
+
+  /* Next-trip band — visually set apart as the finale */
+  .band { border-top: 1px solid var(--line); background: linear-gradient(180deg, var(--ink-2), var(--ink)); }
+  .next-grid { display: grid; grid-template-columns: 1fr auto; gap: clamp(1.4rem, 5vw, 3rem); align-items: center; }
+  .next-dest { font-family: var(--serif); font-weight: 600; font-size: clamp(1.8rem, 1.2rem + 3vw, 3rem); line-height: 1.02; letter-spacing: -.01em; margin-top: .4rem; }
+  .next-dates { font-weight: 700; font-size: clamp(1.05rem, .9rem + .8vw, 1.4rem); color: var(--gold); margin-top: .3rem; }
+  .flyer { position: relative; display: block; flex: none; border-radius: var(--r); overflow: hidden; border: 1px solid var(--line-strong); box-shadow: 0 10px 34px -14px rgba(22,34,27,.45); transition: transform .25s var(--ease), box-shadow .25s var(--ease); }
+  .flyer img { display: block; width: clamp(220px, 34vw, 340px); height: auto; }
+  .flyer:hover { transform: translateY(-3px) rotate(-.4deg); box-shadow: 0 18px 44px -14px rgba(22,34,27,.5); }
+  .flyer__cue { position: absolute; top: .5rem; right: .5rem; padding: .3rem .55rem; font-size: .68rem; font-weight: 700; letter-spacing: .03em; color: #fff; background: rgba(20,30,24,.62); border-radius: 999px; backdrop-filter: blur(2px); opacity: .9; }
+  .flyer:hover .flyer__cue { opacity: 1; background: rgba(20,30,24,.8); }
+
+  .lightbox { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: 4vmin; background: rgba(18,24,20,.86); backdrop-filter: blur(4px); cursor: zoom-out; }
+  .lightbox[hidden] { display: none; }
+  .lightbox img { max-width: 100%; max-height: 92vh; border-radius: 8px; box-shadow: 0 30px 80px -20px #000; }
+
+  @media (max-width: 720px) {
+    .champ-grid { grid-template-columns: 1fr; }
+    .next-grid { grid-template-columns: 1fr; }
+    .flyer { justify-self: center; }
+    .flyer img { width: min(78vw, 340px); }
+  }
+</style>
+
+<script is:inline>
+  (() => {
+    const link = document.querySelector('.flyer');
+    const box = document.getElementById('lightbox');
+    const img = document.getElementById('lightbox-img');
+    if (!link || !box) return;
+    const open = (e) => {
+      e.preventDefault();
+      img.src = link.getAttribute('href');
+      img.alt = link.querySelector('img')?.alt || '';
+      box.hidden = false; box.setAttribute('aria-hidden', 'false');
+    };
+    const close = () => { box.hidden = true; box.setAttribute('aria-hidden', 'true'); img.src = ''; };
+    link.addEventListener('click', open);
+    box.addEventListener('click', close);
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !box.hidden) close(); });
+  })();
+</script>

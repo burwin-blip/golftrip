@@ -1,0 +1,42 @@
+---
+import '@fontsource-variable/fraunces';
+import '@fontsource-variable/archivo';
+import '../styles/global.css';
+import Nav from '../components/Nav.astro';
+import Footer from '../components/Footer.astro';
+
+const { title, description, active } = Astro.props;
+const siteName = 'The Annual';
+const fullTitle = title ? `${title} — ${siteName}` : siteName;
+const desc = description || 'The official historical record of The Annual.';
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{fullTitle}</title>
+    <meta name="description" content={desc} />
+
+    <!-- Privacy: this is a private record for participants only. Never index. -->
+    <meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex" />
+    <meta name="googlebot" content="noindex, nofollow" />
+    <meta name="referrer" content="no-referrer" />
+
+    <meta name="theme-color" content="#FBFBF8" />
+    <meta property="og:title" content={fullTitle} />
+    <meta property="og:description" content={desc} />
+    <meta property="og:type" content="website" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/favicon.png" type="image/png" sizes="64x64" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main" style="position:absolute;left:-9999px;top:0;background:var(--gold);color:#000;padding:.5rem 1rem;border-radius:0 0 6px 0;z-index:100;font-weight:700" onfocus="this.style.left='0'" onblur="this.style.left='-9999px'">Skip to content</a>
+    <Nav active={active} />
+    <main id="main">
+      <slot />
+    </main>
+    <Footer />
+  </body>
+</html>

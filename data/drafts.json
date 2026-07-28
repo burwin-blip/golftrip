@@ -1,0 +1,82 @@
+[
+  {
+    "id": "st-george-2026-pick-1",
+    "tournamentId": "st-george-2026",
+    "pick": 1,
+    "teamId": "silver-spoons",
+    "captainId": "anthony-herring",
+    "playerId": "alan-lozer"
+  },
+  {
+    "id": "st-george-2026-pick-2",
+    "tournamentId": "st-george-2026",
+    "pick": 2,
+    "teamId": "woodpeckers",
+    "captainId": "tom-brunskill",
+    "playerId": "michael-herring"
+  },
+  {
+    "id": "st-george-2026-pick-3",
+    "tournamentId": "st-george-2026",
+    "pick": 3,
+    "teamId": "woodpeckers",
+    "captainId": "tom-brunskill",
+    "playerId": "colton-mckivitz"
+  },
+  {
+    "id": "st-george-2026-pick-4",
+    "tournamentId": "st-george-2026",
+    "pick": 4,
+    "teamId": "silver-spoons",
+    "captainId": "anthony-herring",
+    "playerId": "scott-b"
+  },
+  {
+    "id": "st-george-2026-pick-5",
+    "tournamentId": "st-george-2026",
+    "pick": 5,
+    "teamId": "silver-spoons",
+    "captainId": "anthony-herring",
+    "playerId": "miles-honens"
+  },
+  {
+    "id": "st-george-2026-pick-6",
+    "tournamentId": "st-george-2026",
+    "pick": 6,
+    "teamId": "woodpeckers",
+    "captainId": "tom-brunskill",
+    "playerId": "ben-urwin"
+  },
+  {
+    "id": "st-george-2026-pick-7",
+    "tournamentId": "st-george-2026",
+    "pick": 7,
+    "teamId": "woodpeckers",
+    "captainId": "tom-brunskill",
+    "playerId": "rupert-pedler"
+  },
+  {
+    "id": "st-george-2026-pick-8",
+    "tournamentId": "st-george-2026",
+    "pick": 8,
+    "teamId": "silver-spoons",
+    "captainId": "anthony-herring",
+    "playerId": "steve-urwin"
+  },
+  {
+    "id": "st-george-2026-pick-9",
+    "tournamentId": "st-george-2026",
+    "pick": 9,
+    "teamId": "silver-spoons",
+    "captainId": "anthony-herring",
+    "playerId": "ed-nelson"
+  },
+  {
+    "id": "st-george-2026-pick-10",
+    "tournamentId": "st-george-2026",
+    "pick": 10,
+    "teamId": "woodpeckers",
+    "captainId": "tom-brunskill",
+    "playerId": "chase-hellmers"
+  }
+]

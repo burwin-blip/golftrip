@@ -1,0 +1,520 @@
+---
+import Base from '../../layouts/Base.astro';
+import Scorebug from '../../components/Scorebug.astro';
+import MatchRow from '../../components/MatchRow.astro';
+import MatchSummary from '../../components/MatchSummary.astro';
+import TeamLogo from '../../components/TeamLogo.astro';
+import { tournaments, teamById, playerById, getCourse, matchesForTournament, teamRoster } from '../../lib/data.js';
+import {
+  tournamentStandings, sessionBreakdown, roundSummary,
+  draftForTournament, awardsForTournament, momentsForTournament,
+  playerLeaderboard, allPartnerships, handicapAnalysis, draftValue,
+  formatRecords, normalizeFormat, ANALYTICS_CAVEAT,
+} from '../../lib/stats.js';
+import { fullName, dateRange, num, pctText } from '../../lib/format.js';
+
+export function getStaticPaths() {
+  return tournaments.map((t) => ({ params: { id: t.id }, props: { t } }));
+}
+const { t } = Astro.props;
+const st = tournamentStandings(t.id);
+const teams = t.teams;
+const WP = teams[0].id, SS = teams[1].id;
+const ptsOf = (id) => st.teams.find((x) => x.team.id === id).points;
+const sb = sessionBreakdown(t.id);
+const rsum = roundSummary(t.id);
+const ms = matchesForTournament(t.id);
+const draft = draftForTournament(t.id);
+const awards = awardsForTournament(t.id);
+const moments = momentsForTournament(t.id);
+const champTeam = teamById[st.winnerTeamId];
+const champPlayer = playerById[t.championPlayerId];
+const champMatch = ms.find((m) => /championship/i.test(m.format));
+const board = playerLeaderboard();
+const partnerships = allPartnerships();
+const ha = handicapAnalysis(t.id);
+const dv = draftValue(t.id);
+const hcpById = Object.fromEntries(t.roster.map((r) => [r.playerId, r.handicapIndex]));
+
+const rosterFor = (teamId) => teamRoster(t.id, teamId).slice().sort((a, b) => a.handicapIndex - b.handicapIndex);
+
+// Format matrix (players × formats)
+const FORMATS = ['Scramble', 'Best Ball Match Play (NET)', '9-hole Shamble',
+  'Team Average Stableford', 'Singles Match Play', 'Individual Championship / Singles'];
+const FMT_SHORT = { 'Scramble': 'Scr', 'Best Ball Match Play (NET)': 'BB', '9-hole Shamble': 'Shm',
+  'Team Average Stableford': 'Stb', 'Singles Match Play': 'Sgl', 'Individual Championship / Singles': 'Chp' };
+const rosterAll = [...rosterFor(WP), ...rosterFor(SS)];
+const fmtMatrix = rosterAll.map((r) => {
+  const recs = Object.fromEntries(formatRecords(r.playerId).map((x) => [x.format, x]));
+  return { playerId: r.playerId, teamId: r.teamId, recs };
+});
+const usedFormats = FORMATS.filter((f) => fmtMatrix.some((row) => row.recs[f]));
+
+// Round scores table (from scorecards)
+const roundRole = {};
+for (const rnd of t.rounds) {
+  if (/best ?ball/i.test(rnd.format)) roundRole[rnd.id] = 'bb';
+  else if (/shamble/i.test(rnd.format)) roundRole[rnd.id] = 'sh';
+  else if (/stableford/i.test(rnd.format)) roundRole[rnd.id] = 'st';
+  else if (/singles|championship/i.test(rnd.format)) roundRole[rnd.id] = 'sg';
+}
+const scoreRows = rosterAll.map((r) => {
+  const rec = { playerId: r.playerId, teamId: r.teamId, bb: null, sh: null, st: null, sgNet: null, sgResult: null };
+  for (const s of t.scores) {
+    if (s.playerId !== r.playerId) continue;
+    const role = roundRole[s.roundId];
+    if (role === 'bb') rec.bb = s.net;
+    else if (role === 'sh') rec.sh = s.net;
+    else if (role === 'st') rec.st = s.stableford;
+    else if (role === 'sg') { rec.sgNet = s.net; rec.sgResult = s.result; }
+  }
+  return rec;
+});
+
+// Quick insights (computed)
+const bbRound = rsum.find((r) => /best ?ball/i.test(r.round.format));
+const satRounds = rsum.filter((r) => r.round.day === 'Saturday');
+const satWP = satRounds.reduce((s, r) => s + r.scores[WP], 0);
+const satSS = satRounds.reduce((s, r) => s + r.scores[SS], 0);
+const singlesRound = rsum.find((r) => /singles/i.test(r.round.format) && r.round.number === 5);
+const mostOver = ha.rows.find((r) => r.label === 'Most Overperformed Handicap');
+const bestPair = partnerships[0];
+const insights = [
+  { k: 'Points leader', v: `${playerById[board[0].player.id].name}`, d: `${num(board[0].pointsEarned)} of ${num(board[0].pointsAvailable)} points earned — the most in the field.` },
+  { k: 'Best Ball dominance', v: `${teamById[bbRound.winnerTeamId].name} ${num(bbRound.scores[WP])}–${num(bbRound.scores[SS])}`, d: `The largest session swing of the week; five of six points in a single afternoon.` },
+  { k: 'Saturday split', v: `${num(satWP)}–${num(satSS)}`, d: `Both teams traded a session apiece — a ${num(satWP)}–${num(satSS)} Saturday kept the margin intact.` },
+  { k: 'Final-day stalemate', v: `Singles ${num(singlesRound.scores[WP])}–${num(singlesRound.scores[SS])}`, d: `A halved singles session preserved the overnight lead.` },
+  { k: 'Best partnership', v: `${fullName(bestPair.players[0])} + ${fullName(bestPair.players[1])}`, d: `${num(bestPair.earned)}/${num(bestPair.available)} points (${pctText(bestPair.pointPct)}) — the top pairing of the event.` },
+  { k: 'Most overperformed', v: `${fullName(mostOver.playerId)}`, d: `Beat a handicap-based expectation by ${num(mostOver.overPoints)} points — the field's biggest overperformance.` },
+];
+
+const bright = { woodpeckers: 'var(--wp-bright)', 'silver-spoons': 'var(--ss-bright)' };
+const outc = (rec) => rec ? (rec.w ? 'w' : rec.h ? 'h' : 'l') : null;
+
+const TABS = [
+  ['overview', 'Overview'], ['teams', 'Teams'], ['draft', 'Draft'],
+  ['matches', 'Matches'], ['stats', 'Stats'], ['awards', 'Awards'], ['moments', 'Moments'],
+];
+---
+<Base active="tournament" title={t.name} description={`Full scoreboard, stats and analytics — ${t.name}. Final: ${t.finalScore}.`}>
+
+  <!-- HEADER -->
+  <section class="section" style="padding-bottom: clamp(1.2rem,3vw,1.6rem)">
+    <div class="wrap">
+      <a class="back-link" href="/">← The Annual</a>
+      <div class="reveal" style="margin-top:.9rem">
+        <p class="eyebrow gold">Edition {t.edition} · {t.status} · {t.pointsAvailable} points</p>
+        <h1 class="display" style="font-size:clamp(2rem,5vw,3.6rem);margin:.4rem 0 .5rem">{t.name}</h1>
+        <p class="muted">{dateRange(t.startDate, t.endDate)} · {t.location} · Final round at {t.finalRoundLocation}</p>
+      </div>
+      <div class="reveal" data-d="2" style="margin-top:1.2rem">
+        <Scorebug aId={WP} bId={SS} aScore={ptsOf(WP)} bScore={ptsOf(SS)} winnerId={st.winnerTeamId}
+          aMeta={`${st.teams[0].matchW}–${st.teams[0].matchH}–${st.teams[0].matchL} in matches`}
+          bMeta={`${st.teams[1].matchW}–${st.teams[1].matchH}–${st.teams[1].matchL} in matches`}
+          tag="Final" big={true} />
+      </div>
+    </div>
+  </section>
+
+  <!-- TABS -->
+  <div class="tabs" id="tabs">
+    <div class="tabbar-wrap"><div class="wrap"><div class="tabbar" role="tablist">
+      {TABS.map(([id, label], i) => (
+        <button class:list={["tab", { active: i === 0 }]} role="tab" data-tab={id} id={`tab-${id}`}>{label}</button>
+      ))}
+    </div></div></div>
+
+    <!-- OVERVIEW -->
+    <section class="tabpanel active section" data-panel="overview">
+      <div class="wrap">
+        <div class="section-head"><div><p class="eyebrow">Points by Session</p><h2>Round-by-round</h2></div></div>
+        <div class="table-scroll">
+          <table class="data">
+            <thead><tr><th>Round</th><th>Course</th><th>Format</th><th class="num">Pts</th>
+              <th class="num"><span class="th-team"><TeamLogo teamId={WP} size={18} /></span></th>
+              <th class="num"><span class="th-team"><TeamLogo teamId={SS} size={18} /></span></th>
+              <th>Session</th></tr></thead>
+            <tbody>
+              {rsum.map((r) => (
+                <tr>
+                  <td class="name">R{r.round.number} · {r.round.day}</td>
+                  <td>{getCourse(r.round.courseId).name}</td>
+                  <td class="faint">{r.round.format}</td>
+                  <td class="num tabnums">{r.pointsAvailable}</td>
+                  <td class="num tabnums" style={r.winnerTeamId === WP ? 'font-weight:700;color:var(--wp)' : ''}>{num(r.scores[WP])}</td>
+                  <td class="num tabnums" style={r.winnerTeamId === SS ? 'font-weight:700;color:var(--ss)' : ''}>{num(r.scores[SS])}</td>
+                  <td>{r.winnerTeamId ? <span class="tbadge tbadge--sm"><TeamLogo teamId={r.winnerTeamId} size={16} />{teamById[r.winnerTeamId].name}</span> : <span class="faint">Halved</span>}</td>
+                </tr>
+              ))}
+              <tr class="total-row">
+                <td class="name" colspan="4">Final</td>
+                <td class="num tabnums" style={st.winnerTeamId === WP ? 'font-weight:800;color:var(--wp)' : ''}>{num(ptsOf(WP))}</td>
+                <td class="num tabnums" style={st.winnerTeamId === SS ? 'font-weight:800;color:var(--ss)' : ''}>{num(ptsOf(SS))}</td>
+                <td><span class="pill gold">♛ {champTeam.name}</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="section-head" style="margin-top:2.4rem"><div><p class="eyebrow">The Read</p><h2>Quick insights</h2></div></div>
+        <div class="grid insight-grid">
+          {insights.map((i) => (
+            <div class="tile"><div class="tile__k">{i.k}</div><div class="insight-v">{i.v}</div><div class="tile__sub">{i.d}</div></div>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    <!-- TEAMS -->
+    <section class="tabpanel section" data-panel="teams">
+      <div class="wrap">
+        <div class="section-head"><div><p class="eyebrow">The Field</p><h2>Teams &amp; rosters</h2></div><span class="faint">Handicap index shown</span></div>
+        <div class="grid roster-grid">
+          {[WP, SS].map((id) => {
+            const team = teamById[id];
+            const roster = rosterFor(id);
+            const stand = st.teams.find((x) => x.team.id === id);
+            return (
+              <div class="card card--pad roster" style={`--accent:${team.color}`}>
+                <div class="roster__head">
+                  <div class="tbadge"><TeamLogo teamId={id} size={44} /><span style="font-family:var(--serif);font-size:1.35rem;color:color-mix(in srgb,var(--accent) 80%,#10130f)">{team.name}</span></div>
+                  {st.winnerTeamId === id && <span class="pill gold">♛ Champions</span>}
+                </div>
+                <p class="faint" style="font-size:.82rem;margin:.2rem 0 .9rem">Captain {fullName(team.captainId)} · {num(stand.points)} pts · {stand.matchW}–{stand.matchH}–{stand.matchL}</p>
+                <ul class="hairline-list">
+                  {roster.map((r) => (
+                    <li>
+                      <a class="name" href={`/players/${playerById[r.playerId].slug}`} style="flex:1">{playerById[r.playerId].name}{r.playerId === team.captainId && <span class="pill" style="margin-left:.5rem;font-size:.62rem;padding:.1rem .45rem">C</span>}</a>
+                      <span class="tabnums faint">{r.handicapIndex.toFixed(1)}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </section>
+
+    <!-- DRAFT -->
+    <section class="tabpanel section" data-panel="draft">
+      <div class="wrap">
+        <div class="section-head"><div><p class="eyebrow">Selection</p><h2>The draft</h2></div><span class="faint">8:00 a.m., day one · snake order</span></div>
+        <div class="draft">
+          {draft.map((d) => {
+            const team = teamById[d.teamId];
+            return (
+              <div class="draft__pick card" style={`--accent:${team.color}`}>
+                <span class="draft__no mono-nums">{String(d.pick).padStart(2, '0')}</span>
+                <TeamLogo teamId={d.teamId} size={20} />
+                <a class="name" href={`/players/${playerById[d.playerId].slug}`}>{playerById[d.playerId].name}</a>
+                <span class="faint draft__team">{team.name}</span>
+              </div>
+            );
+          })}
+        </div>
+
+        <div class="section-head" style="margin-top:2.4rem"><div><p class="eyebrow">Draft Guide</p><h2>Composite Draft Value</h2></div></div>
+        <p class="muted" style="max-width:64ch;margin-bottom:1rem;font-size:.92rem">Composite = points earned + a later-pick bonus (0.2 × pick) + a scorecard index (net scoring vs the field). It rewards production <em>and</em> the value of getting it late.</p>
+        <div class="table-scroll">
+          <table class="data">
+            <thead><tr><th class="num">Rank</th><th class="num">Pick</th><th>Player</th><th>Team</th><th class="num">Hcp</th><th class="num">Match Pts</th><th class="num">Scorecard Idx</th><th class="num">Late Bonus</th><th class="num">Composite</th><th>Label</th></tr></thead>
+            <tbody>
+              {dv.map((r) => (
+                <tr class:list={[{ 'hl-good': r.label === 'Best Draft Pick' || r.label === 'Draft Steal', 'hl-bad': r.label === 'Draft Miss' }]}>
+                  <td class="rank">{r.rank}</td>
+                  <td class="num tabnums">{r.pick}</td>
+                  <td class="name"><a href={`/players/${playerById[r.playerId].slug}`}>{playerById[r.playerId].name}</a></td>
+                  <td><TeamLogo teamId={r.teamId} size={18} /></td>
+                  <td class="num tabnums">{hcpById[r.playerId].toFixed(1)}</td>
+                  <td class="num tabnums">{num(r.matchPoints)}</td>
+                  <td class="num tabnums" style={`color:${r.scorecardIndex >= 0 ? 'var(--wp)' : 'var(--faint)'}`}>{r.scorecardIndex > 0 ? '+' : ''}{num(r.scorecardIndex)}</td>
+                  <td class="num tabnums faint">+{num(r.laterPickBonus)}</td>
+                  <td class="num tabnums gold" style="font-weight:700">{num(r.composite)}</td>
+                  <td>{r.label && <span class:list={["pill", { gold: r.label !== 'Draft Miss' }]}>{r.label}</span>}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p class="caveat">⚠ {ANALYTICS_CAVEAT}</p>
+      </div>
+    </section>
+
+    <!-- MATCHES -->
+    <section class="tabpanel section" data-panel="matches">
+      <div class="wrap">
+        <div class="section-head"><div><p class="eyebrow">Every Match</p><h2>Round by round</h2></div><a class="back-link" href="/matches">All matches &amp; filters →</a></div>
+        <div class="stack">
+          {sb.map((s) => {
+            const c = getCourse(s.round.courseId);
+            return (
+              <div class="round-block">
+                <div class="round-head">
+                  <div>
+                    <span class="round-no mono-nums">R{s.round.number}</span>
+                    <span class="round-title">{s.round.day} · {c.name}{c.nine ? ` — ${c.nine}` : ''}</span>
+                    <div class="faint" style="font-size:.8rem">{s.round.holes}-hole {s.round.format}</div>
+                  </div>
+                  <div class="round-score tabnums">
+                    <span style={s.leaderTeamId === WP ? 'color:var(--wp);font-weight:700' : 'color:var(--muted)'}>{num(s.scores[WP])}</span>
+                    <span class="faint">–</span>
+                    <span style={s.leaderTeamId === SS ? 'color:var(--ss);font-weight:700' : 'color:var(--muted)'}>{num(s.scores[SS])}</span>
+                  </div>
+                </div>
+                <div class="matches">
+                  {s.matches.map((m) => (
+                    <div class="match-block">
+                      <MatchRow match={m} />
+                      <MatchSummary match={m} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </section>
+
+    <!-- STATS -->
+    <section class="tabpanel section" data-panel="stats">
+      <div class="wrap">
+        <!-- Points leaderboard -->
+        <div class="section-head"><div><p class="eyebrow">Individual</p><h2>Points leaderboard</h2></div></div>
+        <div class="table-scroll">
+          <table class="data">
+            <thead><tr><th>#</th><th>Player</th><th>Team</th><th class="num">P</th><th class="num">W–H–L</th><th class="num">Pts</th><th class="num">Pt %</th></tr></thead>
+            <tbody>
+              {board.map((c, i) => (
+                <tr>
+                  <td class="rank">{i + 1}</td>
+                  <td class="name"><a href={`/players/${c.player.slug}`}>{c.player.name}</a></td>
+                  <td><TeamLogo teamId={c.appearances[0].teamId} size={18} /></td>
+                  <td class="num tabnums">{c.played}</td>
+                  <td class="num tabnums">{c.w}–{c.h}–{c.l}</td>
+                  <td class="num tabnums gold">{num(c.pointsEarned)}</td>
+                  <td class="num tabnums">{pctText(c.pointPct)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Format records matrix -->
+        <div class="section-head" style="margin-top:2.4rem"><div><p class="eyebrow">Splits</p><h2>Format records</h2></div><span class="faint">W · H · L per format</span></div>
+        <div class="table-scroll">
+          <table class="data matrix">
+            <thead><tr><th>Player</th>{usedFormats.map((f) => <th class="num" title={f}>{FMT_SHORT[f]}</th>)}</tr></thead>
+            <tbody>
+              {fmtMatrix.map((row) => (
+                <tr>
+                  <td class="name"><span class="tbadge tbadge--sm"><TeamLogo teamId={row.teamId} size={16} /><a href={`/players/${playerById[row.playerId].slug}`}>{playerById[row.playerId].name}</a></span></td>
+                  {usedFormats.map((f) => {
+                    const o = outc(row.recs[f]);
+                    return <td class="num">{o ? <b class:list={["fmtcell", o]}>{o.toUpperCase()}</b> : <span class="faint">·</span>}</td>;
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Partnerships -->
+        <div class="section-head" style="margin-top:2.4rem"><div><p class="eyebrow">Alliances</p><h2>Partnership records</h2></div></div>
+        <div class="table-scroll">
+          <table class="data">
+            <thead><tr><th>Pairing</th><th class="num">P</th><th class="num">W–H–L</th><th class="num">Pts</th><th class="num">Pt %</th></tr></thead>
+            <tbody>
+              {partnerships.map((pr) => (
+                <tr>
+                  <td class="name">{pr.players.map((id, idx) => <Fragment>{idx > 0 && <span class="faint"> + </span>}<a href={`/players/${playerById[id].slug}`}>{fullName(id)}</a></Fragment>)}</td>
+                  <td class="num tabnums">{pr.played}</td>
+                  <td class="num tabnums">{pr.w}–{pr.h}–{pr.l}</td>
+                  <td class="num tabnums">{num(pr.earned)}</td>
+                  <td class="num tabnums">{pctText(pr.pointPct)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Round scores -->
+        <div class="section-head" style="margin-top:2.4rem"><div><p class="eyebrow">Scorecards</p><h2>Round scores</h2></div><span class="faint">Net unless noted</span></div>
+        <div class="table-scroll">
+          <table class="data">
+            <thead><tr><th>Player</th><th>Team</th><th class="num">Best Ball</th><th class="num">Shamble (9)</th><th class="num">Stableford</th><th>Singles</th></tr></thead>
+            <tbody>
+              {scoreRows.map((r) => (
+                <tr>
+                  <td class="name"><a href={`/players/${playerById[r.playerId].slug}`}>{playerById[r.playerId].name}</a></td>
+                  <td><TeamLogo teamId={r.teamId} size={18} /></td>
+                  <td class="num tabnums">{r.bb ?? '—'}</td>
+                  <td class="num tabnums">{r.sh ?? '—'}</td>
+                  <td class="num tabnums">{r.st ?? '—'}</td>
+                  <td class="tabnums">{r.sgResult || '—'}{r.sgNet ? <span class="faint"> · {r.sgNet}</span> : ''}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Handicap analysis -->
+        <div class="section-head" style="margin-top:2.4rem"><div><p class="eyebrow">Analytics</p><h2>Handicap-adjusted performance</h2></div><span class="faint">Field avg hcp {ha.fieldAvg.toFixed(1)}</span></div>
+        <div class="table-scroll">
+          <table class="data">
+            <thead><tr><th>Player</th><th class="num">Hcp</th><th class="num">Pts</th><th class="num">Point %</th><th class="num">Expected %</th><th class="num">Over / Under</th><th>Tier</th><th>Label</th></tr></thead>
+            <tbody>
+              {ha.rows.slice().sort((a, b) => b.overPoints - a.overPoints).map((r) => (
+                <tr class:list={[{ 'hl-good': r.label === 'Most Overperformed Handicap', 'hl-bad': r.label === 'Most Underperformed Handicap' }]}>
+                  <td class="name"><a href={`/players/${playerById[r.playerId].slug}`}>{fullName(r.playerId)}</a></td>
+                  <td class="num tabnums">{r.handicap.toFixed(1)}</td>
+                  <td class="num tabnums">{num(r.earned)}</td>
+                  <td class="num tabnums">{pctText(Math.round(r.pointPct * 1000) / 10)}</td>
+                  <td class="num tabnums faint">{pctText(Math.round(r.expectedPct * 1000) / 10)}</td>
+                  <td class="num tabnums" style={`color:${r.overPoints >= 0 ? 'var(--wp)' : '#b4453a'};font-weight:600`}>{r.overPoints > 0 ? '+' : ''}{num(Math.round(r.overPoints * 10) / 10)}</td>
+                  <td><span class="pill">{r.tier}</span></td>
+                  <td>{r.label && <span class:list={["pill", { gold: r.overPoints >= 0 }]}>{r.label.replace(' Handicap', '')}</span>}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p class="caveat">⚠ {ANALYTICS_CAVEAT}</p>
+      </div>
+    </section>
+
+    <!-- AWARDS -->
+    <section class="tabpanel section" data-panel="awards">
+      <div class="wrap">
+        <div class="section-head"><div><p class="eyebrow gold">The Ceremony</p><h2>The trophy cabinet</h2></div><span class="faint">{awards.length} presented</span></div>
+        <div class="cabinet">
+          {awards.map((a) => {
+            const isGold = /champion|team champions|shot of/i.test(a.name);
+            const winner = a.winnerType === 'team' ? teamById[a.winnerTeamId].name
+              : a.winnerType === 'players' ? a.winnerPlayerIds.map((id) => playerById[id].name).join(' & ')
+              : a.winnerText;
+            return (
+              <div class:list={["award-card card", { 'award-card--gold': isGold }]}>
+                <div class="award-card__cup">{isGold ? '🏆' : '🎖'}</div>
+                <div class="award-card__name">{a.name}</div>
+                <div class="award-card__winner">
+                  {a.winnerType === 'players'
+                    ? a.winnerPlayerIds.map((id, idx) => <Fragment>{idx > 0 && <span class="faint"> &amp; </span>}<a href={`/players/${playerById[id].slug}`}>{playerById[id].name}</a></Fragment>)
+                    : a.winnerType === 'team' ? <a href={`/tournaments/${t.id}`}>{winner}</a> : <span>{winner}</span>}
+                </div>
+                {a.notes && <p class="award-card__note">“{a.notes}”</p>}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </section>
+
+    <!-- MOMENTS -->
+    <section class="tabpanel section" data-panel="moments">
+      <div class="wrap">
+        <div class="section-head"><div><p class="eyebrow">Beyond the Numbers</p><h2>Moments of the tournament</h2></div><a class="back-link" href="/lore">Full lore →</a></div>
+        <div class="moments-list">
+          {t.rounds.map((rnd) => {
+            const ms2 = moments.filter((m) => m.roundNumber === rnd.number);
+            if (!ms2.length) return null;
+            return (
+              <div class="mom-round">
+                <div class="mom-round__label"><span class="round-no mono-nums">R{rnd.number}</span><span class="faint">{rnd.day} · {normalizeFormat(rnd.format)}</span></div>
+                <div class="grid mom-grid">
+                  {ms2.map((m) => (
+                    <article class="card card--pad mom-item" style={m.subjectTeamId ? `--accent:${teamById[m.subjectTeamId].color}` : '--accent:var(--gold-bright)'}>
+                      <div class="mom-cat">{m.subjectTeamId && <TeamLogo teamId={m.subjectTeamId} size={20} />}<span class="pill">{m.category}</span></div>
+                      <h3 style="font-size:1.1rem;margin:.2rem 0 .3rem">{m.title}</h3>
+                      <p class="muted" style="font-size:.92rem">{m.description}</p>
+                      {m.subjectPlayerIds && <div class="chips" style="margin-top:.6rem">{m.subjectPlayerIds.map((id) => <a class="pill" href={`/players/${playerById[id].slug}`}>{fullName(id)}</a>)}</div>}
+                    </article>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </section>
+  </div>
+</Base>
+
+<noscript><style>.tabpanel{display:block!important}.tabbar{display:none}</style></noscript>
+
+<style>
+  .tabbar-wrap { position: sticky; top: 63px; z-index: 40; background: color-mix(in srgb, var(--ink) 90%, transparent); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
+  .tabbar { display: flex; gap: .2rem; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .tabbar::-webkit-scrollbar { display: none; }
+  .tab { flex: none; background: none; border: 0; padding: .9rem .8rem; font-family: var(--sans); font-size: .85rem; font-weight: 600; color: var(--muted); border-bottom: 2px solid transparent; white-space: nowrap; }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--text); border-bottom-color: var(--gold-bright); }
+  .tabpanel:not(.active) { display: none; }
+  .tabpanel { padding-top: clamp(1.6rem,4vw,2.4rem); }
+
+  .th-team { display: inline-flex; }
+  .total-row td { border-top: 2px solid var(--line-strong); font-weight: 700; }
+  .insight-grid { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+  .insight-v { font-family: var(--serif); font-size: 1.25rem; font-weight: 600; margin: .35rem 0 .35rem; color: var(--text); }
+
+  .roster-grid { grid-template-columns: 1fr 1fr; }
+  .roster { border-color: color-mix(in srgb, var(--accent) 26%, var(--line)); border-top: 4px solid var(--accent); }
+  .roster__head { display: flex; align-items: center; justify-content: space-between; gap: .5rem; }
+
+  .draft { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: .5rem; }
+  .draft__pick { display: flex; align-items: center; gap: .65rem; padding: .6rem .8rem; border-left: 3px solid var(--accent); }
+  .draft__no { font-family: var(--serif); font-size: 1.1rem; color: var(--faint); min-width: 1.6rem; }
+  .draft__pick .name { flex: 1; }
+  .draft__team { font-size: .72rem; }
+
+  tr.hl-good { background: color-mix(in srgb, var(--wp) 7%, var(--panel)); }
+  tr.hl-bad { background: color-mix(in srgb, #b4453a 6%, var(--panel)); }
+  .caveat { font-size: .78rem; color: var(--muted); margin-top: .8rem; background: var(--gold-soft); border: 1px solid color-mix(in srgb, var(--gold-bright) 30%, transparent); border-radius: var(--r-sm); padding: .55rem .8rem; }
+
+  .round-block + .round-block { margin-top: 2rem; }
+  .round-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: .8rem; padding-bottom: .7rem; border-bottom: 1px solid var(--line); }
+  .round-no { font-family: var(--serif); color: var(--gold); font-size: 1.1rem; margin-right: .6rem; }
+  .round-title { font-family: var(--serif); font-size: 1.05rem; }
+  .round-score { font-size: 1.15rem; display: flex; gap: .5rem; align-items: center; white-space: nowrap; }
+  .match-story { font-size: .8rem; color: var(--muted); font-style: italic; margin: .35rem 0 .2rem .6rem; padding-left: .7rem; border-left: 2px solid var(--line-strong); }
+
+  table.matrix .fmtcell { width: 1.5rem; height: 1.5rem; display: inline-grid; place-items: center; border-radius: 5px; font-size: .72rem; font-weight: 800; }
+  .fmtcell.w { background: var(--wp-soft); color: var(--wp-ink); }
+  .fmtcell.h { background: var(--gold-soft); color: var(--gold); }
+  .fmtcell.l { background: var(--panel-2); color: var(--faint); box-shadow: inset 0 0 0 1px var(--line); }
+
+  .cabinet { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1rem; }
+  .award-card { padding: 1.3rem 1.2rem; display: flex; flex-direction: column; gap: .35rem; border-top: 3px solid var(--line-strong); }
+  .award-card--gold { border-top-color: var(--gold-bright); background: linear-gradient(180deg, var(--gold-soft), var(--panel)); }
+  .award-card__cup { font-size: 1.6rem; line-height: 1; }
+  .award-card__name { font-family: var(--serif); font-size: 1.08rem; line-height: 1.2; margin-top: .2rem; }
+  .award-card__winner { font-weight: 700; }
+  .award-card--gold .award-card__winner { color: var(--gold); }
+  .award-card__note { font-size: .85rem; font-style: italic; color: var(--muted); margin-top: .2rem; }
+
+  .mom-round + .mom-round { margin-top: 2rem; }
+  .mom-round__label { display: flex; align-items: baseline; gap: .7rem; margin-bottom: .9rem; padding-bottom: .6rem; border-bottom: 1px solid var(--line); }
+  .mom-grid { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+  .mom-item { border-left: 3px solid var(--accent); }
+  .mom-cat { display: flex; align-items: center; gap: .5rem; margin-bottom: .4rem; }
+
+  @media (max-width: 640px) { .roster-grid { grid-template-columns: 1fr; } }
+</style>
+
+<script is:inline>
+  (() => {
+    const root = document.getElementById('tabs');
+    if (!root) return;
+    const tabs = [...root.querySelectorAll('.tab')];
+    const panels = [...root.querySelectorAll('.tabpanel')];
+    function activate(id, push) {
+      tabs.forEach((t) => t.classList.toggle('active', t.dataset.tab === id));
+      panels.forEach((p) => p.classList.toggle('active', p.dataset.panel === id));
+      if (push && history.replaceState) history.replaceState(null, '', '#' + id);
+    }
+    tabs.forEach((t) => t.addEventListener('click', () => activate(t.dataset.tab, true)));
+    const hash = location.hash.replace('#', '');
+    if (hash && tabs.some((t) => t.dataset.tab === hash)) activate(hash, false);
+  })();
+</script>

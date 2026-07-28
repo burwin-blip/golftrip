@@ -1,0 +1,10 @@
+---
+import { latestTournament } from '../lib/stats.js';
+const t = latestTournament();
+---
+<footer class="footer">
+  <div class="wrap">
+    <span>The Annual · A private record for the participants of The Annual.</span>
+    <span class="faint">Current champions crowned at {t.name}. Not indexed, not for public distribution.</span>
+  </div>
+</footer>
