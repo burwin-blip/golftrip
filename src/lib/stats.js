@@ -139,7 +139,7 @@ export function careerStats(playerId) {
 
   // Tournaments this player appeared in, with team + handicap + draft context.
   const appearances = tournaments
-    .filter((t) => rosterForTournament(t.id).some((r) => r.playerId === playerId))
+    .filter((t) => t.status === 'completed' && rosterForTournament(t.id).some((r) => r.playerId === playerId))
     .map((t) => {
       const rr = rosterForTournament(t.id).find((r) => r.playerId === playerId);
       const pick = drafts.find((d) => d.tournamentId === t.id && d.playerId === playerId);
@@ -271,7 +271,8 @@ export function allTimeSeries() {
       titles: 0, played: 0, totalPoints: 0,
     });
   }
-  for (const t of tournaments) {
+  const completed = completedTournaments();
+  for (const t of completed) {
     const st = tournamentStandings(t.id);
     for (const row of st.teams) {
       const f = franchises[row.team.id];
@@ -281,14 +282,23 @@ export function allTimeSeries() {
     }
   }
   const arr = Object.values(franchises).sort((a, b) => b.titles - a.titles);
-  return { franchises: arr, editions: tournaments.length };
+  return { franchises: arr, editions: completed.length };
 }
 
+// Every tournament, newest first (includes upcoming) — for navigation/listing.
 export function allTournaments() {
   return tournaments.slice().sort((a, b) => b.year - a.year);
 }
+// ONLY completed tournaments feed stats/records/careers. Upcoming events never do.
+export function completedTournaments() {
+  return tournaments.filter((t) => t.status === 'completed').sort((a, b) => b.year - a.year);
+}
+export function upcomingTournaments() {
+  return tournaments.filter((t) => t.status === 'upcoming').sort((a, b) => a.year - b.year);
+}
+// The most recent COMPLETED tournament (drives home "results", champions, footer).
 export function latestTournament() {
-  return allTournaments()[0];
+  return completedTournaments()[0];
 }
 
 // ---------------------------------------------------------------------------
@@ -343,7 +353,7 @@ export function records() {
 
   // Largest session swing (biggest team point gap in a single session).
   let swing = null;
-  for (const t of tournaments) {
+  for (const t of completedTournaments()) {
     for (const s of sessionBreakdown(t.id)) {
       const vals = Object.entries(s.scores).sort((a, b) => b[1] - a[1]);
       const gap = round1(vals[0][1] - vals[1][1]);
@@ -363,7 +373,7 @@ export function records() {
 
   // Lowest net round on record (any complete round with a net score).
   let lowNet = null;
-  for (const t of tournaments) {
+  for (const t of completedTournaments()) {
     for (const sc of t.scores || []) {
       if (sc.net == null || !sc.completeRound) continue;
       const rnd = roundById[sc.roundId];
@@ -375,7 +385,7 @@ export function records() {
 
   // Best Stableford card on record.
   let bestStbl = null;
-  for (const t of tournaments) {
+  for (const t of completedTournaments()) {
     for (const sc of t.scores || []) {
       if (sc.stableford == null) continue;
       if (!bestStbl || sc.stableford > bestStbl.stableford)
@@ -387,7 +397,7 @@ export function records() {
 }
 
 export function hallOfFame() {
-  const champions = allTournaments().map((t) => {
+  const champions = completedTournaments().map((t) => {
     const st = tournamentStandings(t.id);
     return {
       tournament: t,
@@ -407,6 +417,31 @@ export function momentsForTournament(tid) {
 }
 export function draftForTournament(tid) {
   return drafts.filter((d) => d.tournamentId === tid).sort((a, b) => a.pick - b.pick);
+}
+
+// Eligible-player pool for an UPCOMING tournament: everyone who has played a
+// completed event, plus anyone explicitly confirmed for this one. New blokes
+// (no record yet) appear once `confirmedFor` includes this tournament's id.
+// Sorted by career points so captains see the most productive players first.
+export function draftPoolFor(tid) {
+  return players
+    .map((p) => {
+      const c = careerStats(p.id);
+      const last = c.appearances[c.appearances.length - 1] || null;
+      const confirmed = (p.confirmedFor || []).includes(tid);
+      return {
+        player: p, confirmed,
+        eligible: c.played > 0 || confirmed,
+        played: c.played, w: c.w, h: c.h, l: c.l,
+        pointsEarned: c.pointsEarned, pointPct: c.pointPct,
+        teamId: last ? last.teamId : null,
+        handicap: last ? last.handicapIndex : null,
+        isChampion: c.individualTitles > 0,
+        isNew: c.played === 0,
+      };
+    })
+    .filter((x) => x.eligible)
+    .sort((a, b) => b.pointsEarned - a.pointsEarned || a.player.name.localeCompare(b.player.name));
 }
 
 // ===========================================================================

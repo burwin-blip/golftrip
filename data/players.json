@@ -6,7 +6,8 @@
     "active": true,
     "country": null,
     "nickname": null,
-    "notes": null
+    "notes": null,
+    "confirmedFor": []
   },
   {
     "id": "tom-brunskill",
@@ -15,7 +16,8 @@
     "active": true,
     "country": null,
     "nickname": null,
-    "notes": null
+    "notes": null,
+    "confirmedFor": []
   },
   {
     "id": "michael-herring",
@@ -24,7 +26,8 @@
     "active": true,
     "country": null,
     "nickname": null,
-    "notes": null
+    "notes": null,
+    "confirmedFor": []
   },
   {
     "id": "rupert-pedler",
@@ -33,7 +36,8 @@
     "active": true,
     "country": null,
     "nickname": null,
-    "notes": null
+    "notes": null,
+    "confirmedFor": []
   },
   {
     "id": "chase-hellmers",
@@ -42,7 +46,8 @@
     "active": true,
     "country": null,
     "nickname": null,
-    "notes": null
+    "notes": null,
+    "confirmedFor": []
   },
   {
     "id": "colton-mckivitz",
@@ -51,7 +56,8 @@
     "active": true,
     "country": null,
     "nickname": null,
-    "notes": null
+    "notes": null,
+    "confirmedFor": []
   },
   {
     "id": "anthony-herring",
@@ -60,7 +66,8 @@
     "active": true,
     "country": null,
     "nickname": null,
-    "notes": null
+    "notes": null,
+    "confirmedFor": []
   },
   {
     "id": "steve-urwin",
@@ -69,7 +76,8 @@
     "active": true,
     "country": null,
     "nickname": null,
-    "notes": null
+    "notes": null,
+    "confirmedFor": []
   },
   {
     "id": "scott-b",
@@ -78,7 +86,8 @@
     "active": true,
     "country": null,
     "nickname": null,
-    "notes": null
+    "notes": null,
+    "confirmedFor": []
   },
   {
     "id": "alan-lozer",
@@ -87,7 +96,8 @@
     "active": true,
     "country": null,
     "nickname": null,
-    "notes": null
+    "notes": null,
+    "confirmedFor": []
   },
   {
     "id": "ed-nelson",
@@ -96,7 +106,8 @@
     "active": true,
     "country": null,
     "nickname": null,
-    "notes": null
+    "notes": null,
+    "confirmedFor": []
   },
   {
     "id": "miles-honens",
@@ -105,6 +116,7 @@
     "active": true,
     "country": null,
     "nickname": null,
-    "notes": null
+    "notes": null,
+    "confirmedFor": []
   }
 ]

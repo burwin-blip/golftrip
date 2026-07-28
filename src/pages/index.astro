@@ -2,11 +2,12 @@
 import Base from '../layouts/Base.astro';
 import Scorebug from '../components/Scorebug.astro';
 import TeamLogo from '../components/TeamLogo.astro';
-import { latestTournament, tournamentStandings } from '../lib/stats.js';
+import { latestTournament, tournamentStandings, upcomingTournaments } from '../lib/stats.js';
 import { teamById, playerById, matchesForTournament } from '../lib/data.js';
 import { fullName, dateRange, num } from '../lib/format.js';
 
 const t = latestTournament();
+const nextEvent = upcomingTournaments()[0] || null;
 const city = t.location.split(',')[0].trim(); // "St George, Utah" -> "St George"
 const champMatch = matchesForTournament(t.id).find((m) => /championship/i.test(m.format));
 const st = tournamentStandings(t.id);
@@ -16,12 +17,13 @@ const champTeam = teamById[st.winnerTeamId];
 const champPlayer = playerById[t.championPlayerId];
 const bright = { woodpeckers: 'var(--wp-bright)', 'silver-spoons': 'var(--ss-bright)' };
 
-// Next trip — details pulled from the 2027 flyer.
+// Next trip — details pulled from the 2027 flyer / upcoming tournament.
 const next = {
   destination: 'Palm Springs, California',
   dates: 'March 25–28, 2027',
   flyer: '/next-trip-2027.jpg',
   flyerFull: '/next-trip-2027.png',
+  href: nextEvent ? `/tournaments/${nextEvent.id}` : null,
 };
 ---
 <Base active="home" title={null} description="The official home of the annual boys' golf trip.">
@@ -92,8 +94,8 @@ const next = {
           <p class="next-dates mono-nums">{next.dates}</p>
           <p class="muted" style="margin-top:.9rem">The second edition heads for the desert — four days of golf under the San Jacinto mountains. The Silver Spoons will be coming for the trophy.</p>
           <div class="chips" style="margin-top:1.1rem">
-            <span class="pill gold">To be contested</span>
-            <span class="pill">Palm Springs, CA</span>
+            {next.href && <a class="pill gold" href={next.href}>View the 2027 event →</a>}
+            <span class="pill">To be contested</span>
           </div>
         </div>
         <a class="flyer" href={next.flyerFull} target="_blank" rel="noopener" aria-label="View the 2027 trip flyer full size">

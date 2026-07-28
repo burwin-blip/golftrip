@@ -13,32 +13,57 @@ export function getStaticPaths() {
 }
 const { p } = Astro.props;
 const c = careerStats(p.id);
-const app = c.appearances[c.appearances.length - 1];
-const team = teamById[app.teamId];
 const bright = { woodpeckers: 'var(--wp-bright)', 'silver-spoons': 'var(--ss-bright)' };
-const accentBright = bright[team.id];
-const fr = formatRecords(p.id);
-const pairs = partnershipsFor(p.id).sort((a, b) => b.pointPct - a.pointPct || b.earned - a.earned);
-const opps = opponentRecords(p.id);
-const t = tournamentById[app.tournament.id];
 
-// analytics context for each appearance (handicap-adjusted + draft value)
-const history = c.appearances.map((ap) => {
-  const ha = handicapAnalysis(ap.tournament.id).rows.find((r) => r.playerId === p.id);
-  const dv = draftValue(ap.tournament.id).find((r) => r.playerId === p.id);
-  const si = scorecardIndex(ap.tournament.id).byId[p.id];
-  return { ap, ha, dv, si };
-});
-const cur = history[history.length - 1];
+// A "prospect" is confirmed for an upcoming event but has no completed record yet.
+const isProspect = c.appearances.length === 0;
+const confirmedFor = p.confirmedFor || [];
 
-const myScores = (t.scores || []).filter((s) => s.playerId === p.id)
-  .sort((a, b) => roundById[a.roundId].number - roundById[b.roundId].number);
-const myMoments = moments.filter((m) => (m.subjectPlayerIds || []).includes(p.id));
+let app, team, accentBright, fr, pairs, opps, t, history, cur, myScores, myMoments;
+if (!isProspect) {
+  app = c.appearances[c.appearances.length - 1];
+  team = teamById[app.teamId];
+  accentBright = bright[team.id];
+  fr = formatRecords(p.id);
+  pairs = partnershipsFor(p.id).sort((a, b) => b.pointPct - a.pointPct || b.earned - a.earned);
+  opps = opponentRecords(p.id);
+  t = tournamentById[app.tournament.id];
+  history = c.appearances.map((ap) => {
+    const ha = handicapAnalysis(ap.tournament.id).rows.find((r) => r.playerId === p.id);
+    const dv = draftValue(ap.tournament.id).find((r) => r.playerId === p.id);
+    const si = scorecardIndex(ap.tournament.id).byId[p.id];
+    return { ap, ha, dv, si };
+  });
+  cur = history[history.length - 1];
+  myScores = (t.scores || []).filter((s) => s.playerId === p.id)
+    .sort((a, b) => roundById[a.roundId].number - roundById[b.roundId].number);
+  myMoments = moments.filter((m) => (m.subjectPlayerIds || []).includes(p.id));
+}
 
 const FMT_SHORT = { 'Scramble': 'Scramble', 'Best Ball Match Play (NET)': 'Best Ball', '9-hole Shamble': 'Shamble',
   'Team Average Stableford': 'Stableford', 'Singles Match Play': 'Singles', 'Individual Championship / Singles': 'Championship' };
 ---
-<Base active="players" title={p.name} description={`Scouting report for ${p.name} — career record, format splits, partners, head-to-heads, handicap and draft value.`}>
+<Base active="players" title={p.name} description={isProspect ? `${p.name} — draft prospect for the upcoming season.` : `Scouting report for ${p.name} — career record, format splits, partners, head-to-heads, handicap and draft value.`}>
+
+  {isProspect && (
+    <section class="section">
+      <div class="wrap">
+        <a class="back-link" href="/players">← All players</a>
+        <div class="reveal" style="margin-top:1rem">
+          <span class="pill gold">Draft prospect</span>
+          <h1 class="display" style="font-size:clamp(2.2rem,6vw,4rem);margin:.6rem 0 .3rem">{p.name}</h1>
+          <p class="lede">Confirmed for the upcoming season — no completed tournaments on record yet. The scouting numbers fill in here after their first Annual.</p>
+        </div>
+        <div class="card card--pad" style="margin-top:1.6rem;max-width:520px">
+          <p class="eyebrow">Status</p>
+          <p style="font-family:var(--serif);font-size:1.3rem;margin:.3rem 0 .4rem">Awaiting first appearance</p>
+          <p class="muted" style="font-size:.9rem">Once they play, this becomes a full scouting report — career record, format splits, partners, head-to-heads, handicap and draft value.</p>
+        </div>
+      </div>
+    </section>
+  )}
+
+  {!isProspect && (<Fragment>
 
   <!-- HERO -->
   <section class="section" style={`padding-bottom:clamp(1.2rem,3vw,1.8rem);--accent:${team.color};--accent-bright:${accentBright}`}>
@@ -247,6 +272,7 @@ const FMT_SHORT = { 'Scramble': 'Scramble', 'Best Ball Match Play (NET)': 'Best 
       </div>
     </div>
   </section>
+  </Fragment>)}
 </Base>
 
 <style>

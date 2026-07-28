@@ -48,6 +48,10 @@ def dump(name, obj):
     print(f"wrote {name}: {len(obj) if isinstance(obj, list) else 'obj'} records")
 
 # ---------- players.json ----------
+# `confirmedFor` lists the ids of any UPCOMING tournaments a player has committed
+# to. Existing players (who have played a completed event) are auto-eligible for
+# the next draft pool; new blokes with no record appear once they're added here
+# with the upcoming tournament id in `confirmedFor`.
 players = []
 for r in rows("DB Players"):
     players.append({
@@ -58,6 +62,7 @@ for r in rows("DB Players"):
         "country": r["Country"] or None,
         "nickname": r["Nickname"] or None,
         "notes": r["Notes"] or None,
+        "confirmedFor": [],
     })
 dump("players.json", players)
 
@@ -137,7 +142,7 @@ tournament = {
     "endDate": isodate(tr["End Date"]),
     "location": tr["Location"],
     "finalRoundLocation": "Falcon Ridge, Mesquite, Nevada",
-    "status": tr["Status"],
+    "status": "completed",   # normalized status: "completed" | "upcoming"
     "pointsAvailable": 30,
     "finalScore": tr["Final Score"],
     "winningTeamId": TEAM[tr["Winning Team ID"]],
@@ -149,7 +154,36 @@ tournament = {
     "roster": roster,
     "scores": scores,
 }
-dump("tournaments.json", [tournament])
+
+# ---- UPCOMING tournaments (not in the workbook; added here) ------------------
+# An upcoming event has NO teams / rounds / roster / scores / matches, so it can
+# never affect any stat. When the trip happens: flip status to "completed" and
+# fill in the results data (ideally by extending the workbook + this generator).
+upcoming = [{
+    "id": "duel-in-the-desert-2027",
+    "name": "Duel in the Desert 2027",
+    "shortName": "Desert 2027",
+    "year": 2027,
+    "edition": 2,
+    "startDate": "2027-03-25",
+    "endDate": "2027-03-28",
+    "location": "Palm Springs, California",
+    "finalRoundLocation": None,
+    "status": "upcoming",
+    "pointsAvailable": None,
+    "finalScore": None,
+    "winningTeamId": None,
+    "championPlayerId": None,
+    "notes": "The desert calls. Four days of golf under the San Jacinto mountains.",
+    "flyer": {"display": "/next-trip-2027.jpg", "full": "/next-trip-2027.png"},
+    "teams": [],
+    "courses": [],
+    "rounds": [],
+    "roster": [],
+    "scores": [],
+}]
+
+dump("tournaments.json", [tournament, *upcoming])
 
 # ---------- matches.json ----------
 mrows = rows("DB Matches")

@@ -145,30 +145,55 @@ views it).
 
 ## Layout
 
-- **Home** — champions, all-time series, points leaders, next event.
-- **St George 2026** (`tournaments/[id]`) — **tabbed** (client-side, hash-linked,
-  degrades to all-visible with no JS): Overview (round-by-round table + computed
-  insights), Teams, Draft (board + Composite Draft Value table), Matches (all 18 with
-  story notes), Stats (points leaderboard, format-records matrix, partnerships, round
-  scores, handicap analysis), Awards (trophy cabinet — every award incl. the joke
-  ones, played straight), Moments.
+- **Home** — four sections: title + tagline; **Results** (most recent *completed*
+  tournament, dynamic "YEAR RESULTS · CITY" heading); Awards (Team Champions +
+  Champion Golfer); Next Trip (the flyer + link to the upcoming event).
+- **Tournament pages** (`tournaments/[id]`) branch on `status`:
+  - **completed** → `TournamentCompleted.astro`: **tabbed** (client-side, hash-linked,
+    degrades to all-visible with no JS): Overview, Teams, Draft (board + Composite
+    Draft Value), Matches (all 18 with summaries), Stats (leaderboard, format-records
+    matrix, partnerships, round scores, handicap analysis), Awards (trophy cabinet),
+    Moments.
+  - **upcoming** → `TournamentUpcoming.astro`: only **Overview** (flyer + dates +
+    "Teams/Captains to be announced"), **Draft Pool** (eligible players → profiles),
+    **Draft Guide** (placeholder). No Matches/Stats/Awards until results exist.
+  `[id].astro` is a thin wrapper that picks the component so the completed
+  frontmatter never runs for an upcoming event.
 - **Players** (`players/index`) — sortable all-players comparison table.
 - **Player profile** (`players/[slug]`) — a **scouting report**: career totals,
   format record, best partners, head-to-head vs everyone, handicap + draft-value
   history with labels, honours, moments, full match log.
 - **Matches / Records / Lore** as before.
 
-## Adding a future tournament (the site is built to grow)
+## Tournament status: `completed` vs `upcoming`
 
-1. Add player rows to `players.json` for any newcomers.
-2. Append a tournament object to `tournaments.json` (teams, rounds, courses,
-   roster, scores). Reuse team ids `woodpeckers` / `silver-spoons` so the
-   all-time series accrues correctly.
-3. Add its matches, drafts, moments and awards, all tagged with the new
-   `tournamentId`. Add a logo to `public/logos/` for any new team and map it in
-   `TeamLogo.astro`.
-4. Everything else — standings, records, hall of fame, career pages, the home
-   page champions and all-time series — recomputes automatically.
+Every tournament has `status: "completed" | "upcoming"`. **Only completed
+tournaments feed any stat** — `completedTournaments()` in `stats.js` is the gate,
+and `latestTournament()`, `hallOfFame()`, `allTimeSeries()`, `records()` and
+`careerStats` appearances all filter to completed. An **upcoming** tournament has
+**empty `teams`/`rounds`/`roster`/`scores`** and no matches, so it can never touch
+careers, records, leaderboards, or the home page's "results". `allTournaments()`
+(all, for the nav) is the only helper that includes upcoming ones.
+
+### Adding an UPCOMING tournament
+1. Append a tournament object (in `scripts/gen_data.py`, the `upcoming` list) with
+   `status: "upcoming"`, dates/location, a `flyer: {display, full}` (images in
+   `public/`), and empty `teams/rounds/roster/scores`. It shows in the nav and gets
+   its Overview / Draft Pool / Draft Guide page automatically.
+2. **Draft pool** = everyone who has played a completed event, plus anyone with the
+   tournament's id in their `players.json` `confirmedFor` array. To add a **new
+   bloke**: add a player row (with `confirmedFor: ["<tournament-id>"]`) — they appear
+   in the pool and get a **prospect profile** (guarded in `players/[slug].astro` for
+   zero-appearance players) until they play.
+
+### Flipping upcoming → completed (after the trip)
+1. Change `status` to `"completed"` and fill in the real results — ideally by
+   extending the source workbook + `gen_data.py` (teams, rounds, courses, roster,
+   scores, matches, drafts, moments, awards), reusing team ids so franchises accrue.
+2. Add a logo to `public/logos/` for any new team and map it in `TeamLogo.astro`.
+3. The page automatically switches to the full completed (tabbed) layout, and all
+   stats/records/careers/home "results" recompute. Re-run `/tmp/verify.mjs` and add
+   the new tournament's anchor checks.
 
 ## Commands
 

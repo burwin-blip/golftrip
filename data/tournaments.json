@@ -9,7 +9,7 @@
     "endDate": "2026-03-15",
     "location": "St George, Utah",
     "finalRoundLocation": "Falcon Ridge, Mesquite, Nevada",
-    "status": "Complete",
+    "status": "completed",
     "pointsAvailable": 30,
     "finalScore": "16.5-13.5",
     "winningTeamId": "woodpeckers",
@@ -618,5 +618,31 @@
         "note": "Full net shown."
       }
     ]
+  },
+  {
+    "id": "duel-in-the-desert-2027",
+    "name": "Duel in the Desert 2027",
+    "shortName": "Desert 2027",
+    "year": 2027,
+    "edition": 2,
+    "startDate": "2027-03-25",
+    "endDate": "2027-03-28",
+    "location": "Palm Springs, California",
+    "finalRoundLocation": null,
+    "status": "upcoming",
+    "pointsAvailable": null,
+    "finalScore": null,
+    "winningTeamId": null,
+    "championPlayerId": null,
+    "notes": "The desert calls. Four days of golf under the San Jacinto mountains.",
+    "flyer": {
+      "display": "/next-trip-2027.jpg",
+      "full": "/next-trip-2027.png"
+    },
+    "teams": [],
+    "courses": [],
+    "rounds": [],
+    "roster": [],
+    "scores": []
   }
 ]

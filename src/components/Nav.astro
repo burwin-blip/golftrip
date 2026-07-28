@@ -1,9 +1,18 @@
 ---
 import BrandMark from './BrandMark.astro';
+import { tournaments } from '../lib/data.js';
 const { active } = Astro.props;
+
+// Tournament links are generated from the data (chronological), so new editions
+// appear automatically. `active` is a tournament id on a tournament page.
+const tournamentLinks = tournaments
+  .slice()
+  .sort((a, b) => a.year - b.year)
+  .map((t) => ({ href: `/tournaments/${t.id}`, label: t.shortName, key: t.id }));
+
 const links = [
   { href: '/', label: 'Home', key: 'home' },
-  { href: '/tournaments/st-george-2026', label: 'St George 2026', key: 'tournament' },
+  ...tournamentLinks,
   { href: '/players', label: 'Players', key: 'players' },
   { href: '/matches', label: 'Matches', key: 'matches' },
   { href: '/records', label: 'Records', key: 'records' },
