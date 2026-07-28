@@ -3,14 +3,13 @@ import Base from '../layouts/Base.astro';
 import TeamLogo from '../components/TeamLogo.astro';
 import { teamById, playerById, roundById } from '../lib/data.js';
 import {
-  hallOfFame, records, playerLeaderboard, allPartnerships,
+  hallOfFame, records, playerLeaderboard,
 } from '../lib/stats.js';
 import { fullName, num, pctText } from '../lib/format.js';
 
 const hof = hallOfFame();
 const rec = records();
 const board = playerLeaderboard();
-const pairs = allPartnerships();
 const bright = { woodpeckers: 'var(--wp-bright)', 'silver-spoons': 'var(--ss-bright)' };
 
 const sideNames = (match, teamId) =>
@@ -35,10 +34,6 @@ const recordCards = [
   rec.mostPoints && {
     k: 'Most points', v: num(rec.mostPoints.pointsEarned),
     who: rec.mostPoints.player.name, sub: `${rec.mostPoints.w}–${rec.mostPoints.h}–${rec.mostPoints.l} · from ${num(rec.mostPoints.pointsAvailable)} available`,
-  },
-  rec.bestPair && {
-    k: 'Top partnership', v: pctText(rec.bestPair.pointPct),
-    who: rec.bestPair.players.map(fullName).join(' + '), sub: `${rec.bestPair.w}–${rec.bestPair.l}–${rec.bestPair.h} together`,
   },
   rec.lowNet && {
     k: 'Lowest round (net)', v: String(rec.lowNet.net),
@@ -130,28 +125,6 @@ const recordCards = [
     </div>
   </section>
 
-  <!-- PARTNERSHIPS -->
-  <section class="section" style="padding-top:0">
-    <div class="wrap">
-      <div class="section-head"><div><p class="eyebrow">Alliances</p><h2>Partnership records</h2></div></div>
-      <div class="table-scroll">
-        <table class="data">
-          <thead><tr><th>Pairing</th><th class="num">P</th><th class="num">W–H–L</th><th class="num">Pts</th><th class="num">Pt %</th></tr></thead>
-          <tbody>
-            {pairs.map((pr) => (
-              <tr>
-                <td class="name">{pr.players.map((id, idx) => <Fragment>{idx > 0 && <span class="faint"> + </span>}<a href={`/players/${playerById[id].slug}`}>{fullName(id)}</a></Fragment>)}</td>
-                <td class="num tabnums">{pr.played}</td>
-                <td class="num tabnums">{pr.w}–{pr.h}–{pr.l}</td>
-                <td class="num tabnums">{num(pr.earned)}</td>
-                <td class="num tabnums">{pctText(pr.pointPct)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </section>
 </Base>
 
 <style>

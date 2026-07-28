@@ -8,7 +8,7 @@ import {
   tournamentStandings, sessionBreakdown, roundSummary,
   draftForTournament, awardsForTournament, momentsForTournament,
   playerLeaderboard, allPartnerships, handicapAnalysis, draftValue,
-  formatRecords, normalizeFormat, ANALYTICS_CAVEAT,
+  formatRecords, normalizeFormat, stablefordLeaderboard, ANALYTICS_CAVEAT,
 } from '../lib/stats.js';
 import { fullName, dateRange, num, pctText } from '../lib/format.js';
 
@@ -27,7 +27,8 @@ const champTeam = teamById[st.winnerTeamId];
 const champPlayer = playerById[t.championPlayerId];
 const champMatch = ms.find((m) => /championship/i.test(m.format));
 const board = playerLeaderboard();
-const partnerships = allPartnerships();
+const partnerships = allPartnerships();  // kept for insights (best pairing); table removed
+const stbl = stablefordLeaderboard(t.id);
 const ha = handicapAnalysis(t.id);
 const dv = draftValue(t.id);
 const hcpById = Object.fromEntries(t.roster.map((r) => [r.playerId, r.handicapIndex]));
@@ -307,23 +308,27 @@ const TABS = [
         </table>
       </div>
 
-      <div class="section-head" style="margin-top:2.4rem"><div><p class="eyebrow">Alliances</p><h2>Partnership records</h2></div></div>
-      <div class="table-scroll">
-        <table class="data">
-          <thead><tr><th>Pairing</th><th class="num">P</th><th class="num">W–H–L</th><th class="num">Pts</th><th class="num">Pt %</th></tr></thead>
-          <tbody>
-            {partnerships.map((pr) => (
-              <tr>
-                <td class="name">{pr.players.map((id, idx) => <Fragment>{idx > 0 && <span class="faint"> + </span>}<a href={`/players/${playerById[id].slug}`}>{fullName(id)}</a></Fragment>)}</td>
-                <td class="num tabnums">{pr.played}</td>
-                <td class="num tabnums">{pr.w}–{pr.h}–{pr.l}</td>
-                <td class="num tabnums">{num(pr.earned)}</td>
-                <td class="num tabnums">{pctText(pr.pointPct)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      {stbl && (
+        <Fragment>
+          <div class="section-head" style="margin-top:2.4rem"><div><p class="eyebrow">Scoring</p><h2>Net Stableford leaderboard</h2></div><span class="faint">{normalizeFormat(stbl.round.format)} · {getCourse(stbl.round.courseId).name}</span></div>
+          <p class="muted" style="max-width:64ch;margin-bottom:1rem;font-size:.92rem">Net Stableford points from Round {stbl.round.number}. Stableford rewards good scoring holes, so it's the closest read on birdie-making the recorded data allows (there is no hole-by-hole scoring).</p>
+          <div class="table-scroll">
+            <table class="data">
+              <thead><tr><th>#</th><th>Player</th><th>Team</th><th class="num">Net Stableford</th></tr></thead>
+              <tbody>
+                {stbl.rows.map((r, i) => (
+                  <tr class:list={[{ 'hl-good': i === 0 }]}>
+                    <td class="rank">{i + 1}</td>
+                    <td class="name"><a href={`/players/${playerById[r.playerId].slug}`}>{fullName(r.playerId)}</a></td>
+                    <td>{r.teamId && <TeamLogo teamId={r.teamId} size={18} />}</td>
+                    <td class="num tabnums gold" style="font-weight:700">{r.points}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Fragment>
+      )}
 
       <div class="section-head" style="margin-top:2.4rem"><div><p class="eyebrow">Scorecards</p><h2>Round scores</h2></div><span class="faint">Net unless noted</span></div>
       <div class="table-scroll">

@@ -162,7 +162,7 @@ tournament = {
 upcoming = [{
     "id": "duel-in-the-desert-2027",
     "name": "Duel in the Desert 2027",
-    "shortName": "Desert 2027",
+    "shortName": "Palm Springs 2027",
     "year": 2027,
     "edition": 2,
     "startDate": "2027-03-25",
@@ -176,6 +176,18 @@ upcoming = [{
     "championPlayerId": None,
     "notes": "The desert calls. Four days of golf under the San Jacinto mountains.",
     "flyer": {"display": "/next-trip-2027.jpg", "full": "/next-trip-2027.png"},
+    # Where we're staying. `photos` are site-relative image paths (e.g. under
+    # /accommodation/) — drop them in and they render as a gallery.
+    "accommodation": {
+        "name": "The Compound",
+        "type": "Home in Indio · Palm Springs area",
+        "rating": 4.8,
+        "bedrooms": 16,
+        "beds": 25,
+        "baths": 10.5,
+        "url": "https://www.airbnb.com.au/rooms/1209088157940154534",
+        "photos": [],
+    },
     "teams": [],
     "courses": [],
     "rounds": [],

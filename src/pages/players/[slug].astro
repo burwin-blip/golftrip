@@ -3,7 +3,7 @@ import Base from '../../layouts/Base.astro';
 import TeamLogo from '../../components/TeamLogo.astro';
 import { players, teamById, playerById, roundById, getCourse, tournamentById, moments } from '../../lib/data.js';
 import {
-  careerStats, formatRecords, partnershipsFor, opponentRecords,
+  careerStats, formatRecords, opponentRecords,
   handicapAnalysis, draftValue, scorecardIndex, ANALYTICS_CAVEAT,
 } from '../../lib/stats.js';
 import { fullName, num, pctText } from '../../lib/format.js';
@@ -19,13 +19,12 @@ const bright = { woodpeckers: 'var(--wp-bright)', 'silver-spoons': 'var(--ss-bri
 const isProspect = c.appearances.length === 0;
 const confirmedFor = p.confirmedFor || [];
 
-let app, team, accentBright, fr, pairs, opps, t, history, cur, myScores, myMoments;
+let app, team, accentBright, fr, opps, t, history, cur, myScores, myMoments;
 if (!isProspect) {
   app = c.appearances[c.appearances.length - 1];
   team = teamById[app.teamId];
   accentBright = bright[team.id];
   fr = formatRecords(p.id);
-  pairs = partnershipsFor(p.id).sort((a, b) => b.pointPct - a.pointPct || b.earned - a.earned);
   opps = opponentRecords(p.id);
   t = tournamentById[app.tournament.id];
   history = c.appearances.map((ap) => {
@@ -146,44 +145,24 @@ const FMT_SHORT = { 'Scramble': 'Scramble', 'Best Ball Match Play (NET)': 'Best 
     </div>
   </section>
 
-  <!-- BEST PARTNERS + HEAD TO HEAD -->
+  <!-- HEAD TO HEAD -->
   <section class="section" style="padding-top:0">
-    <div class="wrap two-col">
-      <div>
-        <div class="section-head"><div><p class="eyebrow">Alliances</p><h2>Best partners</h2></div></div>
-        <div class="table-scroll">
-          <table class="data">
-            <thead><tr><th>Partner</th><th class="num">P</th><th class="num">Record</th><th class="num">Pt %</th></tr></thead>
-            <tbody>
-              {pairs.map((pr) => (
-                <tr>
-                  <td class="name"><a href={`/players/${playerById[pr.partnerId].slug}`}>{playerById[pr.partnerId].name}</a></td>
-                  <td class="num tabnums">{pr.played}</td>
-                  <td class="num tabnums">{pr.w}–{pr.h}–{pr.l}</td>
-                  <td class="num tabnums">{pctText(pr.pointPct)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-      <div>
-        <div class="section-head"><div><p class="eyebrow">Rivalries</p><h2>Head-to-head</h2></div><span class="faint">vs everyone faced</span></div>
-        <div class="table-scroll">
-          <table class="data">
-            <thead><tr><th>Opponent</th><th class="num">Mts</th><th class="num">W–H–L</th><th class="num">Pts</th></tr></thead>
-            <tbody>
-              {opps.map((o) => (
-                <tr>
-                  <td class="name"><a href={`/players/${o.opponent.slug}`}>{o.opponent.name}</a></td>
-                  <td class="num tabnums">{o.played}</td>
-                  <td class="num tabnums">{o.aWins}–{o.halved}–{o.bWins}</td>
-                  <td class="num tabnums">{num(o.aPoints)}–{num(o.bPoints)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+    <div class="wrap">
+      <div class="section-head"><div><p class="eyebrow">Rivalries</p><h2>Head-to-head</h2></div><span class="faint">vs everyone faced</span></div>
+      <div class="table-scroll">
+        <table class="data">
+          <thead><tr><th>Opponent</th><th class="num">Meetings</th><th class="num">W–H–L</th><th class="num">Points</th></tr></thead>
+          <tbody>
+            {opps.map((o) => (
+              <tr>
+                <td class="name"><a href={`/players/${o.opponent.slug}`}>{o.opponent.name}</a></td>
+                <td class="num tabnums">{o.played}</td>
+                <td class="num tabnums">{o.aWins}–{o.halved}–{o.bWins}</td>
+                <td class="num tabnums">{num(o.aPoints)}–{num(o.bPoints)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   </section>

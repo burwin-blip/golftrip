@@ -419,6 +419,23 @@ export function draftForTournament(tid) {
   return drafts.filter((d) => d.tournamentId === tid).sort((a, b) => a.pick - b.pick);
 }
 
+// Net Stableford leaderboard for a tournament's Stableford round. Higher points =
+// more good scoring holes, so it's the closest honest read on birdie-making we
+// have (there is no hole-by-hole data). Returns null if the event had no
+// Stableford round.
+export function stablefordLeaderboard(tid) {
+  const t = tournamentById[tid];
+  if (!t) return null;
+  const round = (t.rounds || []).find((r) => /stableford/i.test(r.format));
+  if (!round) return null;
+  const teamOf = Object.fromEntries((t.roster || []).map((r) => [r.playerId, r.teamId]));
+  const rows = (t.scores || [])
+    .filter((s) => s.roundId === round.id && s.stableford != null)
+    .map((s) => ({ playerId: s.playerId, teamId: teamOf[s.playerId] || null, points: s.stableford }))
+    .sort((a, b) => b.points - a.points);
+  return { round, rows };
+}
+
 // Eligible-player pool for an UPCOMING tournament: everyone who has played a
 // completed event, plus anyone explicitly confirmed for this one. New blokes
 // (no record yet) appear once `confirmedFor` includes this tournament's id.
