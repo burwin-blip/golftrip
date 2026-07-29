@@ -5,6 +5,7 @@ import { players, teamById, playerById, roundById, getCourse, tournamentById, mo
 import {
   careerStats, formatRecords, opponentRecords,
   handicapAnalysis, draftValue, scorecardIndex, ANALYTICS_CAVEAT,
+  playerHoleStats, HOLE_STATS_COVERAGE,
 } from '../../lib/stats.js';
 import { fullName, num, pctText } from '../../lib/format.js';
 
@@ -19,7 +20,7 @@ const bright = { woodpeckers: 'var(--wp-bright)', 'silver-spoons': 'var(--ss-bri
 const isProspect = c.appearances.length === 0;
 const confirmedFor = p.confirmedFor || [];
 
-let app, team, accentBright, fr, opps, t, history, cur, myScores, myMoments;
+let app, team, accentBright, fr, opps, t, history, cur, myScores, myMoments, hs;
 if (!isProspect) {
   app = c.appearances[c.appearances.length - 1];
   team = teamById[app.teamId];
@@ -37,7 +38,9 @@ if (!isProspect) {
   myScores = (t.scores || []).filter((s) => s.playerId === p.id)
     .sort((a, b) => roundById[a.roundId].number - roundById[b.roundId].number);
   myMoments = moments.filter((m) => (m.subjectPlayerIds || []).includes(p.id));
+  hs = playerHoleStats(p.id);
 }
+const signed = (x) => (x <= 0 ? String(x) : `+${x}`);
 
 const FMT_SHORT = { 'Scramble': 'Scramble', 'Best Ball Match Play (NET)': 'Best Ball', '9-hole Shamble': 'Shamble',
   'Team Average Stableford': 'Stableford', 'Singles Match Play': 'Singles', 'Individual Championship / Singles': 'Championship' };
@@ -195,6 +198,29 @@ const FMT_SHORT = { 'Scramble': 'Scramble', 'Best Ball Match Play (NET)': 'Best 
     </section>
   )}
 
+  <!-- HOLE-BY-HOLE (NET) -->
+  {hs && hs.hasHoleData && (
+    <section class="section" style="padding-top:0">
+      <div class="wrap">
+        <div class="section-head"><div><p class="eyebrow">Hole by hole</p><h2>Net scoring</h2></div><span class="faint">{hs.holesPlayed} holes recorded</span></div>
+        <div class="holebar" style={`--accent:${accentBright}`}>
+          <div class="holebar__cell hb-eagle"><span class="holebar__n">{hs.eagle}</span><span class="holebar__l">Eagles+</span></div>
+          <div class="holebar__cell hb-birdie"><span class="holebar__n">{hs.birdie}</span><span class="holebar__l">Birdies</span></div>
+          <div class="holebar__cell"><span class="holebar__n">{hs.par}</span><span class="holebar__l">Pars</span></div>
+          <div class="holebar__cell"><span class="holebar__n">{hs.bogey}</span><span class="holebar__l">Bogeys</span></div>
+          <div class="holebar__cell"><span class="holebar__n">{hs.double}</span><span class="holebar__l">Doubles+</span></div>
+        </div>
+        <div class="holemeta">
+          {hs.avgVsPar != null && <span><strong>{signed(Number(hs.avgVsPar.toFixed(2)))}</strong> net per hole <span class="faint">({hs.holesScored} scored)</span></span>}
+          {hs.bestRound && <span><strong>{hs.bestRound.total}</strong> best net round <span class="faint">({signed(hs.bestRound.vsPar)}, R{hs.bestRound.round})</span></span>}
+          {hs.longestBirdieStreak > 1 && <span><strong>{hs.longestBirdieStreak}</strong> in a row at birdie+ </span>}
+          <span><strong>{hs.stablefordPoints}</strong> net Stableford pts</span>
+        </div>
+        <p class="faint" style="font-size:.72rem;margin-top:.7rem;line-height:1.5;max-width:70ch">{HOLE_STATS_COVERAGE}</p>
+      </div>
+    </section>
+  )}
+
   <!-- AWARDS + MOMENTS -->
   <section class="section" style="padding-top:0">
     <div class="wrap two-col">
@@ -262,9 +288,22 @@ const FMT_SHORT = { 'Scramble': 'Scramble', 'Best Ball Match Play (NET)': 'Best 
   .phero__wlh i { font-style: normal; color: var(--faint); font-size: 1.6rem; }
   .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(1.4rem, 4vw, 2.4rem); align-items: start; }
   .caveat { font-size: .76rem; color: var(--muted); margin-top: .7rem; background: var(--gold-soft); border: 1px solid color-mix(in srgb, var(--gold-bright) 30%, transparent); border-radius: var(--r-sm); padding: .5rem .7rem; }
+  .holebar { display: grid; grid-template-columns: repeat(5, 1fr); gap: .5rem; margin-top: .3rem; }
+  .holebar__cell { border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--panel); padding: .7rem .5rem; text-align: center; }
+  .holebar__n { display: block; font-family: var(--serif); font-size: 1.9rem; line-height: 1; color: var(--text); font-variant-numeric: tabular-nums; }
+  .holebar__l { display: block; font-size: .64rem; letter-spacing: .05em; text-transform: uppercase; color: var(--faint); font-weight: 700; margin-top: .3rem; }
+  .hb-birdie { background: var(--wp-soft); border-color: color-mix(in srgb, var(--wp) 30%, var(--line)); }
+  .hb-birdie .holebar__n { color: var(--wp-ink); }
+  .hb-eagle { background: var(--gold-soft); border-color: color-mix(in srgb, var(--gold-bright) 34%, var(--line)); }
+  .hb-eagle .holebar__n { color: var(--gold); }
+  .holemeta { display: flex; flex-wrap: wrap; gap: .5rem 1.4rem; margin-top: .9rem; font-size: .88rem; color: var(--muted); }
+  .holemeta strong { color: var(--text); font-variant-numeric: tabular-nums; }
   @media (max-width: 780px) {
     .phero { grid-template-columns: 1fr; align-items: start; }
     .phero__record { min-width: 0; }
     .two-col { grid-template-columns: 1fr; }
+    .holebar { grid-template-columns: repeat(5, 1fr); gap: .3rem; }
+    .holebar__n { font-size: 1.4rem; }
+    .holebar__l { font-size: .56rem; }
   }
 </style>

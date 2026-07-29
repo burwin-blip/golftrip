@@ -2,6 +2,7 @@
 import Scorebug from './Scorebug.astro';
 import MatchRow from './MatchRow.astro';
 import MatchSummary from './MatchSummary.astro';
+import HoleScorecard from './HoleScorecard.astro';
 import TeamLogo from './TeamLogo.astro';
 import { teamById, playerById, getCourse, matchesForTournament, teamRoster } from '../lib/data.js';
 import {
@@ -9,6 +10,8 @@ import {
   draftForTournament, awardsForTournament, momentsForTournament,
   playerLeaderboard, allPartnerships, handicapAnalysis, draftValue,
   formatRecords, normalizeFormat, stablefordLeaderboard, ANALYTICS_CAVEAT,
+  mostNetBirdies, lowestNetRounds, scoringAverageLeaderboard, holeStatsLeaderboard,
+  tournamentHasHoleData, HOLE_STATS_COVERAGE,
 } from '../lib/stats.js';
 import { fullName, dateRange, num, pctText } from '../lib/format.js';
 
@@ -29,6 +32,14 @@ const champMatch = ms.find((m) => /championship/i.test(m.format));
 const board = playerLeaderboard();
 const partnerships = allPartnerships();  // kept for insights (best pairing); table removed
 const stbl = stablefordLeaderboard(t.id);
+// Hole-by-hole (net) scoring — only if this event has transcribed scorecards.
+const hasHoles = tournamentHasHoleData(t.id);
+const birdieBoard = hasHoles ? mostNetBirdies(t.id).filter((r) => r.birdies > 0 || r.eagles > 0) : [];
+const lowRounds = hasHoles ? lowestNetRounds(18, t.id) : [];
+const lowNine = hasHoles ? lowestNetRounds(9, t.id) : [];
+const avgBoard = hasHoles ? scoringAverageLeaderboard(18, t.id) : [];
+const streakBoard = hasHoles ? holeStatsLeaderboard(t.id).slice().sort((a, b) => b.longestBirdieStreak - a.longestBirdieStreak) : [];
+const signed = (x) => (x <= 0 ? String(x) : `+${x}`);
 const ha = handicapAnalysis(t.id);
 const dv = draftValue(t.id);
 const hcpById = Object.fromEntries(t.roster.map((r) => [r.playerId, r.handicapIndex]));
@@ -257,6 +268,7 @@ const TABS = [
                   <div class="match-block">
                     <MatchRow match={m} />
                     <MatchSummary match={m} />
+                    <HoleScorecard match={m} />
                   </div>
                 ))}
               </div>
@@ -308,24 +320,57 @@ const TABS = [
         </table>
       </div>
 
-      {stbl && (
+      {hasHoles && (
         <Fragment>
-          <div class="section-head" style="margin-top:2.4rem"><div><p class="eyebrow">Scoring</p><h2>Net Stableford leaderboard</h2></div><span class="faint">{normalizeFormat(stbl.round.format)} · {getCourse(stbl.round.courseId).name}</span></div>
-          <p class="muted" style="max-width:64ch;margin-bottom:1rem;font-size:.92rem">Net Stableford points from Round {stbl.round.number}. Stableford rewards good scoring holes, so it's the closest read on birdie-making the recorded data allows (there is no hole-by-hole scoring).</p>
+          <div class="section-head" style="margin-top:2.4rem"><div><p class="eyebrow">Hole by hole</p><h2>Most net birdies</h2></div><span class="faint">From the scorecards</span></div>
+          <p class="muted" style="max-width:66ch;margin-bottom:1rem;font-size:.92rem">{HOLE_STATS_COVERAGE}</p>
           <div class="table-scroll">
             <table class="data">
-              <thead><tr><th>#</th><th>Player</th><th>Team</th><th class="num">Net Stableford</th></tr></thead>
+              <thead><tr><th>#</th><th>Player</th><th>Team</th><th class="num">Net birdies</th><th class="num">Eagles+</th><th class="num">Net pars</th></tr></thead>
               <tbody>
-                {stbl.rows.map((r, i) => (
+                {birdieBoard.map((r, i) => (
                   <tr class:list={[{ 'hl-good': i === 0 }]}>
                     <td class="rank">{i + 1}</td>
                     <td class="name"><a href={`/players/${playerById[r.playerId].slug}`}>{fullName(r.playerId)}</a></td>
                     <td>{r.teamId && <TeamLogo teamId={r.teamId} size={18} />}</td>
-                    <td class="num tabnums gold" style="font-weight:700">{r.points}</td>
+                    <td class="num tabnums" style="font-weight:700;color:var(--wp)">{r.birdies}</td>
+                    <td class="num tabnums gold" style="font-weight:700">{r.eagles || '—'}</td>
+                    <td class="num tabnums faint">{r.pars}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
+          </div>
+
+          <div class="hrec">
+            {lowRounds[0] && (
+              <div class="hrec__card">
+                <p class="hrec__label">Lowest net round (18)</p>
+                <p class="hrec__val">{lowRounds[0].total}</p>
+                <p class="hrec__who"><a href={`/players/${playerById[lowRounds[0].playerId].slug}`}>{fullName(lowRounds[0].playerId)}</a> · {signed(lowRounds[0].vsPar)} · R{lowRounds[0].round}</p>
+              </div>
+            )}
+            {lowNine[0] && (
+              <div class="hrec__card">
+                <p class="hrec__label">Lowest net nine (Shamble)</p>
+                <p class="hrec__val">{lowNine[0].total}</p>
+                <p class="hrec__who"><a href={`/players/${playerById[lowNine[0].playerId].slug}`}>{fullName(lowNine[0].playerId)}</a> · {signed(lowNine[0].vsPar)}</p>
+              </div>
+            )}
+            {avgBoard[0] && (
+              <div class="hrec__card">
+                <p class="hrec__label">Best net scoring avg</p>
+                <p class="hrec__val">{signed(avgBoard[0].avgVsPar.toFixed(2))}</p>
+                <p class="hrec__who"><a href={`/players/${playerById[avgBoard[0].playerId].slug}`}>{fullName(avgBoard[0].playerId)}</a> · per hole ({avgBoard[0].holesScored})</p>
+              </div>
+            )}
+            {streakBoard[0]?.longestBirdieStreak > 1 && (
+              <div class="hrec__card">
+                <p class="hrec__label">Longest birdie streak</p>
+                <p class="hrec__val">{streakBoard[0].longestBirdieStreak}<span class="hrec__unit"> holes</span></p>
+                <p class="hrec__who"><a href={`/players/${playerById[streakBoard[0].playerId].slug}`}>{fullName(streakBoard[0].playerId)}</a> · net birdie+ in a row</p>
+              </div>
+            )}
           </div>
         </Fragment>
       )}
@@ -487,6 +532,15 @@ const TABS = [
   .mom-cat { display: flex; align-items: center; gap: .5rem; margin-bottom: .4rem; }
 
   @media (max-width: 640px) { .roster-grid { grid-template-columns: 1fr; } }
+
+  /* Hole-by-hole record cards */
+  .hrec { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: .8rem; margin-top: 1.1rem; }
+  .hrec__card { border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--panel); padding: .85rem 1rem; box-shadow: var(--shadow); }
+  .hrec__label { font-size: .68rem; letter-spacing: .06em; text-transform: uppercase; color: var(--faint); font-weight: 700; }
+  .hrec__val { font-family: var(--serif); font-size: 2.1rem; line-height: 1.05; color: var(--text); margin: .25rem 0 .3rem; font-variant-numeric: tabular-nums; }
+  .hrec__unit { font-family: var(--sans, inherit); font-size: .85rem; color: var(--faint); }
+  .hrec__who { font-size: .8rem; color: var(--muted); }
+  .hrec__who a { color: var(--wp); font-weight: 600; }
 </style>
 
 <script is:inline>

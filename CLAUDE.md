@@ -75,6 +75,97 @@ Index and Draft Value. All pass. (Node needs the JSON-import loader shim in
 `/tmp/reg.mjs`; Astro/Vite import JSON natively.) If you change a formula, re-run it
 and reconcile before shipping.
 
+## Hole-by-hole scoring layer (`data/hole_scores.json`)
+
+A seventh data file sits **under** the round-level data: one record **per player per
+hole**, transcribed from the physical scorecards. It is additive — the round-level
+`tournaments.json` scores and every existing stat are untouched; this layer only
+adds depth.
+
+- **Generated** by `scripts/gen_hole_scores.py` (the transcribed hole arrays live in
+  that script — it is the source of truth for the raw reads). Re-run it to
+  regenerate `data/hole_scores.json`.
+- **Verified** by `scripts/verify_holes.mjs` (`node --import /tmp/reg.mjs
+  scripts/verify_holes.mjs`) — 54 checks reconciling net round totals to the
+  workbook, per-match holes-won to the recorded winner, and the R5 concessions.
+  Keep it green alongside the 157-check `/tmp/verify.mjs`.
+
+### The NET convention (critical)
+Per the owner (who was there): **every scorecard records NET scores, except the
+Round 1 Scramble, which is a team GROSS score.** So each row carries a `score_type`:
+- `net` — R2 Best Ball, R3 Shamble, R5 Singles. `net_score` / `net_vs_par` /
+  `net_result` are populated. These per-hole numbers are already net; birdies here
+  are **net** birdies. True gross is **not** recoverable and is never shown.
+- `stableford` — R4 Team Average Stableford. `stableford_points` is populated;
+  `net_result` is derived from the points (3 = net birdie, 4+ = net eagle, 2 = par,
+  1 = bogey, 0 = double+). Per-hole net stroke isn't on the card, so `net_score` is
+  null (excluded from scoring-average maths).
+- `team_gross` — R1 Scramble only. `team_gross` is the team's gross; `player` is
+  null (`team_players` holds the pair). **Excluded from every individual stat.**
+- **Conceded holes** (match already decided) have `conceded: true` and no score.
+  R5 concessions: Michael/Anthony holes 17–18, Colton/Ed 16–18, Ben/Scott 16–17.
+  Michael/Anthony are recorded through the 16th (net 86 / 92); the workbook's padded
+  92 / 98 are deliberately **not** used here.
+
+The sanity check that confirms net (not gross): Anthony Herring's R2 74 off playing
+handicap 13 — as gross that's an impossible net 61, so the card must be net.
+
+> **Known cross-dataset flag (unresolved by design):** the older Round-scores table
+> and `records()` read the singles net from `tournaments.json`, which still holds the
+> workbook's **padded** singles totals (e.g. Michael 92, Anthony 98). The hole layer
+> shows the through-16 figures (86 / 92). These disagree for the three conceded R5
+> matches. Left as-is per the owner's "flag, don't silently adjust" instruction —
+> reconcile `tournaments.json` if the owner wants the table to match the cards.
+
+### Hole stats in `stats.js` (all computed, all optionally `tid`-scoped)
+- `playerHoleStats(playerId, tid?)` — net eagle/birdie/par/bogey/double buckets,
+  scoring average vs par (stroke rounds only), best net round (ranked by net-vs-par
+  so 9- and 18-hole rounds compare fairly), Stableford total, longest net-birdie+
+  streak. `teamId` is read off the hole rows (players carry no fixed team).
+- `mostNetBirdies(tid?)`, `lowestNetRounds(holeCount, tid?)`,
+  `scoringAverageLeaderboard(minHoles, tid?)`, `holeStatsLeaderboard(tid?)`,
+  `netRoundTotals()`.
+- `matchScorecard(matchId)` — the per-match grid: player rows with net cells + Out/In/
+  Tot, per-hole winner, and a **running match state that freezes at the closeout hole**
+  (derived from the authoritative margin, e.g. 4&2 → decided at hole 16) so the card
+  agrees with the badge. Scramble → two team-gross rows; Stableford → points + team
+  totals (no holes-up, since it's decided on team average). Each cell carries a
+  `bucket` (`eagle`/`birdie`/`par`/`bogey`/`double`, from the net result vs par — team
+  gross vs par for the scramble) that drives **traditional scorecard notation** in
+  `HoleScorecard.astro`: birdie = circle, eagle+ = double circle, bogey = square,
+  double+ = double square, par = plain, conceded = concede marker. Circles take the
+  row's team colour, eagles are gold, squares a neutral over-par ink; a small legend
+  sits under every card.
+- `HOLE_STATS_COVERAGE` — the one-paragraph caveat; render it wherever hole stats show.
+- `tournamentHasHoleData(tid)` / `tournamentsWithHoleData()` — the gate.
+
+### Where it surfaces
+- **Match pages** (`matches.astro` + St George Matches tab): `HoleScorecard.astro`
+  under each match — the net grid **and** the original card image (framed thumbnail,
+  click → full size in a new tab). Renders nothing if the match has no hole data.
+- **Scorecard images**: `data/scorecard_images.json` maps `match_id →
+  {full, thumb, shared}`; files live in `public/scorecards/<year>/`. Regenerate with
+  the PIL block that crops the annotation banner and writes a full PNG + a JPG thumb.
+  R5 tee sheets carry two singles, so two matches can share one image (`shared`).
+- **Home**: "Most net birdies" board (top 5, team-coloured bars) between Results and
+  Awards.
+- **Tournament Stats tab**: "Most net birdies" board + hole-record cards (lowest net
+  round / nine, best scoring avg, longest streak) — replaced the old Net Stableford
+  leaderboard now that real hole data exists.
+- **Records**: career hole-record cards + a "Net birdie-making" leaderboard.
+- **Player profile**: a "Net scoring" section (bucket tiles + avg / best round /
+  streak / Stableford pts).
+
+### Future-proofing (2027 and beyond — purely additive)
+Adding a new year's scorecards changes **no component code**:
+1. Transcribe the cards into `scripts/gen_hole_scores.py` (new `MATCHES` entries with
+   the new tournament id + course pars/SIs) and re-run it.
+2. Copy the card images into `public/scorecards/<year>/` and add their `match_id`
+   entries to `data/scorecard_images.json` (the PIL block handles the resizing).
+3. Done. Every leaderboard, profile, match grid and record recomputes, because the
+   hole functions accept a `tid` and each surface gates on `tournamentHasHoleData`.
+   An event with **no** scorecards simply shows none of the hole UI.
+
 ## Design language
 
 **Light, clean, official golf-tournament coverage** — bright like the Masters /
@@ -121,11 +212,14 @@ views it).
   Stat Insights / Moments sheets label the Herring final "Father vs Son". The site
   keeps it neutral ("Individual Championship"). Flag it if the owner wants it in.
 - **All recorded scores are NET.** Every per-round score in `tournaments.json`
-  (the `net` field on `scores`) is a net score, even though the source workbook's
-  columns were labelled "Gross". The site must say **net** everywhere (round-scores
-  tables, player profiles, records, match summaries). When importing new score data,
-  treat scores as net unless a source explicitly states gross, and correct the word
-  "gross" → "net" in any note/summary text pulled from a workbook or document.
+  (the `net` field on `scores`) **and** every per-hole score in `hole_scores.json`
+  is a net score, even though the source workbook's columns were labelled "Gross".
+  The **only** exception is the Round 1 Scramble, which is a team gross score. The
+  site must say **net** everywhere (round-scores tables, player profiles, records,
+  match summaries, the hole-by-hole cards). When importing new score data, treat
+  scores as net unless a source explicitly states gross (or it's a scramble), and
+  correct the word "gross" → "net" in any note/summary text pulled from a workbook.
+  See **Hole-by-hole scoring layer** above for the full per-hole convention.
 - **Match summaries** live on each match as `summary` (the written hole-by-hole
   narrative from the scorecard PDF) and `standout` (a standout-player line, null for
   singles). They are shown via `MatchSummary.astro` (a collapsible block) under each
@@ -206,16 +300,20 @@ npm run preview  # serve the built /dist
 ## Structure
 
 ```
-data/                 JSON source of truth (6 files)
-scripts/gen_data.py   regenerates /data from the source workbook
-src/lib/data.js       loads JSON, builds id lookups
-src/lib/stats.js      ALL derived statistics (build-time)
+data/                 JSON source of truth (players, tournaments, matches, drafts,
+                      moments, awards) + hole_scores.json + scorecard_images.json
+scripts/gen_data.py         regenerates the 6 core files from the source workbook
+scripts/gen_hole_scores.py  regenerates hole_scores.json (holds the raw hole reads)
+scripts/verify_holes.mjs    reconciles the hole layer (54 checks)
+src/lib/data.js       loads JSON, builds id lookups (+ holesForMatch)
+src/lib/stats.js      ALL derived statistics (build-time), incl. the hole-stat block
 src/lib/format.js     display-only formatting helpers
 src/layouts/Base.astro   <head>, noindex, nav, footer
-src/components/        Scorebug, MatchRow, TeamLogo, Nav, Footer
+src/components/        Scorebug, MatchRow, MatchSummary, HoleScorecard, TeamLogo, …
 src/pages/            index, tournaments/[id] (tabbed), players/index (comparison),
                       players/[slug] (scouting report), matches, records, lore
 public/logos/         woodpeckers.png, silver-spoons.png (transparent)
+public/scorecards/<year>/  original per-match card images (full PNG + thumb JPG)
 public/               robots.txt, favicon.png, apple-touch-icon.png
 ```
 

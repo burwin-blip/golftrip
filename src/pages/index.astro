@@ -2,11 +2,14 @@
 import Base from '../layouts/Base.astro';
 import Scorebug from '../components/Scorebug.astro';
 import TeamLogo from '../components/TeamLogo.astro';
-import { latestTournament, tournamentStandings, upcomingTournaments } from '../lib/stats.js';
+import { latestTournament, tournamentStandings, upcomingTournaments, mostNetBirdies, tournamentHasHoleData } from '../lib/stats.js';
 import { teamById, playerById, matchesForTournament } from '../lib/data.js';
 import { fullName, dateRange, num } from '../lib/format.js';
 
 const t = latestTournament();
+const birdieBoard = tournamentHasHoleData(t.id)
+  ? mostNetBirdies(t.id).filter((r) => r.birdies > 0 || r.eagles > 0).slice(0, 5)
+  : [];
 const nextEvent = upcomingTournaments()[0] || null;
 const city = t.location.split(',')[0].trim(); // "St George, Utah" -> "St George"
 const champMatch = matchesForTournament(t.id).find((m) => /championship/i.test(m.format));
@@ -57,6 +60,32 @@ const next = {
       </div>
     </div>
   </section>
+
+  <!-- 2b · MOST NET BIRDIES -->
+  {birdieBoard.length > 0 && (
+    <section class="section home-sec">
+      <div class="wrap">
+        <p class="eyebrow gold home-tag">Hole by hole · {t.year}</p>
+        <h2>Most net birdies</h2>
+        <ol class="birdlist">
+          {birdieBoard.map((r, i) => {
+            const pl = playerById[r.playerId];
+            const teamId = r.teamId;
+            return (
+              <li class="birdlist__row" style={`--accent:${teamById[teamId].color}`}>
+                <span class="birdlist__rank">{i + 1}</span>
+                <TeamLogo teamId={teamId} size={22} className="birdlist__logo" />
+                <a class="birdlist__name" href={`/players/${pl.slug}`}>{pl.name}</a>
+                <span class="birdlist__bar" style={`--w:${(r.birdies / birdieBoard[0].birdies) * 100}%`}></span>
+                <span class="birdlist__n">{r.birdies}{r.eagles > 0 && <em class="birdlist__eag"> +{r.eagles}<span class="faint" style="font-style:normal"> eag</span></em>}</span>
+              </li>
+            );
+          })}
+        </ol>
+        <div class="hero-underbug"><a class="pill gold" href="/records">Full record book →</a><span class="faint">Net birdies across every recorded scorecard</span></div>
+      </div>
+    </section>
+  )}
 
   <!-- 3 · AWARDS -->
   <section class="section home-sec">
@@ -121,6 +150,18 @@ const next = {
   .home-head h2 { font-size: clamp(1.5rem, 1.2rem + 1.6vw, 2.1rem); margin-top: .1rem; }
 
   .hero-underbug { display: flex; flex-wrap: wrap; align-items: center; gap: .7rem 1rem; margin-top: 1rem; font-size: .85rem; }
+
+  .birdlist { list-style: none; margin: 1.1rem 0 0; padding: 0; display: flex; flex-direction: column; gap: .4rem; }
+  .birdlist__row { display: grid; grid-template-columns: 1.4rem 22px minmax(6rem, 12rem) 1fr auto; align-items: center; gap: .6rem; padding: .35rem 0; border-bottom: 1px solid var(--line); }
+  .birdlist__row:last-child { border-bottom: 0; }
+  .birdlist__rank { font-family: var(--serif); color: var(--faint); font-size: 1rem; text-align: center; font-variant-numeric: tabular-nums; }
+  .birdlist__logo { border-radius: 50%; }
+  .birdlist__name { font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .birdlist__bar { height: 8px; border-radius: 999px; background: color-mix(in srgb, var(--accent) 22%, transparent); position: relative; min-width: 30px; }
+  .birdlist__bar::before { content: ''; position: absolute; inset: 0 auto 0 0; width: var(--w); background: var(--accent); border-radius: 999px; }
+  .birdlist__n { font-family: var(--serif); font-size: 1.25rem; color: var(--text); font-variant-numeric: tabular-nums; text-align: right; min-width: 2.5rem; }
+  .birdlist__eag { font-size: .8rem; color: var(--gold); font-style: normal; }
+  @media (max-width: 560px) { .birdlist__row { grid-template-columns: 1.2rem 20px minmax(5rem,1fr) auto; } .birdlist__bar { display: none; } }
 
   .champ-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
   .champ__title { display: flex; align-items: center; gap: .6rem; font-family: var(--serif); font-weight: 600; font-size: clamp(1.4rem, 1rem + 2vw, 2rem); margin: .5rem 0 .6rem; }

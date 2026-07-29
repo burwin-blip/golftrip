@@ -1,0 +1,104 @@
+{
+ "st-george-2026-m1": {
+  "full": "/scorecards/2026/03_round_1__match_3.png",
+  "thumb": "/scorecards/2026/03_round_1__match_3.jpg",
+  "shared": []
+ },
+ "st-george-2026-m2": {
+  "full": "/scorecards/2026/01_round_1__match_1.png",
+  "thumb": "/scorecards/2026/01_round_1__match_1.jpg",
+  "shared": []
+ },
+ "st-george-2026-m3": {
+  "full": "/scorecards/2026/02_round_1__match_2.png",
+  "thumb": "/scorecards/2026/02_round_1__match_2.jpg",
+  "shared": []
+ },
+ "st-george-2026-m4": {
+  "full": "/scorecards/2026/04_round_2__match_1.png",
+  "thumb": "/scorecards/2026/04_round_2__match_1.jpg",
+  "shared": []
+ },
+ "st-george-2026-m5": {
+  "full": "/scorecards/2026/05_round_2__match_2.png",
+  "thumb": "/scorecards/2026/05_round_2__match_2.jpg",
+  "shared": []
+ },
+ "st-george-2026-m6": {
+  "full": "/scorecards/2026/06_round_2__match_3.png",
+  "thumb": "/scorecards/2026/06_round_2__match_3.jpg",
+  "shared": []
+ },
+ "st-george-2026-m7": {
+  "full": "/scorecards/2026/07_round_3__match_1.png",
+  "thumb": "/scorecards/2026/07_round_3__match_1.jpg",
+  "shared": []
+ },
+ "st-george-2026-m8": {
+  "full": "/scorecards/2026/08_round_3__match_2.png",
+  "thumb": "/scorecards/2026/08_round_3__match_2.jpg",
+  "shared": []
+ },
+ "st-george-2026-m9": {
+  "full": "/scorecards/2026/09_round_3__match_3.png",
+  "thumb": "/scorecards/2026/09_round_3__match_3.jpg",
+  "shared": []
+ },
+ "st-george-2026-m11": {
+  "full": "/scorecards/2026/10_round_4__match_1.png",
+  "thumb": "/scorecards/2026/10_round_4__match_1.jpg",
+  "shared": []
+ },
+ "st-george-2026-m10": {
+  "full": "/scorecards/2026/11_round_4__match_2.png",
+  "thumb": "/scorecards/2026/11_round_4__match_2.jpg",
+  "shared": []
+ },
+ "st-george-2026-m12": {
+  "full": "/scorecards/2026/12_round_4__match_3.png",
+  "thumb": "/scorecards/2026/12_round_4__match_3.jpg",
+  "shared": []
+ },
+ "st-george-2026-m13": {
+  "full": "/scorecards/2026/13_round_5__matches_1_and_2.png",
+  "thumb": "/scorecards/2026/13_round_5__matches_1_and_2.jpg",
+  "shared": [
+   "st-george-2026-m17"
+  ]
+ },
+ "st-george-2026-m17": {
+  "full": "/scorecards/2026/13_round_5__matches_1_and_2.png",
+  "thumb": "/scorecards/2026/13_round_5__matches_1_and_2.jpg",
+  "shared": [
+   "st-george-2026-m13"
+  ]
+ },
+ "st-george-2026-m18": {
+  "full": "/scorecards/2026/14_round_5__matches_3_and_4.png",
+  "thumb": "/scorecards/2026/14_round_5__matches_3_and_4.jpg",
+  "shared": [
+   "st-george-2026-m16"
+  ]
+ },
+ "st-george-2026-m16": {
+  "full": "/scorecards/2026/14_round_5__matches_3_and_4.png",
+  "thumb": "/scorecards/2026/14_round_5__matches_3_and_4.jpg",
+  "shared": [
+   "st-george-2026-m18"
+  ]
+ },
+ "st-george-2026-m15": {
+  "full": "/scorecards/2026/15_round_5__matches_5_and_6.png",
+  "thumb": "/scorecards/2026/15_round_5__matches_5_and_6.jpg",
+  "shared": [
+   "st-george-2026-m14"
+  ]
+ },
+ "st-george-2026-m14": {
+  "full": "/scorecards/2026/15_round_5__matches_5_and_6.png",
+  "thumb": "/scorecards/2026/15_round_5__matches_5_and_6.jpg",
+  "shared": [
+   "st-george-2026-m15"
+  ]
+ }
+}

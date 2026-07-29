@@ -14,7 +14,7 @@
 //     win percentage independent of a match's point weight.
 // ============================================================================
 import {
-  players, tournaments, matches, drafts, awards, moments,
+  players, tournaments, matches, drafts, awards, moments, holeScores,
   playerById, teamById, matchById, roundById, tournamentById,
   matchesForTournament, rosterForTournament,
 } from './data.js';
@@ -677,3 +677,328 @@ export function draftValue(tid) {
 }
 
 export { round1, pct };
+
+// ==========================================================================
+// HOLE-BY-HOLE (NET) STATS — computed from data/hole_scores.json
+// ==========================================================================
+// Coverage rule (keep visible wherever these appear):
+//   • Individual net scoring uses recorded NET scores — Best Ball, Shamble and
+//     Singles net strokes — plus net Stableford points in Round 4.
+//   • The Round 1 Scramble is a TEAM GROSS score with no individual
+//     attribution, so it is excluded from every individual hole stat.
+//   • Conceded holes (the match was already decided) are excluded.
+// Everything below is derived at build time from the hole rows; nothing is
+// copied from the workbook. New scorecards flow in with zero code changes.
+export const HOLE_STATS_COVERAGE =
+  'Hole-by-hole figures use recorded NET scores — Best Ball, Shamble and ' +
+  'Singles net strokes, plus net Stableford points in Round 4. The Round 1 ' +
+  'Scramble is a team score not attributed to individuals, and conceded holes ' +
+  'are excluded.';
+
+// Every individual, playable row: has a player, not conceded, has a net_result
+// (so Scramble team rows and conceded holes drop out automatically).
+// Short team badge for compact match-state labels (WP / SS), derived from name.
+function teamShort(teamId) {
+  const t = teamById[teamId];
+  if (!t) return '';
+  return t.name.split(/\s+/).map((w) => w[0]).join('').toUpperCase();
+}
+
+// All individual playable rows, optionally scoped to one tournament.
+function individualHoleRows(tid) {
+  return holeScores.filter(
+    (h) => h.player && !h.conceded && h.net_result != null && (!tid || h.tournament === tid),
+  );
+}
+
+// Coarse bucket shared across stroke rounds (which split Double/Triple) and
+// Stableford (which lumps "Double Bogey or Worse").
+function netBucket(result) {
+  if (!result) return null;
+  if (result.startsWith('Eagle')) return 'eagle'; // eagle or better
+  if (result === 'Birdie') return 'birdie';
+  if (result === 'Par') return 'par';
+  if (result === 'Bogey') return 'bogey';
+  return 'double'; // double bogey or worse
+}
+
+// Same buckets, computed straight from a numeric score-vs-par (used for the
+// Round 1 Scramble, which is scored on team gross rather than a net result label).
+function vsParBucket(v) {
+  if (v == null) return null;
+  if (v <= -2) return 'eagle';
+  if (v === -1) return 'birdie';
+  if (v === 0) return 'par';
+  if (v === 1) return 'bogey';
+  return 'double';
+}
+
+// One row per (player, tournament, round) that posted stroke net scores.
+// total = sum of net strokes; complete = every hole in that round was scored
+// (no concessions). Front/back are the 1-9 / 10-18 splits for 18-hole rounds.
+let _netRoundTotals = null;
+export function netRoundTotals() {
+  if (_netRoundTotals) return _netRoundTotals;
+  const byKey = new Map();
+  for (const h of holeScores) {
+    if (!h.player || h.score_type !== 'net') continue;
+    const key = `${h.player}|${h.tournament}|${h.round}`;
+    if (!byKey.has(key))
+      byKey.set(key, {
+        playerId: h.player, tournament: h.tournament, round: h.round,
+        course: h.course, format: h.format, total: 0, parTotal: 0, holes: 0,
+        conceded: 0, holesInRound: 0, front: 0, back: 0, frontHoles: 0, backHoles: 0,
+      });
+    const r = byKey.get(key);
+    r.holesInRound++;
+    if (h.conceded) { r.conceded++; continue; }
+    if (h.net_score == null) continue;
+    r.total += h.net_score;
+    r.parTotal += h.par;
+    r.holes++;
+    if (h.hole <= 9) { r.front += h.net_score; r.frontHoles++; }
+    else { r.back += h.net_score; r.backHoles++; }
+  }
+  _netRoundTotals = [...byKey.values()].map((r) => ({
+    ...r,
+    vsPar: r.total - r.parTotal,
+    complete: r.conceded === 0 && r.holes === r.holesInRound,
+  }));
+  return _netRoundTotals;
+}
+
+// Longest run of consecutive holes (within a single round) at net birdie or
+// better. Conceded/unscored holes break the streak.
+function longestBirdieStreak(playerId, tid) {
+  const byRound = new Map();
+  for (const h of individualHoleRows(tid)) {
+    if (h.player !== playerId) continue;
+    const k = `${h.tournament}|${h.round}`;
+    if (!byRound.has(k)) byRound.set(k, []);
+    byRound.get(k).push(h);
+  }
+  let best = 0;
+  for (const rows of byRound.values()) {
+    rows.sort((a, b) => a.hole - b.hole);
+    let cur = 0;
+    for (const h of rows) {
+      const b = netBucket(h.net_result);
+      if (b === 'birdie' || b === 'eagle') { cur++; if (cur > best) best = cur; }
+      else cur = 0;
+    }
+  }
+  return best;
+}
+
+// Full hole-scoring line for one player. Career by default; pass a tid to scope
+// to a single tournament.
+export function playerHoleStats(playerId, tid) {
+  const rows = individualHoleRows(tid).filter((h) => h.player === playerId);
+  const buckets = { eagle: 0, birdie: 0, par: 0, bogey: 0, double: 0 };
+  for (const h of rows) buckets[netBucket(h.net_result)]++;
+  const stroke = rows.filter((h) => h.net_score != null && h.net_vs_par != null);
+  const holesScored = stroke.length;
+  const netToPar = stroke.reduce((s, h) => s + h.net_vs_par, 0);
+  const stbl = holeScores.filter(
+    (h) => h.player === playerId && h.score_type === 'stableford' && !h.conceded && (!tid || h.tournament === tid),
+  );
+  const stablefordPoints = stbl.reduce((s, h) => s + (h.stableford_points || 0), 0);
+  const myRounds = netRoundTotals().filter(
+    (r) => r.playerId === playerId && r.complete && (!tid || r.tournament === tid),
+  );
+  // Best round ranked by net-vs-par so 9- and 18-hole rounds compare fairly.
+  const bestRound = myRounds.length
+    ? myRounds.reduce((a, b) => (b.vsPar < a.vsPar ? b : a))
+    : null;
+  return {
+    playerId,
+    teamId: rows[0]?.team ?? null, // team is per-tournament; read it off the hole data
+    hasHoleData: rows.length > 0,
+    holesPlayed: rows.length,
+    holesScored,
+    ...buckets,
+    birdiesOrBetter: buckets.eagle + buckets.birdie,
+    avgVsPar: holesScored ? netToPar / holesScored : null,
+    stablefordPoints,
+    bestRound,
+    longestBirdieStreak: longestBirdieStreak(playerId, tid),
+  };
+}
+
+// Every player who has any hole data, with their full line (career or scoped).
+export function holeStatsLeaderboard(tid) {
+  const ids = [...new Set(individualHoleRows(tid).map((h) => h.player))];
+  return ids.map((id) => playerHoleStats(id, tid));
+}
+
+// Most Net Birdies — the headline board. Birdie = exactly net −1 (eagles are a
+// separate, rarer bucket, shown alongside as a tiebreak/decoration).
+export function mostNetBirdies(tid) {
+  return holeStatsLeaderboard(tid)
+    .map((s) => ({
+      playerId: s.playerId, teamId: s.teamId, birdies: s.birdie, eagles: s.eagle,
+      birdiesOrBetter: s.birdiesOrBetter, pars: s.par,
+    }))
+    .sort((a, b) => b.birdies - a.birdies || b.eagles - a.eagles);
+}
+
+// Lowest complete NET round (18-hole by default; pass 9 for the Shamble).
+export function lowestNetRounds(holeCount = 18, tid) {
+  return netRoundTotals()
+    .filter((r) => !tid || r.tournament === tid)
+    .filter((r) => r.complete && r.holes === holeCount)
+    .sort((a, b) => a.total - b.total);
+}
+
+// Best net scoring average vs par (players with a meaningful sample of scored holes).
+export function scoringAverageLeaderboard(minHoles = 18, tid) {
+  return holeStatsLeaderboard(tid)
+    .filter((s) => s.holesScored >= minHoles)
+    .map((s) => ({ playerId: s.playerId, avgVsPar: s.avgVsPar, holesScored: s.holesScored }))
+    .sort((a, b) => a.avgVsPar - b.avgVsPar);
+}
+
+// ---- Per-match scorecard (the hole-by-hole grid + running match state) -----
+// Builds one row per player (net cells, totals) plus, for match-play formats,
+// the per-hole winner and running match state. Stableford rounds show points
+// and a running points differential instead of holes-up.
+export function matchScorecard(matchId) {
+  const match = matchById[matchId];
+  if (!match) return null;
+  const rows = holeScores.filter((h) => h.match_id === matchId);
+  if (!rows.length) return null;
+  const isScramble = match.format === 'Scramble';
+  const isStableford = rows.some((h) => h.score_type === 'stableford');
+  const category = isStableford ? 'stableford' : 'matchplay';
+
+  const holeNums = [...new Set(rows.map((h) => h.hole))].sort((a, b) => a - b);
+  const meta = holeNums.map((n) => {
+    const any = rows.find((h) => h.hole === n);
+    return { hole: n, par: any.par, si: any.stroke_index };
+  });
+
+  // Side membership + display order
+  const sideOf = {};
+  for (const p of match.players) sideOf[p.playerId] = p.side;
+
+  // Build player rows (skip scramble — no individual attribution there)
+  let players = [];
+  if (!isScramble) {
+    const ids = [...new Set(rows.filter((h) => h.player).map((h) => h.player))];
+    players = ids.map((pid) => {
+      const pr = rows.filter((h) => h.player === pid).sort((a, b) => a.hole - b.hole);
+      const cells = meta.map(({ hole }) => {
+        const h = pr.find((x) => x.hole === hole);
+        if (!h) return { hole, empty: true };
+        const bucket = h.conceded ? null : netBucket(h.net_result);
+        return {
+          hole,
+          conceded: !!h.conceded,
+          net: h.net_score,
+          points: h.stableford_points,
+          result: h.net_result,
+          bucket, // 'eagle' | 'birdie' | 'par' | 'bogey' | 'double' | null → scorecard notation
+          isBirdie: bucket === 'birdie',
+          isEagle: bucket === 'eagle',
+          isBogeyPlus: bucket === 'bogey' || bucket === 'double',
+        };
+      });
+      const netTotal = pr.reduce((s, h) => s + (h.net_score || 0), 0);
+      const stblTotal = pr.reduce((s, h) => s + (h.stableford_points || 0), 0);
+      const playedThru = pr.filter((h) => !h.conceded && (h.net_score != null || h.stableford_points != null)).length;
+      const complete = playedThru === pr.length;
+      return {
+        playerId: pid, name: playerById[pid]?.name, teamId: pr[0]?.team ?? null,
+        side: sideOf[pid], hcp: pr.find((h) => h.playing_handicap != null)?.playing_handicap ?? null,
+        cells,
+        total: isStableford ? stblTotal : netTotal,
+        totalLabel: isStableford ? 'pts' : 'net',
+        playedThru, complete,
+      };
+    });
+    // Side A first, then B; within a side keep data order
+    players.sort((a, b) => (a.side === b.side ? 0 : a.side === 'A' ? -1 : 1));
+  }
+
+  // Per-hole comparison + running state
+  const aTeam = match.teamAId, bTeam = match.teamBId;
+  const compareVal = (h, side, hole) => {
+    if (isScramble) {
+      const row = rows.find((r) => r.hole === hole && r.team === (side === 'A' ? aTeam : bTeam));
+      return row && row.team_gross != null ? { v: row.team_gross, lowWins: true } : null;
+    }
+    if (isStableford) {
+      const ps = rows.filter((r) => r.hole === hole && sideOf[r.player] === side && r.stableford_points != null);
+      if (!ps.length) return null;
+      return { v: ps.reduce((s, r) => s + r.stableford_points, 0), lowWins: false };
+    }
+    // best ball / shamble / singles: side's best (min) net that hole
+    const ns = rows
+      .filter((r) => r.hole === hole && sideOf[r.player] === side && !r.conceded && r.net_score != null)
+      .map((r) => r.net_score);
+    return ns.length ? { v: Math.min(...ns), lowWins: true } : null;
+  };
+
+  // A match-play match ends when a side leads by more holes than remain. The
+  // authoritative margin ("4&2") tells us the closeout hole: any holes past it
+  // (best ball records all 18; singles concede the rest) are dead — freeze the
+  // running state there so the card agrees with the badge.
+  const N = meta.length;
+  const mm = /^(\d+)\s*&\s*(\d+)$/.exec(match.margin || '');
+  const closeoutHole = mm ? N - parseInt(mm[2], 10) : N;
+
+  let running = 0; // + = side A ahead (holes, or stableford points)
+  let holesWonA = 0, holesWonB = 0, holesHalved = 0;
+  const state = meta.map(({ hole, par, si }) => {
+    const closed = !isStableford && hole > closeoutHole;
+    const a = compareVal(rows, 'A', hole);
+    const b = compareVal(rows, 'B', hole);
+    let winner = null;
+    if (!closed && a && b) {
+      if (a.v === b.v) winner = 'halved';
+      else if (a.lowWins) winner = a.v < b.v ? 'A' : 'B';
+      else winner = a.v > b.v ? 'A' : 'B';
+    }
+    if (isStableford && a && b) running += a.v - b.v;
+    else if (winner === 'A') { running += 1; holesWonA++; }
+    else if (winner === 'B') { running -= 1; holesWonB++; }
+    else if (winner === 'halved') holesHalved++;
+    const leader = running === 0 ? null : running > 0 ? aTeam : bTeam;
+    const mag = Math.abs(running);
+    const runningLabel = closed
+      ? ''
+      : isStableford
+        ? running === 0 ? 'AS' : `${teamShort(leader)} +${mag}`
+        : running === 0 ? 'AS' : `${mag} ${teamShort(leader)}`;
+    return { hole, par, si, winner, running, leader, runningLabel, closed, closeout: hole === closeoutHole && closeoutHole < N };
+  });
+
+  return {
+    matchId, format: match.format, category, isNet: !isScramble,
+    meta, players, state,
+    sideA: { teamId: aTeam, name: teamById[aTeam]?.name },
+    sideB: { teamId: bTeam, name: teamById[bTeam]?.name },
+    holesWon: { A: holesWonA, B: holesWonB, halved: holesHalved },
+    scramble: isScramble
+      ? {
+          teams: [aTeam, bTeam].map((t) => ({
+            teamId: t,
+            cells: meta.map(({ hole }) => {
+              const r = rows.find((x) => x.hole === hole && x.team === t);
+              // Scramble notation is keyed off the TEAM gross vs par.
+              return r ? { hole, gross: r.team_gross, result: r.team_gross_result, bucket: vsParBucket(r.team_gross_vs_par) } : { hole, empty: true };
+            }),
+            total: rows.filter((x) => x.team === t).reduce((s, x) => s + (x.team_gross || 0), 0),
+          })),
+        }
+      : null,
+  };
+}
+
+// Which completed tournaments actually have hole data (drives "show it or not").
+export function tournamentsWithHoleData() {
+  return [...new Set(holeScores.map((h) => h.tournament))];
+}
+export function tournamentHasHoleData(tid) {
+  return holeScores.some((h) => h.tournament === tid);
+}

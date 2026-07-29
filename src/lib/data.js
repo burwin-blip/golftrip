@@ -6,8 +6,16 @@ import matches from '../../data/matches.json';
 import drafts from '../../data/drafts.json';
 import moments from '../../data/moments.json';
 import awards from '../../data/awards.json';
+import holeScores from '../../data/hole_scores.json';
 
-export { players, tournaments, matches, drafts, moments, awards };
+export { players, tournaments, matches, drafts, moments, awards, holeScores };
+
+// Hole rows for one match (by match id), sorted by hole. Individual-score rows
+// only (excludes scramble team rows) unless includeTeam is set.
+export const holesForMatch = (matchId, includeTeam = true) =>
+  holeScores
+    .filter((h) => h.match_id === matchId && (includeTeam || h.player))
+    .sort((a, b) => a.hole - b.hole);
 
 // ---- lookups -------------------------------------------------------------
 const byId = (arr) => Object.fromEntries(arr.map((x) => [x.id, x]));

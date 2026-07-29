@@ -2,6 +2,7 @@
 import Base from '../layouts/Base.astro';
 import MatchRow from '../components/MatchRow.astro';
 import MatchSummary from '../components/MatchSummary.astro';
+import HoleScorecard from '../components/HoleScorecard.astro';
 import { matches, players, roundById, getCourse } from '../lib/data.js';
 import { normalizeFormat } from '../lib/stats.js';
 
@@ -72,6 +73,7 @@ const rosterPlayers = players
               <div class="mitem__ctx faint">R{rnd.number} · {rnd.day} · {crs.name}{crs.nine ? ` — ${crs.nine}` : ''} · {m.format}</div>
               <MatchRow match={m} />
               <MatchSummary match={m} />
+              <HoleScorecard match={m} />
             </div>
           );
         })}

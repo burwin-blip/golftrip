@@ -4,12 +4,21 @@ import TeamLogo from '../components/TeamLogo.astro';
 import { teamById, playerById, roundById } from '../lib/data.js';
 import {
   hallOfFame, records, playerLeaderboard,
+  mostNetBirdies, holeStatsLeaderboard, scoringAverageLeaderboard, HOLE_STATS_COVERAGE,
 } from '../lib/stats.js';
 import { fullName, num, pctText } from '../lib/format.js';
 
 const hof = hallOfFame();
 const rec = records();
 const board = playerLeaderboard();
+
+// Career hole-by-hole (net) leaders — empty arrays if no scorecards exist yet.
+const birdieBoard = mostNetBirdies().filter((r) => r.birdies > 0 || r.eagles > 0);
+const eagleLeader = birdieBoard.slice().sort((a, b) => b.eagles - a.eagles)[0];
+const avgLeader = scoringAverageLeaderboard(18)[0];
+const streakLeader = holeStatsLeaderboard().slice().sort((a, b) => b.longestBirdieStreak - a.longestBirdieStreak)[0];
+const hasHoles = birdieBoard.length > 0;
+const signed = (x) => (x <= 0 ? String(x) : `+${x}`);
 const bright = { woodpeckers: 'var(--wp-bright)', 'silver-spoons': 'var(--ss-bright)' };
 
 const sideNames = (match, teamId) =>
@@ -47,6 +56,22 @@ const recordCards = [
     k: 'Narrowest decision', v: rec.narrowPoints.match.margin,
     who: sideNames(rec.narrowPoints.match, rec.narrowPoints.match.winnerTeamId),
     sub: `${roundById[rec.narrowPoints.match.roundId].format}`,
+  },
+  birdieBoard[0] && {
+    k: 'Most net birdies', v: String(birdieBoard[0].birdies),
+    who: fullName(birdieBoard[0].playerId), sub: 'across all recorded holes', gold: true,
+  },
+  eagleLeader && eagleLeader.eagles > 0 && {
+    k: 'Most net eagles+', v: String(eagleLeader.eagles),
+    who: fullName(eagleLeader.playerId), sub: 'net eagle or better',
+  },
+  avgLeader && {
+    k: 'Best net scoring avg', v: signed(Number(avgLeader.avgVsPar.toFixed(2))),
+    who: fullName(avgLeader.playerId), sub: `per hole · ${avgLeader.holesScored} scored`,
+  },
+  streakLeader && streakLeader.longestBirdieStreak > 1 && {
+    k: 'Longest birdie streak', v: `${streakLeader.longestBirdieStreak} holes`,
+    who: fullName(streakLeader.playerId), sub: 'net birdie or better in a row',
   },
 ].filter(Boolean);
 ---
@@ -96,6 +121,32 @@ const recordCards = [
     </div>
   </section>
 
+  {hasHoles && (
+    <section class="section" style="padding-top:0">
+      <div class="wrap">
+        <div class="section-head"><div><p class="eyebrow">Hole by hole</p><h2>Net birdie-making</h2></div><span class="faint">All recorded scorecards</span></div>
+        <div class="table-scroll">
+          <table class="data">
+            <thead><tr><th>#</th><th>Player</th><th>Team</th><th class="num">Net birdies</th><th class="num">Eagles+</th><th class="num">Net pars</th></tr></thead>
+            <tbody>
+              {birdieBoard.map((r, i) => (
+                <tr class:list={[{ 'hl-good': i === 0 }]}>
+                  <td class="rank">{i + 1}</td>
+                  <td class="name"><a href={`/players/${playerById[r.playerId].slug}`}>{fullName(r.playerId)}</a></td>
+                  <td>{r.teamId && <TeamLogo teamId={r.teamId} size={20} />}</td>
+                  <td class="num tabnums" style="font-weight:700;color:var(--wp)">{r.birdies}</td>
+                  <td class="num tabnums gold" style="font-weight:700">{r.eagles || '—'}</td>
+                  <td class="num tabnums faint">{r.pars}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p class="faint" style="font-size:.74rem;margin-top:.7rem;max-width:72ch;line-height:1.5">{HOLE_STATS_COVERAGE}</p>
+      </div>
+    </section>
+  )}
+
   <!-- CAREER LEADERBOARD -->
   <section class="section" style="padding-top:0">
     <div class="wrap">
@@ -136,4 +187,5 @@ const recordCards = [
   .hof__team { display:flex; align-items:center; gap:.5rem; font-family:var(--serif); font-size:1.2rem; }
   .hof__champ { font-family:var(--serif); font-size:1.05rem; }
   .rec-grid { grid-template-columns: repeat(auto-fit, minmax(210px,1fr)); }
+  .data tr.hl-good { background: color-mix(in srgb, var(--wp) 7%, var(--panel)); }
 </style>
