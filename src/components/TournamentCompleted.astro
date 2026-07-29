@@ -137,14 +137,14 @@ const TABS = [
             <th>Session</th></tr></thead>
           <tbody>
             {rsum.map((r) => (
-              <tr>
-                <td class="name">R{r.round.number} · {r.round.day}</td>
+              <tr class="round-row" data-round={r.round.number}>
+                <td class="name"><a class="round-jump" href={`#round-${r.round.number}`} data-jump data-round={r.round.number} aria-label={`View Round ${r.round.number} matches`}>R{r.round.number} · {r.round.day}</a></td>
                 <td>{getCourse(r.round.courseId).name}</td>
                 <td class="faint">{r.round.format}</td>
                 <td class="num tabnums">{r.pointsAvailable}</td>
                 <td class="num tabnums" style={r.winnerTeamId === WP ? 'font-weight:700;color:var(--wp)' : ''}>{num(r.scores[WP])}</td>
                 <td class="num tabnums" style={r.winnerTeamId === SS ? 'font-weight:700;color:var(--ss)' : ''}>{num(r.scores[SS])}</td>
-                <td>{r.winnerTeamId ? <span class="tbadge tbadge--sm"><TeamLogo teamId={r.winnerTeamId} size={16} />{teamById[r.winnerTeamId].name}</span> : <span class="faint">Halved</span>}</td>
+                <td class="round-row__session">{r.winnerTeamId ? <span class="tbadge tbadge--sm"><TeamLogo teamId={r.winnerTeamId} size={16} />{teamById[r.winnerTeamId].name}</span> : <span class="faint">Halved</span>}<span class="round-row__cue" aria-hidden="true">→</span></td>
               </tr>
             ))}
             <tr class="total-row">
@@ -155,6 +155,10 @@ const TABS = [
             </tr>
           </tbody>
         </table>
+      </div>
+      <div class="matches-cta">
+        <a class="btn-jump" href="#matches" data-jump>View all 18 matches <span aria-hidden="true">→</span></a>
+        <span class="faint">Tap any round above to jump straight to it.</span>
       </div>
 
       <div class="section-head" style="margin-top:2.4rem"><div><p class="eyebrow">The Read</p><h2>Quick insights</h2></div></div>
@@ -243,24 +247,32 @@ const TABS = [
   </section>
 
   <!-- MATCHES -->
-  <section class="tabpanel section" data-panel="matches">
+  <section class="tabpanel section" data-panel="matches" id="matches">
     <div class="wrap">
       <div class="section-head"><div><p class="eyebrow">Every Match</p><h2>Round by round</h2></div><a class="back-link" href="/matches">All matches &amp; filters →</a></div>
-      <div class="stack">
+      <div class="rounds">
         {sb.map((s) => {
           const c = getCourse(s.round.courseId);
+          const rc = s.leaderTeamId ? teamById[s.leaderTeamId].color : 'var(--gold-bright)';
+          // Some formats already carry the hole count ("9-hole Shamble") — don't double it.
+          const fmtLine = /^\d+-hole/i.test(s.round.format) ? s.round.format : `${s.round.holes}-hole ${s.round.format}`;
           return (
-            <div class="round-block">
-              <div class="round-head">
-                <div>
-                  <span class="round-no mono-nums">R{s.round.number}</span>
-                  <span class="round-title">{s.round.day} · {c.name}{c.nine ? ` — ${c.nine}` : ''}</span>
-                  <div class="faint" style="font-size:.8rem">{s.round.holes}-hole {s.round.format}</div>
+            <div class="round-block" id={`round-${s.round.number}`}>
+              <div class="round-band" style={`--rc:${rc}`}>
+                <span class="round-band__no"><em>Round</em>{s.round.number}</span>
+                <div class="round-band__meta">
+                  <span class="round-band__title">{s.round.day} · {c.name}{c.nine ? ` — ${c.nine}` : ''}</span>
+                  <span class="round-band__sub">{fmtLine}</span>
                 </div>
-                <div class="round-score tabnums">
-                  <span style={s.leaderTeamId === WP ? 'color:var(--wp);font-weight:700' : 'color:var(--muted)'}>{num(s.scores[WP])}</span>
-                  <span class="faint">–</span>
-                  <span style={s.leaderTeamId === SS ? 'color:var(--ss);font-weight:700' : 'color:var(--muted)'}>{num(s.scores[SS])}</span>
+                <div class="round-band__score">
+                  <div class="round-band__tally tabnums">
+                    <TeamLogo teamId={WP} size={20} />
+                    <b style={s.leaderTeamId === WP ? 'color:var(--wp)' : 'color:var(--muted)'}>{num(s.scores[WP])}</b>
+                    <span class="faint">–</span>
+                    <b style={s.leaderTeamId === SS ? 'color:var(--ss)' : 'color:var(--muted)'}>{num(s.scores[SS])}</b>
+                    <TeamLogo teamId={SS} size={20} />
+                  </div>
+                  <span class="round-band__result">{s.leaderTeamId ? `${teamById[s.leaderTeamId].name} took the session` : 'Session halved'}</span>
                 </div>
               </div>
               <div class="matches">
@@ -505,11 +517,43 @@ const TABS = [
   tr.hl-bad { background: color-mix(in srgb, #b4453a 6%, var(--panel)); }
   .caveat { font-size: .78rem; color: var(--muted); margin-top: .8rem; background: var(--gold-soft); border: 1px solid color-mix(in srgb, var(--gold-bright) 30%, transparent); border-radius: var(--r-sm); padding: .55rem .8rem; }
 
-  .round-block + .round-block { margin-top: 2rem; }
-  .round-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: .8rem; padding-bottom: .7rem; border-bottom: 1px solid var(--line); }
-  .round-no { font-family: var(--serif); color: var(--gold); font-size: 1.1rem; margin-right: .6rem; }
-  .round-title { font-family: var(--serif); font-size: 1.05rem; }
-  .round-score { font-size: 1.15rem; display: flex; gap: .5rem; align-items: center; white-space: nowrap; }
+  /* Overview → Matches jump: clickable round rows + CTA button */
+  .round-row { cursor: pointer; transition: background .12s var(--ease); }
+  .round-row:hover, .round-row:focus-visible { background: color-mix(in srgb, var(--gold-bright) 8%, var(--panel)); outline: none; }
+  .round-row:focus-visible { box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--gold-bright) 45%, transparent); }
+  .round-jump { font-weight: 700; color: var(--text); }
+  .round-row:hover .round-jump { color: var(--gold); }
+  .round-row__session { display: flex; align-items: center; justify-content: space-between; gap: .5rem; }
+  .round-row__cue { color: var(--faint); font-weight: 800; opacity: 0; transition: opacity .12s var(--ease), transform .12s var(--ease); transform: translateX(-3px); }
+  .round-row:hover .round-row__cue, .round-row:focus-visible .round-row__cue { opacity: 1; transform: translateX(0); color: var(--gold); }
+  .matches-cta { display: flex; flex-wrap: wrap; align-items: center; gap: .7rem 1rem; margin-top: 1.1rem; }
+  .btn-jump { display: inline-flex; align-items: center; gap: .5rem; padding: .6rem 1.1rem; border-radius: 999px; background: var(--gold-bright); color: #fff; font-weight: 700; font-size: .92rem; letter-spacing: .01em; box-shadow: var(--shadow); transition: filter .12s var(--ease), transform .12s var(--ease); }
+  .btn-jump:hover { filter: brightness(1.06); transform: translateY(-1px); }
+
+  /* Matches tab: each round is its own chapter — strong header band, generous
+     spacing, subtle alternating section tint. */
+  .rounds { display: flex; flex-direction: column; }
+  .round-block { scroll-margin-top: 120px; margin-top: 2.6rem; padding: .5rem .5rem .3rem; border-radius: var(--r-md, 14px); }
+  .round-block:first-child { margin-top: .6rem; }
+  .rounds .round-block:nth-child(even) { background: color-mix(in srgb, var(--line) 26%, transparent); }
+  .round-band { --rc: var(--gold-bright); display: flex; flex-wrap: wrap; align-items: center; gap: .6rem 1.1rem; margin-bottom: 1rem; padding: .8rem 1rem; border-radius: var(--r-sm); background: linear-gradient(100deg, color-mix(in srgb, var(--rc) 16%, var(--panel)), color-mix(in srgb, var(--rc) 5%, var(--panel))); border: 1px solid color-mix(in srgb, var(--rc) 28%, var(--line)); border-left: 5px solid var(--rc); box-shadow: var(--shadow); }
+  .round-band__no { display: inline-flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1; flex: none; min-width: 3.1rem; padding: .4rem .5rem; border-radius: var(--r-sm); background: var(--rc); color: #fff; font-family: var(--serif); font-size: 1.7rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .round-band__no em { font-style: normal; font-family: var(--sans, inherit); font-size: .5rem; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; opacity: .85; margin-bottom: .12rem; }
+  .round-band__meta { display: flex; flex-direction: column; gap: .12rem; margin-right: auto; }
+  .round-band__title { font-family: var(--serif); font-size: clamp(1.05rem, .95rem + .6vw, 1.3rem); color: var(--text); }
+  .round-band__sub { font-size: .78rem; color: var(--muted); letter-spacing: .01em; }
+  .round-band__score { display: flex; flex-direction: column; align-items: flex-end; gap: .1rem; }
+  .round-band__tally { display: flex; align-items: center; gap: .4rem; font-size: 1.2rem; }
+  .round-band__tally b { font-weight: 700; }
+  .round-band__result { font-size: .7rem; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; color: color-mix(in srgb, var(--rc) 70%, var(--muted)); }
+
+  @media (max-width: 560px) {
+    .round-band { gap: .5rem .7rem; padding: .7rem .75rem; }
+    .round-band__no { min-width: 2.6rem; font-size: 1.4rem; }
+    .round-band__meta { flex-basis: calc(100% - 3.4rem); }
+    .round-band__score { align-items: flex-start; flex-basis: 100%; margin-top: .2rem; }
+    .round-block { padding: .35rem .35rem .2rem; }
+  }
 
   table.matrix .fmtcell { width: 1.5rem; height: 1.5rem; display: inline-grid; place-items: center; border-radius: 5px; font-size: .72rem; font-weight: 800; }
   .fmtcell.w { background: var(--wp-soft); color: var(--wp-ink); }
@@ -555,6 +599,37 @@ const TABS = [
       if (push && history.replaceState) history.replaceState(null, '', '#' + id);
     }
     tabs.forEach((t) => t.addEventListener('click', () => activate(t.dataset.tab, true)));
+
+    // Jump links (Overview → Matches): switch to the Matches tab, then scroll to
+    // the requested round (or the top of the matches panel).
+    function jumpToRound(rnd) {
+      activate('matches', true); // un-hides the panel synchronously → layout is ready
+      const id = rnd ? 'round-' + rnd : 'matches';
+      // behavior:'instant' bypasses the page's global scroll-behavior:smooth (a
+      // smooth scroll here gets reset and parks at the top); the sticky-header
+      // offset comes from scroll-margin-top on the round blocks. Call it now, then
+      // re-assert on a timeout for the odd case where layout settles a frame later.
+      // (Do NOT wrap in requestAnimationFrame — a scrollIntoView inside rAF is
+      // silently dropped under the smooth scroll-behavior.)
+      const go = () => { const el = document.getElementById(id); if (el) el.scrollIntoView({ behavior: 'instant', block: 'start' }); };
+      go();
+      // On first activation the match logos/content load and grow the layout after
+      // the initial jump — re-assert (instantly, so it's invisible when already in
+      // place) across the next half-second to absorb that shift.
+      [40, 120, 260, 450].forEach((t) => setTimeout(go, t));
+    }
+    root.querySelectorAll('[data-jump]').forEach((el) => {
+      el.addEventListener('click', (e) => { e.preventDefault(); jumpToRound(el.getAttribute('data-round')); });
+    });
+    // The whole round row is clickable for mouse users; the embedded link stays
+    // the keyboard/no-JS control, so skip clicks that land on it (already handled).
+    root.querySelectorAll('.round-row').forEach((row) => {
+      row.addEventListener('click', (e) => {
+        if (e.target.closest('[data-jump]')) return;
+        jumpToRound(row.getAttribute('data-round'));
+      });
+    });
+
     const hash = location.hash.replace('#', '');
     if (hash && tabs.some((t) => t.dataset.tab === hash)) activate(hash, false);
   })();
