@@ -1,16 +1,16 @@
 ---
-// Hole-by-hole NET scorecard for one match, plus the original card image.
-// All numbers come from stats.matchScorecard() — computed from hole_scores.json,
-// never hardcoded. Renders nothing if the match has no hole data.
+// Hole-by-hole NET scorecard for one match. All numbers come from
+// stats.matchScorecard() — computed from hole_scores.json, never hardcoded.
+// Renders nothing if the match has no hole data.
+// (The original card screenshots remain archived in public/scorecards/<year>/
+// and data/scorecard_images.json, but are no longer displayed — the generated
+// grid is now the canonical view.)
 import { matchScorecard, HOLE_STATS_COVERAGE } from '../lib/stats.js';
-import { teamById, roundById } from '../lib/data.js';
-import images from '../../data/scorecard_images.json';
+import { teamById } from '../lib/data.js';
 import TeamLogo from './TeamLogo.astro';
 
 const { match } = Astro.props;
 const sc = matchScorecard(match.id);
-const img = images[match.id] || null;
-const round = roundById[match.roundId];
 
 // Column groups: split at the turn for 18-hole rounds.
 const holes = sc ? sc.meta.map((m) => m.hole) : [];
@@ -33,6 +33,21 @@ function tallies(p) {
 // double+ = double square, par = plain. Conceded holes show the concede marker.
 const MARK = { eagle: 'scv m-eagle', birdie: 'scv m-birdie', par: 'scv m-par', bogey: 'scv m-bogey', double: 'scv m-double' };
 const markClass = (bucket) => MARK[bucket] || 'scv m-par';
+
+// Running match state from a single team's perspective (Squabbit style):
+// "2up" when that team leads, "1dn" when behind, "AS" all square. state.running
+// is + when side A is ahead. Holes past the closeout show nothing.
+const teamLead = (s, side) => (side === 'A' ? s.running : -s.running);
+const stateLabel = (s, side) => {
+  if (!s || s.closed) return '';
+  const up = teamLead(s, side);
+  return up === 0 ? 'AS' : up > 0 ? `${up}up` : `${-up}dn`;
+};
+const stateCls = (s, side) => {
+  if (!s || s.closed) return 'st-x closed';
+  const up = teamLead(s, side);
+  return up > 0 ? 'st-x up' : up < 0 ? 'st-x dn' : 'st-x as';
+};
 
 const teamShort = (id) => teamById[id]?.name.split(/\s+/).map((w) => w[0]).join('').toUpperCase();
 ---
@@ -118,20 +133,28 @@ const teamShort = (id) => teamById[id]?.name.split(/\s+/).map((w) => w[0]).join(
           </tbody>
           {sc.category === 'matchplay' && (
             <tfoot>
-              <tr class="hsc__state">
-                <th class="hsc__name">Match</th>
-                {front.map((m) => {
-                  const s = sc.state.find((x) => x.hole === m.hole);
-                  return <td class:list={['sc-state', s?.winner ? `w-${s.winner}` : '']}>{s?.runningLabel === 'AS' ? 'AS' : s?.runningLabel}</td>;
-                })}
-                {is18 && <td class="hsc__sum"></td>}
-                {back.map((m) => {
-                  const s = sc.state.find((x) => x.hole === m.hole);
-                  return <td class:list={['sc-state', s?.winner ? `w-${s.winner}` : '']}>{s?.runningLabel === 'AS' ? 'AS' : s?.runningLabel}</td>;
-                })}
-                {is18 && <td class="hsc__sum"></td>}
-                <td class="hsc__sum"></td>
-              </tr>
+              {['A', 'B'].map((side) => {
+                const teamId = side === 'A' ? sc.sideA.teamId : sc.sideB.teamId;
+                return (
+                  <tr class="hsc__state" style={`--accent:${teamById[teamId]?.color}`}>
+                    <th class="hsc__name">
+                      <TeamLogo teamId={teamId} size={16} className="hsc__logo" />
+                      <span>{teamById[teamId]?.name}</span>
+                    </th>
+                    {front.map((m) => {
+                      const s = sc.state.find((x) => x.hole === m.hole);
+                      return <td class={stateCls(s, side)}>{stateLabel(s, side)}</td>;
+                    })}
+                    {is18 && <td class="hsc__sum"></td>}
+                    {back.map((m) => {
+                      const s = sc.state.find((x) => x.hole === m.hole);
+                      return <td class={stateCls(s, side)}>{stateLabel(s, side)}</td>;
+                    })}
+                    {is18 && <td class="hsc__sum"></td>}
+                    <td class="hsc__sum"></td>
+                  </tr>
+                );
+              })}
             </tfoot>
           )}
         </table>
@@ -149,19 +172,6 @@ const teamShort = (id) => teamById[id]?.name.split(/\s+/).map((w) => w[0]).join(
         </div>
         <p class="hsc__note">Notation shows each hole's {sc.isNet ? 'net result' : 'team score'} vs par — circles under par, squares over. {sc.isNet ? 'Net scores' : 'Team gross (scramble)'} · {HOLE_STATS_COVERAGE.split('.')[0]}.</p>
       </div>
-
-      {img && (
-        <figure class="hsc__card">
-          <a href={img.full} target="_blank" rel="noopener" class="hsc__cardlink" aria-label="Open full scorecard image">
-            <img src={img.thumb} alt={`Original scorecard — Round ${round.number}, ${match.margin} ${match.halved ? '' : ''}`} loading="lazy" />
-            <span class="hsc__zoom">⤢ Full card</span>
-          </a>
-          <figcaption>
-            Original scorecard · Round {round.number} — {round.format}
-            {img.shared.length > 0 && <span class="hsc__shared"> · one card covers both singles on this tee sheet</span>}
-          </figcaption>
-        </figure>
-      )}
     </div>
   </details>
 )}
@@ -209,10 +219,17 @@ const teamShort = (id) => teamById[id]?.name.split(/\s+/).map((w) => w[0]).join(
   .scv.m-double { border: 1.5px solid var(--sq-ink); border-radius: 3px; color: var(--sq-ink); font-weight: 700; box-shadow: 0 0 0 1.5px var(--panel), 0 0 0 2.9px var(--sq-ink); }
   .scv.conceded { color: var(--faint); }
 
-  .hsc__state th, .hsc__state td { border-top: 2px solid var(--line); font-size: .66rem; font-weight: 700; color: var(--faint); padding-top: .35rem; padding-bottom: .35rem; }
-  .hsc__state .hsc__name { color: var(--muted); background: var(--panel); }
-  .sc-state.w-A { color: var(--wp); background: color-mix(in srgb, var(--wp) 10%, transparent); }
-  .sc-state.w-B { color: var(--ss); background: color-mix(in srgb, var(--ss) 10%, transparent); }
+  /* Running match state — one row per team, each from its own perspective and in
+     its own colour: "up" cells get a solid team-colour wash so you can read at a
+     glance who led after every hole; "dn" recedes, "AS" is neutral. */
+  .hsc__state td { border-top: 1px solid var(--line); font-size: .64rem; font-weight: 700; padding-top: .32rem; padding-bottom: .32rem; }
+  .hsc__state:first-of-type td, .hsc__state:first-of-type th { border-top: 2px solid var(--line-strong, var(--line)); }
+  .hsc__state .hsc__name { color: var(--accent); background: var(--panel); font-weight: 700; }
+  .st-x { color: color-mix(in srgb, var(--accent) 55%, var(--muted)); }
+  .st-x.up { color: #fff; background: var(--accent); font-weight: 800; }
+  .st-x.dn { color: color-mix(in srgb, var(--accent) 45%, var(--muted)); font-weight: 600; }
+  .st-x.as { color: var(--faint); font-weight: 600; }
+  .st-x.closed { color: var(--faint); }
 
   .hsc__foot { margin-top: .55rem; }
   /* Legend: draw the same marks in a neutral ink so the shapes read regardless of
@@ -223,13 +240,6 @@ const teamShort = (id) => teamById[id]?.name.split(/\s+/).map((w) => w[0]).join(
   .lg .scv.m-birdie { border-color: var(--muted); color: var(--muted); }
   .hsc__hw { color: var(--faint); font-weight: 600; margin-left: auto; }
   .hsc__note { margin-top: .4rem; font-size: .66rem; color: var(--faint); line-height: 1.4; }
-
-  .hsc__card { margin: .8rem 0 0; }
-  .hsc__cardlink { position: relative; display: block; border: 1px solid var(--line); border-radius: var(--r-sm); overflow: hidden; background: #fff; box-shadow: var(--shadow-sm, 0 1px 3px rgba(0,0,0,.08)); }
-  .hsc__cardlink img { display: block; width: 100%; height: auto; }
-  .hsc__zoom { position: absolute; right: .5rem; bottom: .5rem; background: color-mix(in srgb, var(--hsc-head) 88%, transparent); color: #fff; font-size: .68rem; font-weight: 700; padding: .28rem .55rem; border-radius: 999px; letter-spacing: .02em; }
-  .hsc__card figcaption { margin-top: .4rem; font-size: .68rem; color: var(--faint); }
-  .hsc__shared { color: var(--muted); }
 
   @media (max-width: 560px) {
     .hsc__name { min-width: 6.4rem !important; font-size: .72rem; }

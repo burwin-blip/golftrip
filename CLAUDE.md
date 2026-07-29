@@ -135,20 +135,27 @@ handicap 13 — as gross that's an impossible net 61, so the card must be net.
   `HoleScorecard.astro`: birdie = circle, eagle+ = double circle, bogey = square,
   double+ = double square, par = plain, conceded = concede marker. Circles take the
   row's team colour, eagles are gold, squares a neutral over-par ink; a small legend
-  sits under every card.
+  sits under every card. The running match state is drawn as **two rows, one per
+  team, each from its own perspective** (Squabbit style: `2up` / `1dn` / `AS`) in the
+  team's own colour, with "up" cells washed solid so you can read who led after every
+  hole; both freeze at the closeout.
 - `HOLE_STATS_COVERAGE` — the one-paragraph caveat; render it wherever hole stats show.
 - `tournamentHasHoleData(tid)` / `tournamentsWithHoleData()` — the gate.
 
 ### Where it surfaces
 - **Match pages** (`matches.astro` + St George Matches tab): `HoleScorecard.astro`
-  under each match — the net grid **and** the original card image (framed thumbnail,
-  click → full size in a new tab). Renders nothing if the match has no hole data.
-- **Scorecard images**: `data/scorecard_images.json` maps `match_id →
-  {full, thumb, shared}`; files live in `public/scorecards/<year>/`. Regenerate with
-  the PIL block that crops the annotation banner and writes a full PNG + a JPG thumb.
-  R5 tee sheets carry two singles, so two matches can share one image (`shared`).
-- **Home**: "Most net birdies" board (top 5, team-coloured bars) between Results and
-  Awards.
+  under each match — the generated net grid. Renders nothing if the match has no hole
+  data.
+- **Scorecard images (archived, not displayed)**: the original card screenshots live
+  in `public/scorecards/<year>/` (full PNG + JPG thumb) and are indexed by
+  `data/scorecard_images.json` (`match_id → {full, thumb, shared}`), kept as a source
+  archive. They were removed from the match pages once every card was transcribed —
+  the generated grid is now the canonical view. `HoleScorecard.astro` no longer
+  imports the map; re-wire it if you ever want to show the originals again. The
+  regenerate step is the PIL block that crops the annotation banner and writes both
+  sizes; R5 tee sheets carry two singles, so two matches can share one image.
+- **Home**: no hole-by-hole section — the homepage stays title → 2026 results → The
+  silverware → Next trip. (The net-birdies leaderboard lives on Stats/Records.)
 - **Tournament Stats tab**: "Most net birdies" board + hole-record cards (lowest net
   round / nine, best scoring avg, longest streak) — replaced the old Net Stableford
   leaderboard now that real hole data exists.
