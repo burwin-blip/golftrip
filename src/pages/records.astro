@@ -3,7 +3,7 @@ import Base from '../layouts/Base.astro';
 import TeamLogo from '../components/TeamLogo.astro';
 import { teamById, playerById, roundById } from '../lib/data.js';
 import {
-  hallOfFame, records, playerLeaderboard,
+  hallOfFame, records, playerLeaderboard, upcomingTournaments,
   mostNetBirdies, holeStatsLeaderboard, scoringAverageLeaderboard, HOLE_STATS_COVERAGE,
 } from '../lib/stats.js';
 import { fullName, num, pctText } from '../lib/format.js';
@@ -19,88 +19,88 @@ const avgLeader = scoringAverageLeaderboard(18)[0];
 const streakLeader = holeStatsLeaderboard().slice().sort((a, b) => b.longestBirdieStreak - a.longestBirdieStreak)[0];
 const hasHoles = birdieBoard.length > 0;
 const signed = (x) => (x <= 0 ? String(x) : `+${x}`);
-const bright = { woodpeckers: 'var(--wp-bright)', 'silver-spoons': 'var(--ss-bright)' };
 
 const sideNames = (match, teamId) =>
   match.players.filter((p) => p.teamId === teamId).map((p) => fullName(p.playerId)).join(' & ');
 
+// ---- Honour-board rows: filled champions + EMPTY future years (room to grow) ----
+const filled = hof.champions.map((ch) => ({
+  year: ch.tournament.year,
+  href: `/tournaments/${ch.tournament.id}`,
+  place: ch.tournament.location.split(',')[0].trim(),
+  finalScore: ch.finalScore,
+  teamId: ch.teamChampionId,
+  teamName: teamById[ch.teamChampionId].name,
+  player: playerById[ch.championPlayerId],
+}));
+const doneYears = new Set(filled.map((r) => r.year));
+const upcoming = upcomingTournaments();
+// Show the next contested edition (2027) and one beyond (2028) as empty engraving.
+const futureYears = [2027, 2028].filter((y) => !doneYears.has(y));
+const emptyRows = futureYears.map((y) => {
+  const evt = upcoming.find((t) => t.year === y);
+  return { year: y, place: evt ? evt.location.split(',')[0].trim() : 'To be announced', href: evt ? `/tournaments/${evt.id}` : null };
+});
+
 // Assemble the record book from computed values (nothing hardcoded).
 const recordCards = [
-  rec.biggest && {
-    k: 'Largest margin of victory', v: rec.biggest.match.margin,
-    who: sideNames(rec.biggest.match, rec.biggest.match.winnerTeamId),
-    sub: `${roundById[rec.biggest.match.roundId].format}`,
-  },
-  rec.swing && {
-    k: 'Biggest session swing', v: `+${num(rec.swing.gap)}`,
-    who: teamById[rec.swing.leaderTeamId].name,
-    sub: `${rec.swing.round.format} · ${num(rec.swing.scores[rec.swing.leaderTeamId])}–${num(Object.entries(rec.swing.scores).find(([id]) => id !== rec.swing.leaderTeamId)[1])}`,
-  },
-  rec.bestPct && {
-    k: 'Best points percentage', v: pctText(rec.bestPct.pointPct),
-    who: rec.bestPct.player.name, sub: `${rec.bestPct.w}–${rec.bestPct.h}–${rec.bestPct.l} · ${num(rec.bestPct.pointsEarned)}/${num(rec.bestPct.pointsAvailable)} pts`, gold: true,
-  },
-  rec.mostPoints && {
-    k: 'Most points', v: num(rec.mostPoints.pointsEarned),
-    who: rec.mostPoints.player.name, sub: `${rec.mostPoints.w}–${rec.mostPoints.h}–${rec.mostPoints.l} · from ${num(rec.mostPoints.pointsAvailable)} available`,
-  },
-  rec.lowNet && {
-    k: 'Lowest round (net)', v: String(rec.lowNet.net),
-    who: fullName(rec.lowNet.playerId), sub: `${rec.lowNet.round.holes}-hole ${rec.lowNet.round.format}`,
-  },
-  rec.bestStbl && {
-    k: 'Best Stableford card', v: String(rec.bestStbl.stableford),
-    who: fullName(rec.bestStbl.playerId), sub: `${rec.bestStbl.round.format}`,
-  },
-  rec.narrowPoints && {
-    k: 'Narrowest decision', v: rec.narrowPoints.match.margin,
-    who: sideNames(rec.narrowPoints.match, rec.narrowPoints.match.winnerTeamId),
-    sub: `${roundById[rec.narrowPoints.match.roundId].format}`,
-  },
-  birdieBoard[0] && {
-    k: 'Most net birdies', v: String(birdieBoard[0].birdies),
-    who: fullName(birdieBoard[0].playerId), sub: 'across all recorded holes', gold: true,
-  },
-  eagleLeader && eagleLeader.eagles > 0 && {
-    k: 'Most net eagles+', v: String(eagleLeader.eagles),
-    who: fullName(eagleLeader.playerId), sub: 'net eagle or better',
-  },
-  avgLeader && {
-    k: 'Best net scoring avg', v: signed(Number(avgLeader.avgVsPar.toFixed(2))),
-    who: fullName(avgLeader.playerId), sub: `per hole · ${avgLeader.holesScored} scored`,
-  },
-  streakLeader && streakLeader.longestBirdieStreak > 1 && {
-    k: 'Longest birdie streak', v: `${streakLeader.longestBirdieStreak} holes`,
-    who: fullName(streakLeader.playerId), sub: 'net birdie or better in a row',
-  },
+  rec.biggest && { k: 'Largest margin of victory', v: rec.biggest.match.margin, who: sideNames(rec.biggest.match, rec.biggest.match.winnerTeamId), sub: `${roundById[rec.biggest.match.roundId].format}` },
+  rec.swing && { k: 'Biggest session swing', v: `+${num(rec.swing.gap)}`, who: teamById[rec.swing.leaderTeamId].name, sub: `${rec.swing.round.format} · ${num(rec.swing.scores[rec.swing.leaderTeamId])}–${num(Object.entries(rec.swing.scores).find(([id]) => id !== rec.swing.leaderTeamId)[1])}` },
+  rec.bestPct && { k: 'Best points percentage', v: pctText(rec.bestPct.pointPct), who: rec.bestPct.player.name, sub: `${rec.bestPct.w}–${rec.bestPct.h}–${rec.bestPct.l} · ${num(rec.bestPct.pointsEarned)}/${num(rec.bestPct.pointsAvailable)} pts`, gold: true },
+  rec.mostPoints && { k: 'Most points', v: num(rec.mostPoints.pointsEarned), who: rec.mostPoints.player.name, sub: `${rec.mostPoints.w}–${rec.mostPoints.h}–${rec.mostPoints.l} · from ${num(rec.mostPoints.pointsAvailable)} available` },
+  rec.lowNet && { k: 'Lowest round (net)', v: String(rec.lowNet.net), who: fullName(rec.lowNet.playerId), sub: `${rec.lowNet.round.holes}-hole ${rec.lowNet.round.format}` },
+  rec.bestStbl && { k: 'Best Stableford card', v: String(rec.bestStbl.stableford), who: fullName(rec.bestStbl.playerId), sub: `${rec.bestStbl.round.format}` },
+  rec.narrowPoints && { k: 'Narrowest decision', v: rec.narrowPoints.match.margin, who: sideNames(rec.narrowPoints.match, rec.narrowPoints.match.winnerTeamId), sub: `${roundById[rec.narrowPoints.match.roundId].format}` },
+  birdieBoard[0] && { k: 'Most net birdies', v: String(birdieBoard[0].birdies), who: fullName(birdieBoard[0].playerId), sub: 'across all recorded holes', gold: true },
+  eagleLeader && eagleLeader.eagles > 0 && { k: 'Most net eagles+', v: String(eagleLeader.eagles), who: fullName(eagleLeader.playerId), sub: 'net eagle or better' },
+  avgLeader && { k: 'Best net scoring avg', v: signed(Number(avgLeader.avgVsPar.toFixed(2))), who: fullName(avgLeader.playerId), sub: `per hole · ${avgLeader.holesScored} scored` },
+  streakLeader && streakLeader.longestBirdieStreak > 1 && { k: 'Longest birdie streak', v: `${streakLeader.longestBirdieStreak} holes`, who: fullName(streakLeader.playerId), sub: 'net birdie or better in a row' },
 ].filter(Boolean);
 ---
 <Base active="records" title="Records & Hall of Fame" description="The Annual record book and hall of fame — champions, career leaders and the marks to beat.">
 
-  <!-- HALL OF FAME -->
+  <!-- HONOUR BOARD -->
   <section class="section">
     <div class="wrap">
       <p class="eyebrow gold">Immortals</p>
       <h1 class="display" style="font-size:clamp(2.1rem,6vw,3.6rem);margin:.3rem 0 .5rem">Hall of Fame</h1>
-      <p class="lede">Every champion crowned in The Annual. The names carved first.</p>
+      <p class="lede">Every champion crowned in The Annual — engraved, with room for the names still to come.</p>
 
-      <div class="hof">
-        {hof.champions.map((ch) => {
-          const team = teamById[ch.teamChampionId];
-          const player = playerById[ch.championPlayerId];
-          return (
-            <div class="hof__card card" style={`--accent:${team.color};--accent-bright:${bright[team.id]}`}>
-              <div class="hof__year">{ch.tournament.year}</div>
-              <div class="hof__body">
-                <p class="eyebrow">{ch.tournament.shortName} · {ch.finalScore}</p>
-                <div class="hof__teams">
-                  <a href={`/tournaments/${ch.tournament.id}`} class="hof__team"><TeamLogo teamId={team.id} size={30} /><span>{team.name}</span><span class="pill gold" style="margin-left:.2rem">♛ Team</span></a>
-                  <a href={`/players/${player.slug}`} class="hof__champ gold">{player.name} <span class="faint" style="font-weight:400">— Champion Golfer</span></a>
-                </div>
-              </div>
+      <div class="board" style="margin-top:1.6rem">
+        <div class="board__crest" aria-hidden="true">⛳</div>
+        <div class="board__title">Roll of Champions</div>
+        <div class="board__rule"></div>
+        <div class="board__head">
+          <span>Year</span><span>Team Champions</span><span>Champion Golfer</span>
+        </div>
+
+        {filled.map((r) => (
+          <a class="brow brow--filled" href={r.href} style={`--accent:${teamById[r.teamId].color}`}>
+            <div class="brow__year">{r.year}<span class="brow__place">{r.place}</span></div>
+            <div class="brow__team">
+              <TeamLogo teamId={r.teamId} size={26} chip={true} />
+              <span><span class="brow__crown" aria-hidden="true">♛</span>{r.teamName}</span>
+              <span class="brow__score">{r.finalScore}</span>
             </div>
-          );
-        })}
+            <div class="brow__golfer">{r.player.name}</div>
+          </a>
+        ))}
+
+        {emptyRows.map((r) => (
+          r.href ? (
+            <a class="brow brow--empty" href={r.href}>
+              <div class="brow__year">{r.year}<span class="brow__place">{r.place}</span></div>
+              <div class="brow__team brow__await">To be contested</div>
+              <div class="brow__golfer brow__await">—</div>
+            </a>
+          ) : (
+            <div class="brow brow--empty">
+              <div class="brow__year">{r.year}<span class="brow__place">{r.place}</span></div>
+              <div class="brow__team brow__await">To be contested</div>
+              <div class="brow__golfer brow__await">—</div>
+            </div>
+          )
+        ))}
       </div>
     </div>
   </section>
@@ -179,13 +179,50 @@ const recordCards = [
 </Base>
 
 <style>
-  .hof { margin-top:1.6rem; display:flex; flex-direction:column; gap:1rem; }
-  .hof__card { display:grid; grid-template-columns:auto 1fr; overflow:hidden; border-color:color-mix(in srgb,var(--accent) 34%,var(--line)); }
-  .hof__year { font-family:var(--serif); font-size:clamp(2rem,1.4rem+3vw,3.4rem); font-weight:600; display:flex; align-items:center; justify-content:center; padding:0 clamp(1rem,3vw,1.8rem); background:linear-gradient(160deg,color-mix(in srgb,var(--accent) 26%,var(--panel)),var(--panel)); color:var(--accent-bright); border-right:1px solid var(--line); font-variant-numeric:tabular-nums; }
-  .hof__body { padding:clamp(1rem,3vw,1.4rem); }
-  .hof__teams { display:flex; flex-direction:column; gap:.5rem; margin-top:.5rem; }
-  .hof__team { display:flex; align-items:center; gap:.5rem; font-family:var(--serif); font-size:1.2rem; }
-  .hof__champ { font-family:var(--serif); font-size:1.05rem; }
+  /* ---- Clubhouse honour board — engraved gold on lacquered green ---- */
+  .board {
+    position: relative;
+    background:
+      radial-gradient(140% 90% at 50% 0%, #1d4a37 0%, var(--green-900) 70%);
+    border-radius: var(--r-lg);
+    padding: clamp(1.4rem, 4vw, 2.6rem) clamp(1.2rem, 4vw, 2.6rem) clamp(1rem, 3vw, 1.8rem);
+    box-shadow: var(--shadow-lg);
+    color: var(--green-ink);
+  }
+  /* engraved double frame */
+  .board::before {
+    content: ''; position: absolute; inset: 10px; border-radius: calc(var(--r-lg) - 8px);
+    border: 1px solid color-mix(in srgb, var(--gold-line) 40%, transparent);
+    box-shadow: inset 0 0 0 3px color-mix(in srgb, var(--gold-line) 14%, transparent);
+    pointer-events: none;
+  }
+  .board__crest { text-align: center; font-size: 1.5rem; filter: sepia(1) saturate(2) hue-rotate(5deg) brightness(1.1); }
+  .board__title { font-family: var(--serif); text-align: center; color: var(--gold-line); font-size: clamp(1.3rem, 1rem + 2vw, 2rem); letter-spacing: .02em; margin-top: .2rem; }
+  .board__rule { height: 2px; width: min(220px, 60%); margin: .8rem auto 1.3rem; background: linear-gradient(90deg, transparent, var(--gold-line), transparent); opacity: .7; }
+
+  .board__head, .brow { display: grid; grid-template-columns: 6.5rem 1.5fr 1.3fr; gap: 1rem; align-items: center; }
+  .board__head { font-family: var(--sans); font-size: .64rem; letter-spacing: .16em; text-transform: uppercase; color: color-mix(in srgb, var(--gold-line) 75%, transparent); padding: 0 clamp(.4rem,2vw,1rem) .7rem; }
+  .brow { padding: clamp(.9rem, 2.5vw, 1.15rem) clamp(.4rem, 2vw, 1rem); border-top: 1px solid color-mix(in srgb, var(--gold-line) 16%, transparent); transition: background .18s var(--ease); }
+  .brow--filled { cursor: pointer; }
+  .brow--filled:hover { background: color-mix(in srgb, var(--gold-line) 8%, transparent); border-radius: var(--r-sm); }
+  .brow__year { font-family: var(--serif); font-size: clamp(1.5rem, 1.1rem + 2vw, 2.2rem); font-weight: 600; color: var(--gold-line); line-height: 1; font-variant-numeric: tabular-nums; display: flex; flex-direction: column; gap: .2rem; }
+  .brow__place { font-family: var(--sans); font-size: .6rem; letter-spacing: .12em; text-transform: uppercase; color: color-mix(in srgb, var(--green-ink) 55%, transparent); font-weight: 700; }
+  .brow__team { display: flex; align-items: center; gap: .55rem; font-family: var(--serif); font-size: clamp(1.05rem, .9rem + .8vw, 1.35rem); color: var(--green-ink); flex-wrap: wrap; }
+  .brow__crown { color: var(--gold-bright); margin-right: .3rem; }
+  .brow__score { font-family: var(--sans); font-size: .66rem; font-weight: 700; letter-spacing: .06em; color: color-mix(in srgb, var(--green-ink) 60%, transparent); background: color-mix(in srgb, var(--green-ink) 12%, transparent); padding: .12rem .5rem; border-radius: 999px; }
+  .brow__golfer { font-family: var(--serif); font-size: clamp(1.1rem, .9rem + 1vw, 1.5rem); color: var(--gold-line); font-weight: 600; letter-spacing: .01em; }
+  .brow--empty { opacity: .82; }
+  .brow--empty .brow__year { color: color-mix(in srgb, var(--gold-line) 60%, transparent); }
+  .brow__await { font-family: var(--sans); font-size: .8rem; font-weight: 600; letter-spacing: .04em; color: color-mix(in srgb, var(--green-ink) 42%, transparent); text-transform: none; }
+  a.brow--empty:hover { background: color-mix(in srgb, var(--gold-line) 6%, transparent); border-radius: var(--r-sm); }
+
   .rec-grid { grid-template-columns: repeat(auto-fit, minmax(210px,1fr)); }
-  .data tr.hl-good { background: color-mix(in srgb, var(--wp) 7%, var(--panel)); }
+  .data tr.hl-good { background: color-mix(in srgb, var(--wp) 8%, transparent); }
+
+  @media (max-width: 640px) {
+    .board__head { display: none; }
+    .brow { grid-template-columns: 1fr; gap: .35rem; }
+    .brow__year { flex-direction: row; align-items: baseline; gap: .5rem; }
+    .brow__golfer::before { content: 'Champion Golfer · '; font-family: var(--sans); font-size: .58rem; letter-spacing: .12em; text-transform: uppercase; color: color-mix(in srgb, var(--gold-line) 60%, transparent); font-weight: 700; }
+  }
 </style>

@@ -489,12 +489,12 @@ const TABS = [
 <noscript><style>.tabpanel{display:block!important}.tabbar{display:none}</style></noscript>
 
 <style>
-  .tabbar-wrap { position: sticky; top: 63px; z-index: 40; background: color-mix(in srgb, var(--ink) 90%, transparent); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
-  .tabbar { display: flex; gap: .2rem; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .tabbar-wrap { position: sticky; top: 64px; z-index: 40; background: color-mix(in srgb, var(--cream) 88%, transparent); backdrop-filter: blur(12px); padding-block: .55rem; }
+  .tabbar { display: flex; gap: .25rem; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; background: var(--paper); padding: 5px; border-radius: 999px; box-shadow: inset 0 0 0 1px var(--line), var(--shadow); }
   .tabbar::-webkit-scrollbar { display: none; }
-  .tab { flex: none; background: none; border: 0; padding: .9rem .8rem; font-family: var(--sans); font-size: .85rem; font-weight: 600; color: var(--muted); border-bottom: 2px solid transparent; white-space: nowrap; }
-  .tab:hover { color: var(--text); }
-  .tab.active { color: var(--text); border-bottom-color: var(--gold-bright); }
+  .tab { flex: none; background: none; border: 0; padding: .5rem .95rem; border-radius: 999px; font-family: var(--sans); font-size: .82rem; font-weight: 700; color: var(--muted); white-space: nowrap; transition: color .18s var(--ease), background .18s var(--ease); }
+  .tab:hover { color: var(--text); background: color-mix(in srgb, var(--green-800) 8%, transparent); }
+  .tab.active { color: var(--green-ink); background: var(--green-800); box-shadow: 0 2px 8px -3px rgba(18,43,29,.5); }
   .tabpanel:not(.active) { display: none; }
   .tabpanel { padding-top: clamp(1.6rem,4vw,2.4rem); }
 
@@ -527,16 +527,16 @@ const TABS = [
   .round-row__cue { color: var(--faint); font-weight: 800; opacity: 0; transition: opacity .12s var(--ease), transform .12s var(--ease); transform: translateX(-3px); }
   .round-row:hover .round-row__cue, .round-row:focus-visible .round-row__cue { opacity: 1; transform: translateX(0); color: var(--gold); }
   .matches-cta { display: flex; flex-wrap: wrap; align-items: center; gap: .7rem 1rem; margin-top: 1.1rem; }
-  .btn-jump { display: inline-flex; align-items: center; gap: .5rem; padding: .6rem 1.1rem; border-radius: 999px; background: var(--gold-bright); color: #fff; font-weight: 700; font-size: .92rem; letter-spacing: .01em; box-shadow: var(--shadow); transition: filter .12s var(--ease), transform .12s var(--ease); }
-  .btn-jump:hover { filter: brightness(1.06); transform: translateY(-1px); }
+  .btn-jump { display: inline-flex; align-items: center; gap: .5rem; padding: .62rem 1.15rem; border-radius: 999px; background: var(--terra); color: #fff; font-weight: 700; font-size: .92rem; letter-spacing: .01em; box-shadow: 0 8px 20px -8px color-mix(in srgb, var(--terra) 75%, transparent); transition: filter .12s var(--ease), transform .12s var(--ease); }
+  .btn-jump:hover { filter: brightness(1.04); transform: translateY(-1px); }
 
   /* Matches tab: each round is its own chapter — strong header band, generous
      spacing, subtle alternating section tint. */
   .rounds { display: flex; flex-direction: column; }
-  .round-block { scroll-margin-top: 120px; margin-top: 2.6rem; padding: .5rem .5rem .3rem; border-radius: var(--r-md, 14px); }
+  .round-block { scroll-margin-top: 124px; margin-top: 2.6rem; padding: .5rem .5rem .3rem; border-radius: var(--r); }
   .round-block:first-child { margin-top: .6rem; }
-  .rounds .round-block:nth-child(even) { background: color-mix(in srgb, var(--line) 26%, transparent); }
-  .round-band { --rc: var(--gold-bright); display: flex; flex-wrap: wrap; align-items: center; gap: .6rem 1.1rem; margin-bottom: 1rem; padding: .8rem 1rem; border-radius: var(--r-sm); background: linear-gradient(100deg, color-mix(in srgb, var(--rc) 16%, var(--panel)), color-mix(in srgb, var(--rc) 5%, var(--panel))); border: 1px solid color-mix(in srgb, var(--rc) 28%, var(--line)); border-left: 5px solid var(--rc); box-shadow: var(--shadow); }
+  .rounds .round-block:nth-child(even) { background: color-mix(in srgb, var(--ink-2) 55%, transparent); }
+  .round-band { --rc: var(--gold-bright); display: flex; flex-wrap: wrap; align-items: center; gap: .6rem 1.1rem; margin-bottom: 1rem; padding: .85rem 1.1rem; border-radius: var(--r-sm); background: linear-gradient(100deg, color-mix(in srgb, var(--rc) 15%, var(--paper)), color-mix(in srgb, var(--rc) 4%, var(--paper))); border-left: 5px solid var(--rc); box-shadow: var(--shadow); }
   .round-band__no { display: inline-flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1; flex: none; min-width: 3.1rem; padding: .4rem .5rem; border-radius: var(--r-sm); background: var(--rc); color: #fff; font-family: var(--serif); font-size: 1.7rem; font-weight: 600; font-variant-numeric: tabular-nums; }
   .round-band__no em { font-style: normal; font-family: var(--sans, inherit); font-size: .5rem; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; opacity: .85; margin-bottom: .12rem; }
   .round-band__meta { display: flex; flex-direction: column; gap: .12rem; margin-right: auto; }
@@ -579,7 +579,7 @@ const TABS = [
 
   /* Hole-by-hole record cards */
   .hrec { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: .8rem; margin-top: 1.1rem; }
-  .hrec__card { border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--panel); padding: .85rem 1rem; box-shadow: var(--shadow); }
+  .hrec__card { border-radius: var(--r-sm); background: var(--panel); padding: .95rem 1.1rem; box-shadow: var(--shadow); }
   .hrec__label { font-size: .68rem; letter-spacing: .06em; text-transform: uppercase; color: var(--faint); font-weight: 700; }
   .hrec__val { font-family: var(--serif); font-size: 2.1rem; line-height: 1.05; color: var(--text); margin: .25rem 0 .3rem; font-variant-numeric: tabular-nums; }
   .hrec__unit { font-family: var(--sans, inherit); font-size: .85rem; color: var(--faint); }

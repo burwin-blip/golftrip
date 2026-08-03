@@ -12,6 +12,8 @@ const teamA = teamById[sideA[0].teamId];
 const teamB = teamById[sideB[0].teamId];
 const aWon = match.winnerTeamId === teamA.id;
 const bWon = match.winnerTeamId === teamB.id;
+// The result chip carries the winner's colour (gold for a halved match).
+const winColor = aWon ? teamA.color : bWon ? teamB.color : 'var(--gold-bright)';
 
 const names = (side) => side.map((p) => fullName(p.playerId)).join(' & ');
 ---
@@ -23,7 +25,7 @@ const names = (side) => side.map((p) => fullName(p.playerId)).join(' & ');
       <div class="mrow__tag">{teamA.name}</div>
     </div>
   </div>
-  <div class="mrow__center">
+  <div class="mrow__center" style={`--accent:${winColor}`}>
     <div class:list={["mrow__margin", { halved: match.halved }]}>{match.halved ? 'AS' : match.margin}</div>
     <div class="mrow__pts">{match.halved ? '½ + ½' : `${num(match.pointsAvailable)} pt${match.pointsAvailable === 1 ? '' : 's'}`}</div>
   </div>
