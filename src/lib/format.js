@@ -4,7 +4,7 @@ import { playerById } from './data.js';
 export const firstName = (id) => (playerById[id]?.name || id).split(' ')[0];
 export const fullName = (id) => playerById[id]?.name || id;
 
-// Last name, but keep short single-token names ("Scott B") intact.
+// Last name, but keep single-token names (no surname on file) intact.
 export const lastName = (id) => {
   const parts = (playerById[id]?.name || id).split(' ');
   return parts.length > 1 ? parts.slice(1).join(' ') : parts[0];

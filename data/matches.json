@@ -104,8 +104,8 @@
     "halved": false,
     "winnerTeamId": "silver-spoons",
     "margin": "5&3",
-    "summary": "Ed Nelson and Scott B took control from the opening hole and never allowed the Woodpeckers into the match. They were 1 Up after the 1st, 2 Up through two and 3 Up after the 3rd. After a halved 4th, the Silver Spoons won the 5th and 6th to reach 5 Up. Colton McKivitz and Chase Hellmers managed to win the 7th and briefly reduce the margin, but the response was short-lived. Ed and Scott restored the five-hole advantage at the 9th to complete the most one-sided result of the opening session. The match was effectively decided by the Silver Spoons' five-hole winning burst across the first six holes.",
-    "standout": "Scott B — he helped set the pace from the first hole and anchored the dominant 5&3 victory.",
+    "summary": "Ed Nelson and Scott Benesh took control from the opening hole and never allowed the Woodpeckers into the match. They were 1 Up after the 1st, 2 Up through two and 3 Up after the 3rd. After a halved 4th, the Silver Spoons won the 5th and 6th to reach 5 Up. Colton McKivitz and Chase Hellmers managed to win the 7th and briefly reduce the margin, but the response was short-lived. Ed and Scott restored the five-hole advantage at the 9th to complete the most one-sided result of the opening session. The match was effectively decided by the Silver Spoons' five-hole winning burst across the first six holes.",
+    "standout": "Scott Benesh — he helped set the pace from the first hole and anchored the dominant 5&3 victory.",
     "players": [
       {
         "playerId": "colton-mckivitz",
@@ -129,7 +129,7 @@
         "pointsEarned": 1.0
       },
       {
-        "playerId": "scott-b",
+        "playerId": "scott-benesh",
         "teamId": "silver-spoons",
         "side": "B",
         "outcome": "win",
@@ -196,7 +196,7 @@
     "halved": true,
     "winnerTeamId": null,
     "margin": "AS",
-    "summary": "This was one of the most even matches of the tournament. The sides were all square through the 8th before Michael Herring and Rupert Pedler edged 1 Up at the 9th and carried that lead to the 10th. Steve Urwin and Scott B pulled the match level at the 11th and moved 1 Up at the 12th. The Woodpeckers answered at the 13th, but the Silver Spoons again moved ahead at the 14th and remained 1 Up through the 15th. Michael and Rupert squared it at the 16th, and neither team could win either of the final two holes. The lead changed hands repeatedly, with both teams producing an answer whenever the other appeared ready to take control.",
+    "summary": "This was one of the most even matches of the tournament. The sides were all square through the 8th before Michael Herring and Rupert Pedler edged 1 Up at the 9th and carried that lead to the 10th. Steve Urwin and Scott Benesh pulled the match level at the 11th and moved 1 Up at the 12th. The Woodpeckers answered at the 13th, but the Silver Spoons again moved ahead at the 14th and remained 1 Up through the 15th. Michael and Rupert squared it at the 16th, and neither team could win either of the final two holes. The lead changed hands repeatedly, with both teams producing an answer whenever the other appeared ready to take control.",
     "standout": "Michael Herring — he posted the lowest net score in the group at 75 and was central to the Woodpeckers' late recovery.",
     "players": [
       {
@@ -221,7 +221,7 @@
         "pointsEarned": 1.0
       },
       {
-        "playerId": "scott-b",
+        "playerId": "scott-benesh",
         "teamId": "silver-spoons",
         "side": "B",
         "outcome": "halve",
@@ -288,7 +288,7 @@
     "halved": true,
     "winnerTeamId": null,
     "margin": "AS",
-    "summary": "The opening shamble match changed direction several times. Ben Urwin and Tom Brunskill won the 1st, but Scott B and Miles Honens squared it at the 2nd and moved 1 Up at the 3rd. The Woodpeckers immediately answered at the 4th, after which four consecutive holes were halved. The Silver Spoons then won the 8th to take a one-hole lead to the final tee. Ben and Tom needed the 9th and delivered, winning the last hole to rescue half a point. Neither pairing led by more than one hole at any stage, making this a genuine back-and-forth contest.",
+    "summary": "The opening shamble match changed direction several times. Ben Urwin and Tom Brunskill won the 1st, but Scott Benesh and Miles Honens squared it at the 2nd and moved 1 Up at the 3rd. The Woodpeckers immediately answered at the 4th, after which four consecutive holes were halved. The Silver Spoons then won the 8th to take a one-hole lead to the final tee. Ben and Tom needed the 9th and delivered, winning the last hole to rescue half a point. Neither pairing led by more than one hole at any stage, making this a genuine back-and-forth contest.",
     "standout": "Ben Urwin — he recorded the lowest score for the Woodpeckers and helped win the final hole to secure the halve.",
     "players": [
       {
@@ -306,7 +306,7 @@
         "pointsEarned": 0.5
       },
       {
-        "playerId": "scott-b",
+        "playerId": "scott-benesh",
         "teamId": "silver-spoons",
         "side": "B",
         "outcome": "halve",
@@ -518,8 +518,8 @@
     "halved": false,
     "winnerTeamId": "silver-spoons",
     "margin": "30.5–30",
-    "summary": "Chase Hellmers and Rupert Pedler made the better start and led by two points after the 3rd. Alan Lozer and Scott B erased the advantage by the 4th and moved half a point ahead at the 5th. The Silver Spoons remained narrowly in front through the 9th, but the Woodpeckers pulled the match level again after the 10th and kept it tied through the 13th. Chase and Rupert then moved ahead at the 14th and stretched the lead to 1.5 points after the 15th. Scott's steady back-nine scoring brought the Silver Spoons back: they reduced the gap at the 16th, squared the match at the 17th and gained the decisive half point on the 18th to win 30.5-30.",
-    "standout": "Scott B — his match-high 35 points carried the Silver Spoons through the back nine and completed the final-hole comeback.",
+    "summary": "Chase Hellmers and Rupert Pedler made the better start and led by two points after the 3rd. Alan Lozer and Scott Benesh erased the advantage by the 4th and moved half a point ahead at the 5th. The Silver Spoons remained narrowly in front through the 9th, but the Woodpeckers pulled the match level again after the 10th and kept it tied through the 13th. Chase and Rupert then moved ahead at the 14th and stretched the lead to 1.5 points after the 15th. Scott's steady back-nine scoring brought the Silver Spoons back: they reduced the gap at the 16th, squared the match at the 17th and gained the decisive half point on the 18th to win 30.5-30.",
+    "standout": "Scott Benesh — his match-high 35 points carried the Silver Spoons through the back nine and completed the final-hole comeback.",
     "players": [
       {
         "playerId": "rupert-pedler",
@@ -543,7 +543,7 @@
         "pointsEarned": 2.0
       },
       {
-        "playerId": "scott-b",
+        "playerId": "scott-benesh",
         "teamId": "silver-spoons",
         "side": "B",
         "outcome": "win",
@@ -628,7 +628,7 @@
     "halved": false,
     "winnerTeamId": "woodpeckers",
     "margin": "4&3",
-    "summary": "Scott B won the opening hole, but Ben Urwin answered immediately at the 2nd and then took control. Ben moved 1 Up at the 3rd, and after the match briefly returned to all square, he won the 6th and carried a one-hole advantage to the turn. The decisive run came on the back nine: Ben won the 10th, 11th and 13th to move 3 Up, then extended the lead to 4 Up by the 15th. Scott could not generate the sustained response needed, and Ben closed the match 4&3.",
+    "summary": "Scott Benesh won the opening hole, but Ben Urwin answered immediately at the 2nd and then took control. Ben moved 1 Up at the 3rd, and after the match briefly returned to all square, he won the 6th and carried a one-hole advantage to the turn. The decisive run came on the back nine: Ben won the 10th, 11th and 13th to move 3 Up, then extended the lead to 4 Up by the 15th. Scott could not generate the sustained response needed, and Ben closed the match 4&3.",
     "standout": null,
     "players": [
       {
@@ -639,7 +639,7 @@
         "pointsEarned": 2.0
       },
       {
-        "playerId": "scott-b",
+        "playerId": "scott-benesh",
         "teamId": "silver-spoons",
         "side": "B",
         "outcome": "loss",

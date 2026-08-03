@@ -63,7 +63,7 @@ MATCHES = [
            (SS,["steve-urwin","anthony-herring"],[4,5,4,5,3,3,5,3,4])],"result":"Silver Spoons won 2&1"},
  {"m":3,"round":1,"format":"Scramble","card":"02_round_1__match_2.png","team_scored":True,
   "sides":[(WP,["colton-mckivitz","chase-hellmers"],[5,6,4,5,4,6,4,3,5]),
-           (SS,["ed-nelson","scott-b"],[3,3,3,5,3,4,5,3,4])],"result":"Silver Spoons won 5&3"},
+           (SS,["ed-nelson","scott-benesh"],[3,3,3,5,3,4,5,3,4])],"result":"Silver Spoons won 5&3"},
 
  # ---- ROUND 2: BEST BALL — per-hole NET ----
  {"m":4,"round":2,"format":"Best Ball Match Play (NET)","card":"04_round_2__match_1.png",
@@ -75,7 +75,7 @@ MATCHES = [
   "players":[(WP,"michael-herring",13,[4,3,5,6,3,4,4,4,3,3,6,3,4,5,5,5,3,5]),
              (WP,"rupert-pedler",21,[3,4,5,6,4,5,4,3,3,4,8,3,4,7,4,4,3,4]),
              (SS,"steve-urwin",20,[4,2,7,5,4,6,4,4,6,3,6,2,6,7,5,6,3,5]),
-             (SS,"scott-b",2,[6,3,5,3,3,4,5,4,4,4,5,3,5,4,4,6,4,4])],"result":"Match halved"},
+             (SS,"scott-benesh",2,[6,3,5,3,3,4,5,4,4,4,5,3,5,4,4,6,4,4])],"result":"Match halved"},
  {"m":6,"round":2,"format":"Best Ball Match Play (NET)","card":"06_round_2__match_3.png",
   "players":[(WP,"ben-urwin",7,[6,3,5,4,4,3,5,6,4,3,3,5,4,6,6,4,5,4]),
              (WP,"chase-hellmers",22,[5,4,5,3,3,5,7,4,3,4,5,3,4,6,4,6,6,3]),
@@ -85,7 +85,7 @@ MATCHES = [
  # ---- ROUND 3: SHAMBLE — per-hole NET ----
  {"m":7,"round":3,"format":"9-hole Shamble","card":"07_round_3__match_1.png",
   "players":[(WP,"ben-urwin",2,[3,6,5,4,4,3,3,4,3]),(WP,"tom-brunskill",6,[6,6,5,2,4,3,3,4,5]),
-             (SS,"scott-b",0,[4,4,6,4,5,3,4,3,5]),(SS,"miles-honens",5,[5,5,4,3,4,3,3,4,5])],"result":"Match halved"},
+             (SS,"scott-benesh",0,[4,4,6,4,5,3,4,3,5]),(SS,"miles-honens",5,[5,5,4,3,4,3,3,4,5])],"result":"Match halved"},
  {"m":8,"round":3,"format":"9-hole Shamble","card":"08_round_3__match_2.png",
   "players":[(WP,"chase-hellmers",9,[4,3,5,3,3,2,3,3,5]),(WP,"michael-herring",4,[7,4,5,3,4,4,3,4,4]),
              (SS,"ed-nelson",5,[5,4,3,3,4,4,3,4,4]),(SS,"anthony-herring",4,[6,4,4,3,2,3,3,5,4])],"result":"Woodpeckers won 2&1"},
@@ -108,7 +108,7 @@ MATCHES = [
   "players":[(WP,"chase-hellmers",21,[1,3,2,2,0,1,1,2,2,2,2,2,3,2,1,0,3,1]),
              (WP,"rupert-pedler",20,[3,1,2,0,1,3,1,2,4,2,1,2,0,3,2,2,0,1]),
              (SS,"alan-lozer",5,[1,0,1,3,0,2,2,1,3,1,2,2,2,1,0,1,3,1]),
-             (SS,"scott-b",0,[2,3,1,3,2,2,1,3,3,1,1,2,1,2,2,2,2,2])],"result":"Silver Spoons won 30.5-30"},
+             (SS,"scott-benesh",0,[2,3,1,3,2,2,1,3,3,1,1,2,1,2,2,2,2,2])],"result":"Silver Spoons won 30.5-30"},
 
  # ---- ROUND 5: SINGLES — per-hole NET (concessions marked C) ----
  {"m":13,"round":5,"format":"Singles Match Play","card":"13_round_5__matches_1_and_2.png",
@@ -125,7 +125,7 @@ MATCHES = [
              (SS,"ed-nelson",0,[6,4,6,6,6,7,5,5,5,6,3,6,5,5,6,C,C,C])],"result":"Silver Spoons won 4&3"},
  {"m":15,"round":5,"format":"Singles Match Play","card":"15_round_5__matches_5_and_6.png",
   "players":[(WP,"ben-urwin",5,[8,1,6,6,4,5,5,3,6,5,5,5,3,4,4,C,C,4]),
-             (SS,"scott-b",0,[6,4,5,7,4,6,5,3,4,6,6,5,6,4,5,C,C,4])],"result":"Woodpeckers won 4&3"},
+             (SS,"scott-benesh",0,[6,4,5,7,4,6,5,3,4,6,6,5,6,4,5,C,C,4])],"result":"Woodpeckers won 4&3"},
  {"m":14,"round":5,"format":"Singles Match Play","card":"15_round_5__matches_5_and_6.png",
   "players":[(WP,"rupert-pedler",None,[6,3,6,7,6,4,7,3,5,6,6,7,5,2,6,5,4,4]),
              (SS,"miles-honens",None,[8,3,5,6,5,5,8,4,5,6,5,6,6,4,5,6,6,5])],"result":"Woodpeckers won 2&1"},

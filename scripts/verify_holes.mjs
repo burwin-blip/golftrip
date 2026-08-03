@@ -12,10 +12,10 @@ const check = (name, cond, got, want) => {
 
 // Workbook NET round totals (V4 "Round Scores"; all NET per the owner).
 const WB = {
-  2: { 'alan-lozer':85,'anthony-herring':74,'ben-urwin':80,'chase-hellmers':80,'colton-mckivitz':92,'ed-nelson':85,'michael-herring':75,'miles-honens':88,'rupert-pedler':78,'scott-b':76,'steve-urwin':85,'tom-brunskill':80 },
-  3: { 'alan-lozer':40,'anthony-herring':34,'ben-urwin':35,'chase-hellmers':31,'colton-mckivitz':37,'ed-nelson':34,'michael-herring':38,'miles-honens':36,'rupert-pedler':38,'scott-b':38,'steve-urwin':34,'tom-brunskill':38 },
+  2: { 'alan-lozer':85,'anthony-herring':74,'ben-urwin':80,'chase-hellmers':80,'colton-mckivitz':92,'ed-nelson':85,'michael-herring':75,'miles-honens':88,'rupert-pedler':78,'scott-benesh':76,'steve-urwin':85,'tom-brunskill':80 },
+  3: { 'alan-lozer':40,'anthony-herring':34,'ben-urwin':35,'chase-hellmers':31,'colton-mckivitz':37,'ed-nelson':34,'michael-herring':38,'miles-honens':36,'rupert-pedler':38,'scott-benesh':38,'steve-urwin':34,'tom-brunskill':38 },
 };
-const STBL = { 'alan-lozer':26,'anthony-herring':30,'ben-urwin':27,'chase-hellmers':30,'colton-mckivitz':26,'ed-nelson':30,'michael-herring':28,'miles-honens':26,'rupert-pedler':30,'scott-b':35,'steve-urwin':21,'tom-brunskill':24 };
+const STBL = { 'alan-lozer':26,'anthony-herring':30,'ben-urwin':27,'chase-hellmers':30,'colton-mckivitz':26,'ed-nelson':30,'michael-herring':28,'miles-honens':26,'rupert-pedler':30,'scott-benesh':35,'steve-urwin':21,'tom-brunskill':24 };
 
 const netTotal = (pid, rnd) => holeScores.filter(h => h.player===pid && h.round===rnd && h.net_score!=null).reduce((s,h)=>s+h.net_score,0);
 const stblTotal = (pid) => holeScores.filter(h => h.player===pid && h.round===4).reduce((s,h)=>s+(h.stableford_points||0),0);

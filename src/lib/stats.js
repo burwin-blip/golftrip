@@ -1040,10 +1040,14 @@ function powerMetrics(pid, asOf) {
   const index = latest.index;
   // form: index − recent avg differential (positive ⇒ scoring better than their number)
   const form = latest.avgDifferential != null ? round1(index - latest.avgDifferential) : null;
-  // trend: earliest index within the window minus the current index (positive ⇒ index fell ⇒ improving)
+  // trend: how far the index moved to reach today (positive ⇒ index fell ⇒ improving).
+  // Prefer the earliest snapshot inside the 90-day window; but if the only prior
+  // check-in predates the window (common on the FIRST real check-in after a long
+  // gap — e.g. the St George seed sitting 20 weeks back), fall back to that
+  // immediately-previous check-in so the movement still counts.
   const cutoff = dparse(latest.date) - POWER_RANKING_TREND_DAYS * DAY_MS;
   const inWindow = snaps.filter((s) => dparse(s.date) >= cutoff);
-  const base = inWindow[0];
+  const base = inWindow.length > 1 ? inWindow[0] : (snaps.length > 1 ? snaps[snaps.length - 2] : null);
   const trend = base && base !== latest ? round1(base.index - index) : null;
   // activity: rounds on the latest check-in, else summed across the window
   let activity = latest.rounds != null ? latest.rounds : null;

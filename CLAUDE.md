@@ -219,8 +219,13 @@ them by id on regen** (a regen never wipes a GHIN number).
 ### The formula (`stats.js` → `powerRankings()`)
 A transparent weighted score (0–100). **Weights live in ONE place** —
 `POWER_RANKING_WEIGHTS` at the top of the Power Rankings block in `stats.js`:
-**40%** recent form vs index · **30%** 90-day index trend · **20%** activity
-(rounds) · **10%** last Annual (points %). Each component is min-max normalised
+**40%** recent form vs index · **30%** index trend · **20%** activity
+(rounds) · **10%** last Annual (points %). The **index-trend** component prefers the
+earliest snapshot inside the 90-day window (`POWER_RANKING_TREND_DAYS`), but falls
+back to the **immediately-previous check-in regardless of age** when no in-window
+prior exists — so on the first real check-in after a long gap (e.g. the St George
+seed 20 weeks back) the "since last time" movement still counts. Each component is
+min-max normalised
 across the field; a player missing a component is scored **only on what they have**
 (never penalised), ranked last if they have nothing, and flagged `stale` if they
 skipped the latest check-in. Movement arrows compare each player's rank now vs the

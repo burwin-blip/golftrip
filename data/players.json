@@ -7,7 +7,7 @@
   "country": null,
   "nickname": null,
   "notes": null,
-  "ghin": null,
+  "ghin": "3202528",
   "confirmedFor": []
  },
  {
@@ -88,9 +88,9 @@
   "confirmedFor": []
  },
  {
-  "id": "scott-b",
-  "name": "Scott B",
-  "slug": "scott-b",
+  "id": "scott-benesh",
+  "name": "Scott Benesh",
+  "slug": "scott-benesh",
   "active": true,
   "country": null,
   "nickname": null,

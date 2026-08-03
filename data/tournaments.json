@@ -144,7 +144,7 @@
         "handicapIndex": 14.0
       },
       {
-        "playerId": "scott-b",
+        "playerId": "scott-benesh",
         "teamId": "silver-spoons",
         "handicapIndex": 2.8
       },
@@ -511,7 +511,7 @@
       },
       {
         "roundId": "st-george-2026-r2",
-        "playerId": "scott-b",
+        "playerId": "scott-benesh",
         "net": 76,
         "stableford": null,
         "result": null,
@@ -520,7 +520,7 @@
       },
       {
         "roundId": "st-george-2026-r3",
-        "playerId": "scott-b",
+        "playerId": "scott-benesh",
         "net": 38,
         "stableford": null,
         "result": null,
@@ -529,7 +529,7 @@
       },
       {
         "roundId": "st-george-2026-r4",
-        "playerId": "scott-b",
+        "playerId": "scott-benesh",
         "net": null,
         "stableford": 35,
         "result": null,
@@ -538,7 +538,7 @@
       },
       {
         "roundId": "st-george-2026-r5",
-        "playerId": "scott-b",
+        "playerId": "scott-benesh",
         "net": null,
         "stableford": null,
         "result": "Loss 4&3",
