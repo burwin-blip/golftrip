@@ -25,6 +25,16 @@ const rsum = roundSummary(t.id);
 const ms = matchesForTournament(t.id);
 const draft = draftForTournament(t.id);
 const awards = awardsForTournament(t.id);
+// Awards display: FEATURE Team Champions + Champion Golfer on the top row; the
+// "Shot of the Tournament" card is intentionally NOT shown here (the award stays
+// in the data, and its hole-in-one story lives in Moments/Lore).
+const isTeamChampions = (a) => /team champions/i.test(a.name);
+const isChampionGolfer = (a) => /champion golfer/i.test(a.name);
+const isShotOfTournament = (a) => /shot of the tournament/i.test(a.name);
+const featuredAwards = awards
+  .filter((a) => isTeamChampions(a) || isChampionGolfer(a))
+  .sort((a, b) => (isTeamChampions(a) ? 0 : 1) - (isTeamChampions(b) ? 0 : 1));
+const restAwards = awards.filter((a) => !isTeamChampions(a) && !isChampionGolfer(a) && !isShotOfTournament(a));
 const moments = momentsForTournament(t.id);
 const champTeam = teamById[st.winnerTeamId];
 const champPlayer = playerById[t.championPlayerId];
@@ -433,16 +443,35 @@ const TABS = [
   <!-- AWARDS -->
   <section class="tabpanel section" data-panel="awards">
     <div class="wrap">
-      <div class="section-head"><div><p class="eyebrow gold">The Ceremony</p><h2>The trophy cabinet</h2></div><span class="faint">{awards.length} presented</span></div>
+      <div class="section-head"><div><p class="eyebrow gold">The Ceremony</p><h2>The trophy cabinet</h2></div><span class="faint">{featuredAwards.length + restAwards.length} presented</span></div>
+
+      <div class="cabinet-featured">
+        {featuredAwards.map((a) => {
+          const winner = a.winnerType === 'team' ? teamById[a.winnerTeamId].name
+            : a.winnerType === 'players' ? a.winnerPlayerIds.map((id) => playerById[id].name).join(' & ') : a.winnerText;
+          return (
+            <div class="award-feat card">
+              <div class="award-feat__cup">🏆</div>
+              <div class="award-feat__name">{a.name}</div>
+              <div class="award-feat__winner">
+                {a.winnerType === 'players'
+                  ? a.winnerPlayerIds.map((id, idx) => <Fragment>{idx > 0 && <span class="faint"> &amp; </span>}<a href={`/players/${playerById[id].slug}`}>{playerById[id].name}</a></Fragment>)
+                  : a.winnerType === 'team' ? <a href={`/tournaments/${t.id}`}>{winner}</a> : <span>{winner}</span>}
+              </div>
+              {a.notes && <p class="award-feat__note">“{a.notes}”</p>}
+            </div>
+          );
+        })}
+      </div>
+
       <div class="cabinet">
-        {awards.map((a) => {
-          const isGold = /champion|team champions|shot of/i.test(a.name);
+        {restAwards.map((a) => {
           const winner = a.winnerType === 'team' ? teamById[a.winnerTeamId].name
             : a.winnerType === 'players' ? a.winnerPlayerIds.map((id) => playerById[id].name).join(' & ')
             : a.winnerText;
           return (
-            <div class:list={["award-card card", { 'award-card--gold': isGold }]}>
-              <div class="award-card__cup">{isGold ? '🏆' : '🎖'}</div>
+            <div class="award-card card">
+              <div class="award-card__cup">🎖</div>
               <div class="award-card__name">{a.name}</div>
               <div class="award-card__winner">
                 {a.winnerType === 'players'
@@ -559,6 +588,17 @@ const TABS = [
   .fmtcell.w { background: var(--wp-soft); color: var(--wp-ink); }
   .fmtcell.h { background: var(--gold-soft); color: var(--gold); }
   .fmtcell.l { background: var(--panel-2); color: var(--faint); box-shadow: inset 0 0 0 1px var(--line); }
+
+  /* featured top row — Team Champions + Champion Golfer */
+  .cabinet-featured { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
+  .award-feat { padding: clamp(1.4rem,3vw,1.9rem) clamp(1.3rem,3vw,1.7rem); display: flex; flex-direction: column; gap: .4rem; border-top: 4px solid var(--gold-bright); background: linear-gradient(180deg, var(--gold-soft), var(--panel)); }
+  .award-feat__cup { font-size: 2rem; line-height: 1; }
+  .award-feat__name { font-family: var(--sans); font-size: .68rem; letter-spacing: .14em; text-transform: uppercase; color: var(--gold); font-weight: 700; margin-top: .3rem; }
+  .award-feat__winner { font-family: var(--serif); font-weight: 600; font-size: clamp(1.4rem,1.1rem+1.6vw,2rem); line-height: 1.05; color: var(--text); }
+  .award-feat__winner a { color: var(--text); }
+  .award-feat__winner a:hover { color: var(--gold); }
+  .award-feat__note { font-size: .88rem; font-style: italic; color: var(--muted); margin-top: .2rem; }
+  @media (max-width: 640px) { .cabinet-featured { grid-template-columns: 1fr; } }
 
   .cabinet { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1rem; }
   .award-card { padding: 1.3rem 1.2rem; display: flex; flex-direction: column; gap: .35rem; border-top: 3px solid var(--line-strong); }

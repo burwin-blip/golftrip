@@ -173,6 +173,83 @@ Adding a new year's scorecards changes **no component code**:
    hole functions accept a `tid` and each surface gates on `tournamentHasHoleData`.
    An event with **no** scorecards simply shows none of the hole UI.
 
+## Power Rankings & GHIN check-ins (`data/handicap_snapshots.json`)
+
+A living form guide between trips, driven by GHIN handicap check-ins the owner
+enters **by hand** — often from a phone via the GitHub web editor, which
+auto-deploys. So the file is deliberately simple and the build is defensive.
+
+### Editing the file (this is the owner's monthly routine)
+`data/handicap_snapshots.json` is a **flat JSON array** — one object per player per
+check-in. Each month: open the check-in sheet at the bottom of `/power-rankings`,
+look each player up on ghin.com, and append one object per player. Worked example
+(adding a May check-in):
+
+```json
+[
+  { "player": "ben-urwin",    "date": "2026-05-01", "index": 6.4, "rounds": 5, "avgDifferential": 5.1, "note": "been at the range" },
+  { "player": "tom-brunskill", "date": "2026-05-01", "index": 14.9, "rounds": 0 },
+  { "player": "scott-b",       "date": "2026-05-01", "index": 2.6 }
+]
+```
+
+Fields — **`player`, `date`, `index` are required; the rest are optional and may be
+omitted entirely**:
+- `player` — the player id (the `id`/`slug` in players.json, e.g. `"ben-urwin"`).
+- `date` — `YYYY-MM-DD`.
+- `index` — the GHIN handicap index, a **number** (no quotes).
+- `rounds` — scores posted since the last check-in.
+- `avgDifferential` — average differential of their recent scores.
+- `note` — free text (`"shoulder injury"`, `"been at the range"`).
+
+**Forgiving by design:** order doesn't matter (the engine sorts by date); optional
+fields can be absent. If anything is malformed, the **build fails with a clear
+message naming the offending record and field** — validated in
+`src/lib/data.js` → `validateHandicapSnapshots()`. A broken file never deploys.
+
+**Seed:** ships with one snapshot per 2026 player, dated `2026-03-13`, at their
+tournament handicap, so the page works before any real check-in (flagged "seed").
+
+### GHIN numbers
+`players.json` has a `ghin` field per player (their GHIN number), `null` until
+filled in. Shown as a small line on each profile and in the check-in sheet. Both
+`ghin` and `confirmedFor` are **hand-maintained**; `scripts/gen_data.py` **preserves
+them by id on regen** (a regen never wipes a GHIN number).
+
+### The formula (`stats.js` → `powerRankings()`)
+A transparent weighted score (0–100). **Weights live in ONE place** —
+`POWER_RANKING_WEIGHTS` at the top of the Power Rankings block in `stats.js`:
+**40%** recent form vs index · **30%** 90-day index trend · **20%** activity
+(rounds) · **10%** last Annual (points %). Each component is min-max normalised
+across the field; a player missing a component is scored **only on what they have**
+(never penalised), ranked last if they have nothing, and flagged `stale` if they
+skipped the latest check-in. Movement arrows compare each player's rank now vs the
+previous check-in date. Verdicts ("Trending sharp", "Hasn't posted in 6 weeks") are
+auto-generated in `powerVerdict()`.
+
+`powerRankings()` returns `{ weights, trendDays, staleDays, dataAsOf, checkInDates,
+hasRealData, rows[] }`; each row carries `rank, movement, movementBy, player,
+teamId, isRookie, ghin, score, index, trend, form, rounds, lastTournamentPct,
+series (sparkline), lastCheckIn, note, stale, verdict`. **The 2027 Draft Guide is
+meant to consume `powerRankings().rows` directly** — that's why the output is
+structured, not just rendered.
+
+Page: `/power-rankings` (nav label **Rankings**, also linked from Players). The
+check-in helper table is `handicapCheckInList()` (name · GHIN · index · last
+check-in). To retune the model, edit only `POWER_RANKING_WEIGHTS` /
+`POWER_RANKING_TREND_DAYS` / `POWER_RANKING_STALE_DAYS`.
+
+## Rookies (confirmed, not yet debuted)
+
+A player with `confirmedFor: ["<upcoming-tid>"]` and **zero completed appearances**
+is a *rookie*. Helpers: `rookiesFor(tid)` / `allRookies()` in `stats.js`. Rookies
+get, automatically: a **"Rookie — debuts <year>"** profile treatment (badge, bio,
+handicap/GHIN, live power-ranking once snapshots exist, and a "no tournament record
+yet" panel **instead of blank stat tables**); their own **"Confirmed for <year>"**
+group under the veterans on the Players page; and a **"Rookie" tag** in the upcoming
+Draft Pool. To add one: add a player row to `players.json` with `confirmedFor` set
+(and a `ghin` when known) — nothing else required.
+
 ## Design language
 
 **Light, clean, official golf-tournament coverage** — bright like the Masters /
@@ -254,7 +331,11 @@ views it).
     degrades to all-visible with no JS): Overview, Teams, Draft (board + Composite
     Draft Value), Matches (all 18 with summaries), Stats (leaderboard, format-records
     matrix, partnerships, round scores, handicap analysis), Awards (trophy cabinet),
-    Moments.
+    Moments. The **Awards** tab features **Team Champions + Champion Golfer** on a
+    top row, then the joke awards; the **"Shot of the Tournament"** card is
+    deliberately hidden from this tab (the award stays in `awards.json`, and its
+    hole-in-one story lives in Moments/Lore) — see the `isShotOfTournament` filter
+    in `TournamentCompleted.astro`.
   - **upcoming** → `TournamentUpcoming.astro`: only **Overview** (flyer + dates +
     "Teams/Captains to be announced"), **Draft Pool** (eligible players → profiles),
     **Draft Guide** (placeholder). No Matches/Stats/Awards until results exist.

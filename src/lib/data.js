@@ -7,8 +7,45 @@ import drafts from '../../data/drafts.json';
 import moments from '../../data/moments.json';
 import awards from '../../data/awards.json';
 import holeScores from '../../data/hole_scores.json';
+import rawHandicapSnapshots from '../../data/handicap_snapshots.json';
 
-export { players, tournaments, matches, drafts, moments, awards, holeScores };
+// ---------------------------------------------------------------------------
+// GHIN handicap check-ins (data/handicap_snapshots.json) are HAND-EDITED, often
+// from a phone via the GitHub web editor. So we validate them at build time and,
+// on any problem, throw a CLEAR error that names the offending record — the
+// build FAILS loudly rather than deploying a broken Power Rankings page. Only
+// `player`, `date` and `index` are required; everything else is optional.
+// ---------------------------------------------------------------------------
+function validateHandicapSnapshots(rows, validPlayerIds) {
+  const where = 'data/handicap_snapshots.json';
+  if (!Array.isArray(rows)) {
+    throw new Error(`${where}: the file must be a JSON array [ ... ] of check-in records. Got ${typeof rows}.`);
+  }
+  const isDate = (s) => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s) && !Number.isNaN(Date.parse(s));
+  rows.forEach((r, i) => {
+    const at = `record #${i + 1}` + (r && (r.player || r.date) ? ` (player "${r?.player ?? '?'}", date "${r?.date ?? '?'}")` : '');
+    if (r === null || typeof r !== 'object' || Array.isArray(r)) {
+      throw new Error(`${where}: ${at} must be an object like { "player": "ben-urwin", "date": "2026-04-01", "index": 7.4 }.`);
+    }
+    if (!r.player) throw new Error(`${where}: ${at} is missing "player" (a player id, e.g. "ben-urwin").`);
+    if (!validPlayerIds.has(r.player)) throw new Error(`${where}: ${at} — unknown player id "${r.player}". Check the spelling against the "id" values in data/players.json.`);
+    if (!r.date) throw new Error(`${where}: ${at} is missing "date".`);
+    if (!isDate(r.date)) throw new Error(`${where}: ${at} — "date" must be YYYY-MM-DD (e.g. "2026-04-01"), got "${r.date}".`);
+    if (r.index === undefined || r.index === null || r.index === '') throw new Error(`${where}: ${at} is missing "index" (the GHIN handicap index, a number like 7.4).`);
+    if (typeof r.index !== 'number' || Number.isNaN(r.index)) throw new Error(`${where}: ${at} — "index" must be a number (no quotes), got ${JSON.stringify(r.index)}.`);
+    if (r.rounds !== undefined && r.rounds !== null && (typeof r.rounds !== 'number' || r.rounds < 0)) throw new Error(`${where}: ${at} — optional "rounds" must be a non-negative number, got ${JSON.stringify(r.rounds)}.`);
+    if (r.avgDifferential !== undefined && r.avgDifferential !== null && typeof r.avgDifferential !== 'number') throw new Error(`${where}: ${at} — optional "avgDifferential" must be a number, got ${JSON.stringify(r.avgDifferential)}.`);
+    if (r.note !== undefined && r.note !== null && typeof r.note !== 'string') throw new Error(`${where}: ${at} — optional "note" must be text in quotes, got ${JSON.stringify(r.note)}.`);
+  });
+  return rows;
+}
+
+const handicapSnapshots = validateHandicapSnapshots(
+  rawHandicapSnapshots,
+  new Set(players.map((p) => p.id)),
+);
+
+export { players, tournaments, matches, drafts, moments, awards, holeScores, handicapSnapshots };
 
 // Hole rows for one match (by match id), sorted by hole. Individual-score rows
 // only (excludes scramble team rows) unless includeTeam is set.

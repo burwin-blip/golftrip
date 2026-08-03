@@ -1,0 +1,214 @@
+---
+import Base from '../layouts/Base.astro';
+import TeamLogo from '../components/TeamLogo.astro';
+import { powerRankings, handicapCheckInList } from '../lib/stats.js';
+import { longDate } from '../lib/format.js';
+
+const pr = powerRankings();
+const checkIn = handicapCheckInList();
+const W = pr.weights;
+const pctW = (x) => Math.round(x * 100);
+
+const signed1 = (x) => (x > 0 ? `+${x}` : `${x}`);
+const asOf = pr.dataAsOf ? longDate(pr.dataAsOf) : null;
+
+// Sparkline geometry for a player's index-over-time series.
+function spark(series) {
+  const W = 104, H = 30, pad = 4;
+  if (!series.length) return null;
+  const idx = series.map((s) => s.index);
+  const min = Math.min(...idx), max = Math.max(...idx);
+  const xAt = (i) => series.length === 1 ? W / 2 : pad + (i / (series.length - 1)) * (W - 2 * pad);
+  const yAt = (v) => max === min ? H / 2 : pad + ((v - min) / (max - min)) * (H - 2 * pad);
+  const pts = series.map((s, i) => `${xAt(i).toFixed(1)},${yAt(s.index).toFixed(1)}`);
+  const improving = series.length > 1 && series[series.length - 1].index < series[0].index;
+  return { W, H, pts, last: { x: xAt(series.length - 1), y: yAt(series[series.length - 1].index) }, improving, single: series.length === 1 };
+}
+
+const MOVE = {
+  up:     { sym: '▲', cls: 'up' },
+  down:   { sym: '▼', cls: 'down' },
+  steady: { sym: '—', cls: 'steady' },
+  new:    { sym: '✦', cls: 'new' },
+  none:   { sym: '·', cls: 'steady' },
+};
+---
+<Base active="rankings" title="Power Rankings" description="The Annual power rankings — driven by weekly GHIN handicap check-ins. Who's trending sharp and who's gone quiet.">
+
+  <!-- HEADER -->
+  <section class="section" style="padding-bottom:clamp(1rem,3vw,1.6rem)">
+    <div class="wrap">
+      <p class="eyebrow gold">Form Guide</p>
+      <h1 class="display" style="font-size:clamp(2.1rem,6vw,3.6rem);margin:.3rem 0 .5rem">Power Rankings</h1>
+      <p class="lede">Who's sharp, who's rusty — ranked from GHIN handicap check-ins between trips. Built for the group chat.</p>
+      <div class="pr-updated">
+        <span class="pr-updated__dot"></span>
+        <span>Last updated <b>{asOf ?? '—'}</b></span>
+        {pr.hasRealData
+          ? <span class="faint">· {pr.checkInDates.length} check-in{pr.checkInDates.length === 1 ? '' : 's'} on record</span>
+          : <span class="pill" style="margin-left:.2rem">Seeded from 2026 handicaps</span>}
+      </div>
+    </div>
+  </section>
+
+  {!pr.hasRealData && (
+    <section class="section" style="padding-top:0">
+      <div class="wrap">
+        <div class="pr-seed">
+          <span class="pr-seed__ic" aria-hidden="true">⛳</span>
+          <div>
+            <b>These are seed rankings.</b> Every player starts on their 2026 tournament handicap, so today the board is ordered by last-tournament form. Enter your first GHIN check-in in <code>data/handicap_snapshots.json</code> and the form, trend and activity components come alive — the check-in table below is your starting point.
+          </div>
+        </div>
+      </div>
+    </section>
+  )}
+
+  <!-- THE BOARD -->
+  <section class="section" style="padding-top:clamp(.5rem,2vw,1rem)">
+    <div class="wrap">
+      <ol class="pr-board">
+        {pr.rows.map((r) => {
+          const mv = MOVE[r.movement] || MOVE.none;
+          const sp = spark(r.series);
+          return (
+            <li class:list={['pr-row', { 'is-stale': r.stale, 'no-data': !r.hasData }]}>
+              <div class="pr-rank">
+                <span class:list={['pr-num', { medal: r.rank === 1 }]}>{r.rank ?? '–'}</span>
+                <span class:list={['pr-move', mv.cls]}>{mv.sym}{r.movement === 'up' || r.movement === 'down' ? Math.abs(r.movementBy) : ''}</span>
+              </div>
+
+              <div class="pr-main">
+                <div class="pr-nameline">
+                  {r.teamId && <TeamLogo teamId={r.teamId} size={22} />}
+                  <a class="pr-name" href={`/players/${r.player.slug}`}>{r.player.name}</a>
+                  {r.isRookie && <span class="pr-tag rookie">Rookie</span>}
+                  {r.stale && <span class="pr-tag stale">Stale</span>}
+                </div>
+                <div class="pr-verdict">{r.verdict}</div>
+                <div class="pr-meta">
+                  {r.form != null && <span class="pr-chip"><b>Form</b> {signed1(r.form)}</span>}
+                  {r.trend != null && <span class="pr-chip"><b>Index</b> {r.trend > 0 ? '▼' : r.trend < 0 ? '▲' : '—'}{r.trend !== 0 ? Math.abs(r.trend) : ''} <span class="faint">{pr.trendDays}d</span></span>}
+                  {r.rounds != null && <span class="pr-chip"><b>{r.rounds}</b> round{r.rounds === 1 ? '' : 's'}</span>}
+                  {r.lastTournamentPct != null && <span class="pr-chip"><b>{r.lastTournamentPct}%</b> last Annual</span>}
+                </div>
+              </div>
+
+              <div class="pr-side">
+                <div class="pr-index"><span class="pr-index__v">{r.index ?? '—'}</span><span class="pr-index__l">index</span></div>
+                {sp && (
+                  <svg class="pr-spark" viewBox={`0 0 ${sp.W} ${sp.H}`} width={sp.W} height={sp.H} aria-hidden="true">
+                    {!sp.single && <polyline points={sp.pts.join(' ')} fill="none" stroke={sp.improving ? 'var(--wp)' : 'var(--terra)'} stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />}
+                    <circle cx={sp.last.x} cy={sp.last.y} r="2.6" fill={sp.improving ? 'var(--wp)' : 'var(--terra)'} />
+                  </svg>
+                )}
+              </div>
+            </li>
+          );
+        })}
+      </ol>
+    </div>
+  </section>
+
+  <!-- METHODOLOGY -->
+  <section class="section" style="padding-top:0">
+    <div class="wrap">
+      <div class="pr-method">
+        <div class="section-head" style="margin-bottom:1rem"><div><p class="eyebrow">How it's calculated</p><h2>The formula</h2></div></div>
+        <p class="muted" style="max-width:70ch;font-size:.94rem">A transparent weighted score (0–100). Each component is normalised across the field, then blended by these weights. A player missing a component is scored on the ones they have — never penalised for data that isn't in yet — and flagged <b>stale</b> if they skipped the latest check-in.</p>
+        <div class="pr-weights">
+          <div class="pr-w"><span class="pr-w__pct">{pctW(W.recentForm)}%</span><span class="pr-w__k">Recent form vs index</span><span class="pr-w__d">Recent scoring differentials against their handicap — are they beating their number?</span></div>
+          <div class="pr-w"><span class="pr-w__pct">{pctW(W.indexTrend)}%</span><span class="pr-w__k">{pr.trendDays}-day index trend</span><span class="pr-w__d">Which way the index is moving. Falling = improving.</span></div>
+          <div class="pr-w"><span class="pr-w__pct">{pctW(W.activity)}%</span><span class="pr-w__k">Activity</span><span class="pr-w__d">Rounds posted since the last check-in. Rewards the grinders.</span></div>
+          <div class="pr-w"><span class="pr-w__pct">{pctW(W.lastTournament)}%</span><span class="pr-w__k">Last Annual</span><span class="pr-w__d">Points percentage at their most recent trip.</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CHECK-IN HELPER -->
+  <section class="section" style="padding-top:0">
+    <div class="wrap">
+      <div class="section-head"><div><p class="eyebrow gold">Monthly routine</p><h2>Check-in sheet</h2></div><span class="faint">Look each player up on ghin.com, then add a snapshot</span></div>
+      <div class="table-scroll">
+        <table class="data">
+          <thead><tr><th>Player</th><th class="num">GHIN #</th><th class="num">Current index</th><th class="num">Last check-in</th></tr></thead>
+          <tbody>
+            {checkIn.map((c) => (
+              <tr>
+                <td class="name"><a href={`/players/${c.player.slug}`}>{c.player.name}</a></td>
+                <td class="num tabnums">{c.ghin ?? <span class="faint">— add —</span>}</td>
+                <td class="num tabnums">{c.index ?? '—'}</td>
+                <td class="num tabnums faint">{c.lastCheckIn ? longDate(c.lastCheckIn) : '—'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p class="faint" style="font-size:.8rem;margin-top:.8rem;max-width:74ch;line-height:1.5">Add a GHIN number to a player once (in <code>data/players.json</code>), then each month add one line per player to <code>data/handicap_snapshots.json</code>: <code>{"{"} "player": "ben-urwin", "date": "2026-05-01", "index": 6.4, "rounds": 5 {"}"}</code>. Only <b>player</b>, <b>date</b> and <b>index</b> are required.</p>
+    </div>
+  </section>
+
+</Base>
+
+<style>
+  .pr-updated { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin-top: 1.1rem; font-size: .95rem; color: var(--muted); }
+  .pr-updated b { color: var(--text); }
+  .pr-updated__dot { width: .6rem; height: .6rem; border-radius: 50%; background: var(--terra); box-shadow: 0 0 0 4px color-mix(in srgb, var(--terra) 22%, transparent); }
+
+  .pr-seed { display: flex; gap: .9rem; align-items: flex-start; background: var(--gold-soft); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--gold-bright) 30%, transparent); border-radius: var(--r); padding: 1rem 1.2rem; font-size: .92rem; color: var(--text); line-height: 1.55; }
+  .pr-seed__ic { font-size: 1.4rem; filter: sepia(1) saturate(1.8) brightness(1.05); }
+  .pr-seed code { font-family: ui-monospace, Menlo, monospace; font-size: .85em; background: color-mix(in srgb, var(--green-800) 8%, transparent); padding: .05rem .35rem; border-radius: 5px; }
+
+  /* THE BOARD — big, scannable, phone-first */
+  .pr-board { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: .6rem; }
+  .pr-row { display: grid; grid-template-columns: 3.2rem 1fr auto; gap: clamp(.7rem, 2vw, 1.2rem); align-items: center; background: var(--panel); border-radius: var(--r); box-shadow: var(--shadow); padding: clamp(.8rem, 2.4vw, 1.1rem) clamp(.9rem, 2.6vw, 1.3rem); transition: transform .15s var(--ease), box-shadow .15s var(--ease); }
+  .pr-row:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+  .pr-row.is-stale { opacity: .74; }
+
+  .pr-rank { display: flex; flex-direction: column; align-items: center; gap: .1rem; }
+  .pr-num { font-family: var(--serif); font-weight: 600; font-size: clamp(1.7rem, 1.2rem + 2vw, 2.4rem); line-height: 1; color: var(--text); font-variant-numeric: tabular-nums; }
+  .pr-num.medal { color: var(--gold); }
+  .pr-move { font-size: .72rem; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: .02em; display: inline-flex; align-items: center; gap: .05rem; }
+  .pr-move.up { color: var(--wp); }
+  .pr-move.down { color: var(--terra-ink); }
+  .pr-move.steady { color: var(--faint); }
+  .pr-move.new { color: var(--gold); }
+
+  .pr-main { min-width: 0; }
+  .pr-nameline { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
+  .pr-nameline :global(img) { border-radius: 50%; }
+  .pr-name { font-family: var(--serif); font-weight: 600; font-size: clamp(1.15rem, 1rem + 1vw, 1.45rem); color: var(--text); }
+  .pr-name:hover { color: var(--terra-ink); }
+  .pr-tag { font-size: .58rem; font-weight: 800; letter-spacing: .09em; text-transform: uppercase; padding: .12rem .45rem; border-radius: 999px; }
+  .pr-tag.stale { background: color-mix(in srgb, var(--terra) 16%, transparent); color: var(--terra-ink); }
+  .pr-tag.rookie { background: var(--gold-soft); color: var(--gold); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--gold-bright) 40%, transparent); }
+  .pr-verdict { font-size: .9rem; color: var(--muted); margin-top: .12rem; }
+  .pr-meta { display: flex; flex-wrap: wrap; gap: .35rem .5rem; margin-top: .5rem; }
+  .pr-chip { font-size: .74rem; color: var(--muted); background: var(--panel-2); border-radius: 999px; padding: .16rem .55rem; font-variant-numeric: tabular-nums; }
+  .pr-chip b { color: var(--text); font-weight: 700; }
+
+  .pr-side { display: flex; flex-direction: column; align-items: flex-end; gap: .3rem; }
+  .pr-index { display: flex; flex-direction: column; align-items: flex-end; line-height: 1; }
+  .pr-index__v { font-family: var(--serif); font-weight: 600; font-size: clamp(1.5rem, 1.1rem + 1.6vw, 2rem); color: var(--text); font-variant-numeric: tabular-nums; }
+  .pr-index__l { font-size: .58rem; letter-spacing: .12em; text-transform: uppercase; color: var(--faint); font-weight: 700; margin-top: .2rem; }
+  .pr-spark { display: block; }
+
+  /* methodology */
+  .pr-method { background: var(--panel); border-radius: var(--r); box-shadow: var(--shadow); padding: clamp(1.2rem, 3vw, 1.8rem); }
+  .pr-weights { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: .8rem; margin-top: 1.2rem; }
+  .pr-w { background: var(--panel-2); border-radius: var(--r-sm); padding: .9rem 1rem; }
+  .pr-w__pct { font-family: var(--serif); font-weight: 600; font-size: 1.6rem; color: var(--gold); display: block; line-height: 1; }
+  .pr-w__k { display: block; font-weight: 700; font-size: .9rem; margin-top: .4rem; }
+  .pr-w__d { display: block; font-size: .78rem; color: var(--muted); margin-top: .25rem; line-height: 1.45; }
+
+  code { font-family: ui-monospace, Menlo, monospace; font-size: .86em; background: color-mix(in srgb, var(--green-800) 8%, transparent); padding: .05rem .35rem; border-radius: 5px; }
+
+  @media (max-width: 540px) {
+    .pr-row { grid-template-columns: 2.6rem 1fr; grid-template-areas: 'rank main' 'rank side'; row-gap: .5rem; }
+    .pr-rank { grid-area: rank; align-self: start; }
+    .pr-main { grid-area: main; }
+    .pr-side { grid-area: side; flex-direction: row; align-items: center; justify-content: flex-start; gap: .8rem; }
+    .pr-index { flex-direction: row; align-items: baseline; gap: .3rem; }
+  }
+</style>

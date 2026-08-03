@@ -15,6 +15,7 @@
 // ============================================================================
 import {
   players, tournaments, matches, drafts, awards, moments, holeScores,
+  handicapSnapshots,
   playerById, teamById, matchById, roundById, tournamentById,
   matchesForTournament, rosterForTournament,
 } from './data.js';
@@ -1001,4 +1002,217 @@ export function tournamentsWithHoleData() {
 }
 export function tournamentHasHoleData(tid) {
   return holeScores.some((h) => h.tournament === tid);
+}
+
+// ===========================================================================
+// POWER RANKINGS — driven by GHIN handicap check-ins
+// (data/handicap_snapshots.json). Transparent, weighted formula. Handles
+// missing data gracefully: a player ranks on whatever components they have,
+// and the board flags "stale" data. Output is structured so the 2027 Draft
+// Guide can consume it directly (see `powerRankings().rows`).
+// ===========================================================================
+
+// >>> THE ONE PLACE TO TUNE THE FORMULA <<<  (weights should sum to 1.0)
+export const POWER_RANKING_WEIGHTS = {
+  recentForm:     0.40,  // recent scoring differentials vs the player's index (sharp = playing under their number)
+  indexTrend:     0.30,  // movement of their index over the trend window (dropping = improving)
+  activity:       0.20,  // rounds posted recently — reward the grinders
+  lastTournament: 0.10,  // points % at their most recent Annual
+};
+export const POWER_RANKING_TREND_DAYS = 90;  // window for the index-trend component
+export const POWER_RANKING_STALE_DAYS = 35;  // a check-in older than this (vs the newest) is "stale"
+
+const DAY_MS = 86400000;
+const dparse = (s) => Date.parse(s);
+const snapsForPlayer = (pid, asOf) =>
+  handicapSnapshots
+    .filter((s) => s.player === pid && (!asOf || dparse(s.date) <= dparse(asOf)))
+    .sort((a, b) => dparse(a.date) - dparse(b.date));
+
+// Raw (un-normalised) metrics for one player as of a given date.
+function powerMetrics(pid, asOf) {
+  const snaps = snapsForPlayer(pid, asOf);
+  if (!snaps.length) {
+    return { hasData: false, snaps: [], index: null, form: null, trend: null,
+      activity: null, lastTournamentPct: null, lastCheckIn: null, note: null };
+  }
+  const latest = snaps[snaps.length - 1];
+  const index = latest.index;
+  // form: index − recent avg differential (positive ⇒ scoring better than their number)
+  const form = latest.avgDifferential != null ? round1(index - latest.avgDifferential) : null;
+  // trend: earliest index within the window minus the current index (positive ⇒ index fell ⇒ improving)
+  const cutoff = dparse(latest.date) - POWER_RANKING_TREND_DAYS * DAY_MS;
+  const inWindow = snaps.filter((s) => dparse(s.date) >= cutoff);
+  const base = inWindow[0];
+  const trend = base && base !== latest ? round1(base.index - index) : null;
+  // activity: rounds on the latest check-in, else summed across the window
+  let activity = latest.rounds != null ? latest.rounds : null;
+  if (activity == null && inWindow.some((s) => s.rounds != null)) {
+    activity = inWindow.reduce((n, s) => n + (s.rounds || 0), 0);
+  }
+  // last tournament points %
+  const car = careerStats(pid);
+  const lastApp = car.appearances[car.appearances.length - 1] || null;
+  let lastTournamentPct = null;
+  if (lastApp) {
+    const { earned, available } = tournamentPointsFor(lastApp.tournament.id, pid);
+    lastTournamentPct = available ? round1(pct(earned, available)) : null;
+  }
+  return { hasData: true, snaps, index, form, trend, activity, lastTournamentPct,
+    lastCheckIn: latest.date, note: latest.note ?? null };
+}
+
+// Min–max normalise a set of {id, v} to 0..1 (higher raw ⇒ higher norm). Values
+// that are null are left out; if every value is equal, everyone gets 0.5.
+function normalise(pairs) {
+  const vals = pairs.filter((p) => p.v != null).map((p) => p.v);
+  const out = new Map();
+  if (!vals.length) return out;
+  const min = Math.min(...vals), max = Math.max(...vals);
+  for (const p of pairs) {
+    if (p.v == null) continue;
+    out.set(p.id, max === min ? 0.5 : (p.v - min) / (max - min));
+  }
+  return out;
+}
+
+// Compute a full ranking as of `asOf` (defaults to the newest snapshot date).
+// Returns { asOf, rows:[{playerId, score, rank, metrics, weightsUsed}] }.
+function rankingAsOf(asOf) {
+  const metrics = players.map((p) => ({ playerId: p.id, m: powerMetrics(p.id, asOf) }));
+  const W = POWER_RANKING_WEIGHTS;
+  const formN     = normalise(metrics.map((x) => ({ id: x.playerId, v: x.m.form })));
+  const trendN    = normalise(metrics.map((x) => ({ id: x.playerId, v: x.m.trend })));
+  const activityN = normalise(metrics.map((x) => ({ id: x.playerId, v: x.m.activity })));
+  const lastN     = normalise(metrics.map((x) => ({ id: x.playerId, v: x.m.lastTournamentPct })));
+
+  const rows = metrics.map(({ playerId, m }) => {
+    const comps = [
+      { key: 'recentForm', w: W.recentForm, n: formN.get(playerId) },
+      { key: 'indexTrend', w: W.indexTrend, n: trendN.get(playerId) },
+      { key: 'activity', w: W.activity, n: activityN.get(playerId) },
+      { key: 'lastTournament', w: W.lastTournament, n: lastN.get(playerId) },
+    ].filter((c) => c.n != null);
+    const totalW = comps.reduce((s, c) => s + c.w, 0);
+    const score = totalW > 0 ? round1((comps.reduce((s, c) => s + c.w * c.n, 0) / totalW) * 100) : 0;
+    return { playerId, score, metrics: m, weightsUsed: comps.map((c) => c.key) };
+  });
+  // rank: score desc, then lower index (better golfer), then name
+  rows.sort((a, b) =>
+    b.score - a.score ||
+    (a.metrics.index ?? 99) - (b.metrics.index ?? 99) ||
+    playerById[a.playerId].name.localeCompare(playerById[b.playerId].name));
+  rows.forEach((r, i) => (r.rank = r.metrics.hasData ? i + 1 : null));
+  return { asOf, rows };
+}
+
+// A one-line, auto-generated read on each player.
+function powerVerdict(m, dataAsOf, seededOnly) {
+  if (!m.hasData) return 'No GHIN check-in yet';
+  const weeks = Math.max(0, Math.round((dparse(dataAsOf) - dparse(m.lastCheckIn)) / (7 * DAY_MS)));
+  if (m.lastCheckIn < dataAsOf && weeks * 7 >= POWER_RANKING_STALE_DAYS)
+    return `Hasn't posted in ${weeks} week${weeks === 1 ? '' : 's'}`;
+  if (m.trend != null && m.trend >= 0.5) return 'Trending sharp — index falling';
+  if (m.trend != null && m.trend <= -0.5) return 'Index drifting up';
+  if (m.form != null && m.form >= 2) return 'Playing under their number';
+  if (m.activity != null && m.activity >= 8) return `Grinding — ${m.activity} rounds posted`;
+  if (m.activity === 0) return 'No rounds since last check-in';
+  if (seededOnly || (m.form == null && m.trend == null && m.activity == null))
+    return 'Seed data — awaiting first GHIN check-in';
+  return 'Holding steady';
+}
+
+// THE PUBLIC ENTRY POINT. Returns everything the Power Rankings page (and the
+// future Draft Guide) needs.
+export function powerRankings() {
+  if (!handicapSnapshots.length) {
+    return { weights: POWER_RANKING_WEIGHTS, trendDays: POWER_RANKING_TREND_DAYS,
+      dataAsOf: null, hasRealData: false, checkInDates: [], rows: [] };
+  }
+  const dates = [...new Set(handicapSnapshots.map((s) => s.date))].sort();
+  const dataAsOf = dates[dates.length - 1];
+  const prevDate = dates.length > 1 ? dates[dates.length - 2] : null;
+  // "Real" data = anything beyond the single seed check-in (a later date, or any
+  // posted rounds / differentials).
+  const hasRealData = dates.length > 1 ||
+    handicapSnapshots.some((s) => s.rounds != null || s.avgDifferential != null);
+
+  const current = rankingAsOf(dataAsOf);
+  const previous = prevDate ? rankingAsOf(prevDate) : null;
+  const prevRank = new Map((previous?.rows || []).map((r) => [r.playerId, r.rank]));
+
+  const rows = current.rows.map((r) => {
+    const m = r.metrics;
+    const car = careerStats(r.playerId);
+    const lastApp = car.appearances[car.appearances.length - 1] || null;
+    const pr = prevRank.get(r.playerId);
+    let movement = 'steady', movementBy = 0;
+    if (!previous || !m.hasData) movement = m.hasData ? 'steady' : 'none';
+    else if (pr == null && r.rank != null) movement = 'new';
+    else if (pr != null && r.rank != null) {
+      movementBy = pr - r.rank;
+      movement = movementBy > 0 ? 'up' : movementBy < 0 ? 'down' : 'steady';
+    }
+    const stale = m.hasData ? (m.lastCheckIn < dataAsOf) : true;
+    return {
+      rank: r.rank,
+      player: playerById[r.playerId],
+      teamId: lastApp ? lastApp.teamId : null,   // most recent team (null for a rookie)
+      isRookie: car.played === 0,
+      ghin: playerById[r.playerId].ghin ?? null,
+      score: r.score,
+      index: m.index,
+      trend: m.trend,               // index change over window (− = improving)
+      form: m.form,                 // index − avg differential (+ = sharp)
+      rounds: m.activity,
+      lastTournamentPct: m.lastTournamentPct,
+      series: m.snaps.map((s) => ({ date: s.date, index: s.index })),
+      lastCheckIn: m.lastCheckIn,
+      note: m.note,
+      movement, movementBy,
+      stale,
+      weightsUsed: r.weightsUsed,
+      hasData: m.hasData,
+      verdict: powerVerdict(m, dataAsOf, !hasRealData),
+    };
+  });
+
+  return {
+    weights: POWER_RANKING_WEIGHTS,
+    trendDays: POWER_RANKING_TREND_DAYS,
+    staleDays: POWER_RANKING_STALE_DAYS,
+    dataAsOf,
+    checkInDates: dates,
+    hasRealData,
+    rows,
+  };
+}
+
+// The manual check-in helper: name · GHIN · current index · last check-in.
+// (Sorted by name for an easy monthly lookup routine on ghin.com.)
+export function handicapCheckInList() {
+  const latest = new Map();
+  for (const s of handicapSnapshots) {
+    const cur = latest.get(s.player);
+    if (!cur || s.date > cur.date) latest.set(s.player, s);
+  }
+  return players
+    .map((p) => {
+      const s = latest.get(p.id) || null;
+      return { player: p, ghin: p.ghin ?? null, index: s ? s.index : null, lastCheckIn: s ? s.date : null };
+    })
+    .sort((a, b) => a.player.name.localeCompare(b.player.name));
+}
+
+// Players confirmed for an upcoming event who have never played an Annual —
+// "rookies". Ordered by name. Used by the Players page and profile treatment.
+export function rookiesFor(tid) {
+  return players
+    .filter((p) => (p.confirmedFor || []).includes(tid) && careerStats(p.id).played === 0)
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+export function allRookies() {
+  return players
+    .filter((p) => (p.confirmedFor || []).length > 0 && careerStats(p.id).played === 0)
+    .sort((a, b) => a.name.localeCompare(b.name));
 }

@@ -5,7 +5,7 @@ import { players, teamById, playerById, roundById, getCourse, tournamentById, mo
 import {
   careerStats, formatRecords, opponentRecords,
   handicapAnalysis, draftValue, scorecardIndex, ANALYTICS_CAVEAT,
-  playerHoleStats, HOLE_STATS_COVERAGE,
+  playerHoleStats, HOLE_STATS_COVERAGE, powerRankings,
 } from '../../lib/stats.js';
 import { fullName, num, pctText } from '../../lib/format.js';
 
@@ -16,9 +16,14 @@ const { p } = Astro.props;
 const c = careerStats(p.id);
 const bright = { woodpeckers: 'var(--wp-bright)', 'silver-spoons': 'var(--ss-bright)' };
 
-// A "prospect" is confirmed for an upcoming event but has no completed record yet.
+// A "rookie" is confirmed for an upcoming event but has no completed record yet.
 const isProspect = c.appearances.length === 0;
 const confirmedFor = p.confirmedFor || [];
+const rookieTid = confirmedFor[0] || null;
+const rookieYear = rookieTid ? tournamentById[rookieTid]?.year : null;
+
+// This player's live power-ranking row (works for veterans and rookies alike).
+const prRow = powerRankings().rows.find((r) => r.player.id === p.id) || null;
 
 let app, team, accentBright, fr, opps, t, history, cur, myScores, myMoments, hs;
 if (!isProspect) {
@@ -47,23 +52,59 @@ const FMT_SHORT = { 'Scramble': 'Scramble', 'Best Ball Match Play (NET)': 'Best 
 ---
 <Base active="players" title={p.name} description={isProspect ? `${p.name} — draft prospect for the upcoming season.` : `Scouting report for ${p.name} — career record, format splits, partners, head-to-heads, handicap and draft value.`}>
 
-  {isProspect && (
-    <section class="section">
+  {isProspect && (<Fragment>
+    <section class="section" style="--accent:var(--gold-bright);--accent-bright:var(--gold-bright)">
       <div class="wrap">
         <a class="back-link" href="/players">← All players</a>
-        <div class="reveal" style="margin-top:1rem">
-          <span class="pill gold">Draft prospect</span>
-          <h1 class="display" style="font-size:clamp(2.2rem,6vw,4rem);margin:.6rem 0 .3rem">{p.name}</h1>
-          <p class="lede">Confirmed for the upcoming season — no completed tournaments on record yet. The scouting numbers fill in here after their first Annual.</p>
-        </div>
-        <div class="card card--pad" style="margin-top:1.6rem;max-width:520px">
-          <p class="eyebrow">Status</p>
-          <p style="font-family:var(--serif);font-size:1.3rem;margin:.3rem 0 .4rem">Awaiting first appearance</p>
-          <p class="muted" style="font-size:.9rem">Once they play, this becomes a full scouting report — career record, format splits, partners, head-to-heads, handicap and draft value.</p>
+        <div class="phero reveal">
+          <div class="phero__id">
+            <span class="pill gold">★ Rookie{rookieYear ? ` — debuts ${rookieYear}` : ''}</span>
+            <h1 class="display" style="font-size:clamp(2.2rem,6vw,4rem);margin:.5rem 0 .1rem">{p.name}</h1>
+            {p.nickname && <p class="muted" style="font-style:italic">“{p.nickname}”</p>}
+            <div class="chips" style="margin-top:.7rem">
+              {rookieYear && <span class="pill">Confirmed for {rookieYear}</span>}
+              {prRow?.hasData && <span class="pill">Index {prRow.index}</span>}
+              {prRow?.hasData && prRow.rank && <span class="pill gold">Power #{prRow.rank}</span>}
+            </div>
+            {p.ghin && <p class="ghin-line">GHIN #{p.ghin}</p>}
+            {p.notes && <p class="lede" style="margin-top:.9rem">{p.notes}</p>}
+          </div>
+          <div class="phero__record card card--pad" style="border-top:4px solid var(--gold-bright)">
+            <p class="eyebrow gold">Status</p>
+            <p style="font-family:var(--serif);font-size:1.5rem;line-height:1.1;margin:.35rem 0 .4rem">First Annual awaits</p>
+            <p class="muted" style="font-size:.85rem">No tournament record yet — the scouting numbers fill in after {fullName(p.id).split(' ')[0]}’s debut.</p>
+          </div>
         </div>
       </div>
     </section>
-  )}
+
+    {prRow?.hasData && (
+      <section class="section" style="padding-top:0">
+        <div class="wrap">
+          <div class="rookie-pr card card--pad">
+            <div>
+              <p class="eyebrow gold">Form guide</p>
+              <p class="rookie-pr__verdict">{prRow.verdict}</p>
+              <p class="muted" style="font-size:.85rem;margin-top:.3rem">Handicap index {prRow.index}{prRow.rounds != null ? ` · ${prRow.rounds} rounds posted` : ''}. Follow the full board on the <a href="/power-rankings" class="gold">Power Rankings</a>.</p>
+            </div>
+            <a class="pr-badge" href="/power-rankings"><span class="pr-badge__k">Power</span><span class="pr-badge__v">#{prRow.rank}</span></a>
+          </div>
+        </div>
+      </section>
+    )}
+
+    <section class="section" style="padding-top:0">
+      <div class="wrap">
+        <div class="norecord card card--pad">
+          <span class="norecord__ic" aria-hidden="true">🏌️</span>
+          <div>
+            <h2 style="font-size:1.3rem;margin-bottom:.3rem">No tournament record yet</h2>
+            <p class="muted" style="max-width:60ch">Career totals, format splits, head-to-heads and honours will appear here once {fullName(p.id).split(' ')[0]} plays their first Annual{rookieYear ? ` in ${rookieYear}` : ''}. Until then, this profile carries their handicap, GHIN and live form.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </Fragment>)}
 
   {!isProspect && (<Fragment>
 
@@ -82,7 +123,9 @@ const FMT_SHORT = { 'Scramble': 'Scramble', 'Best Ball Match Play (NET)': 'Best 
             {cur.ha && <span class="pill">{cur.ha.tier} handicap</span>}
             {app.draftPick ? <span class="pill">Draft #{app.draftPick}</span> : <span class="pill">Captain</span>}
             {cur.dv?.label && <span class:list={["pill", { gold: cur.dv.label !== 'Draft Miss' }]}>{cur.dv.label}</span>}
+            {prRow?.hasData && prRow.rank && <a class="pill" href="/power-rankings" style="text-decoration:none">Power #{prRow.rank}</a>}
           </div>
+          {p.ghin && <p class="ghin-line">GHIN #{p.ghin}</p>}
         </div>
         <div class="phero__record card card--pad">
           <p class="eyebrow">Career record</p>
@@ -287,6 +330,15 @@ const FMT_SHORT = { 'Scramble': 'Scramble', 'Best Ball Match Play (NET)': 'Best 
   .phero__wlh b { font-family: var(--serif); font-size: clamp(2.2rem, 1.6rem + 3vw, 3.2rem); line-height: 1; color: var(--accent-bright); }
   .phero__wlh i { font-style: normal; color: var(--faint); font-size: 1.6rem; }
   .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(1.4rem, 4vw, 2.4rem); align-items: start; }
+  .ghin-line { font-size: .78rem; color: var(--faint); font-weight: 600; letter-spacing: .03em; margin-top: .7rem; font-variant-numeric: tabular-nums; }
+  /* rookie treatment */
+  .rookie-pr { display: flex; align-items: center; justify-content: space-between; gap: 1.2rem; flex-wrap: wrap; border-top: 4px solid var(--gold-bright); }
+  .rookie-pr__verdict { font-family: var(--serif); font-size: clamp(1.2rem,1rem+1vw,1.6rem); margin-top: .2rem; }
+  .pr-badge { display: flex; flex-direction: column; align-items: center; justify-content: center; min-width: 78px; padding: .6rem .9rem; border-radius: var(--r-sm); background: var(--green-800); color: var(--green-ink); }
+  .pr-badge__k { font-size: .58rem; letter-spacing: .14em; text-transform: uppercase; font-weight: 700; opacity: .85; }
+  .pr-badge__v { font-family: var(--serif); font-size: 1.8rem; line-height: 1; font-variant-numeric: tabular-nums; }
+  .norecord { display: flex; gap: 1.1rem; align-items: flex-start; }
+  .norecord__ic { font-size: 1.8rem; line-height: 1; }
   .caveat { font-size: .76rem; color: var(--muted); margin-top: .7rem; background: var(--gold-soft); border: 1px solid color-mix(in srgb, var(--gold-bright) 30%, transparent); border-radius: var(--r-sm); padding: .5rem .7rem; }
   .holebar { display: grid; grid-template-columns: repeat(5, 1fr); gap: .5rem; margin-top: .3rem; }
   .holebar__cell { border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--panel); padding: .7rem .5rem; text-align: center; }

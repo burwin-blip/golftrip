@@ -30,3 +30,10 @@ export const dateRange = (start, end) => {
 };
 
 export const num = (n) => (Number.isInteger(n) ? String(n) : n.toFixed(1));
+
+// "2026-03-13" -> "March 13, 2026"
+export const longDate = (iso) => {
+  if (!iso) return '';
+  const d = new Date(iso + 'T00:00:00');
+  return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+};

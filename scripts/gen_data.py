@@ -52,17 +52,29 @@ def dump(name, obj):
 # to. Existing players (who have played a completed event) are auto-eligible for
 # the next draft pool; new blokes with no record appear once they're added here
 # with the upcoming tournament id in `confirmedFor`.
+# `ghin` (the player's GHIN number) and `confirmedFor` are HAND-MAINTAINED after
+# generation (edited directly in players.json, often from a phone via GitHub). So
+# we preserve any existing values by id when regenerating — a regen never wipes a
+# GHIN number or a confirmed-for list that was entered by hand.
+_existing = {}
+_pp = os.path.join(OUT, "players.json")
+if os.path.exists(_pp):
+    for _e in json.load(open(_pp)):
+        _existing[_e["id"]] = _e
 players = []
 for r in rows("DB Players"):
+    pid = r["Profile Slug"]
+    prev = _existing.get(pid, {})
     players.append({
-        "id": r["Profile Slug"],
+        "id": pid,
         "name": r["Player Name"],
-        "slug": r["Profile Slug"],
+        "slug": pid,
         "active": bool(r["Active"]),
         "country": r["Country"] or None,
         "nickname": r["Nickname"] or None,
         "notes": r["Notes"] or None,
-        "confirmedFor": [],
+        "ghin": prev.get("ghin"),                 # hand-maintained; preserved on regen
+        "confirmedFor": prev.get("confirmedFor", []),  # hand-maintained; preserved on regen
     })
 dump("players.json", players)
 
