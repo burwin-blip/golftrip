@@ -12,18 +12,27 @@ const pctW = (x) => Math.round(x * 100);
 const signed1 = (x) => (x > 0 ? `+${x}` : `${x}`);
 const asOf = pr.dataAsOf ? longDate(pr.dataAsOf) : null;
 
-// Sparkline geometry for a player's index-over-time series.
+// Sparkline geometry — plots the INDEX VALUE literally: higher index sits higher
+// on the chart, so a falling handicap (improving) draws a line going DOWN, the
+// way golfers read it. A little vertical padding keeps a small move visible.
 function spark(series) {
-  const W = 104, H = 30, pad = 4;
+  const W = 104, H = 30, pad = 5;
   if (!series.length) return null;
   const idx = series.map((s) => s.index);
-  const min = Math.min(...idx), max = Math.max(...idx);
+  let min = Math.min(...idx), max = Math.max(...idx);
+  if (max - min < 1) { const mid = (max + min) / 2; min = mid - 0.5; max = mid + 0.5; } // floor the range so tiny moves show
   const xAt = (i) => series.length === 1 ? W / 2 : pad + (i / (series.length - 1)) * (W - 2 * pad);
-  const yAt = (v) => max === min ? H / 2 : pad + ((v - min) / (max - min)) * (H - 2 * pad);
+  const yAt = (v) => max === min ? H / 2 : pad + ((max - v) / (max - min)) * (H - 2 * pad); // higher index -> higher (smaller y)
   const pts = series.map((s, i) => `${xAt(i).toFixed(1)},${yAt(s.index).toFixed(1)}`);
-  const improving = series.length > 1 && series[series.length - 1].index < series[0].index;
-  return { W, H, pts, last: { x: xAt(series.length - 1), y: yAt(series[series.length - 1].index) }, improving, single: series.length === 1 };
+  return { W, H, pts, last: { x: xAt(series.length - 1), y: yAt(series[series.length - 1].index) }, single: series.length === 1 };
 }
+
+// index-direction → sparkline colour + annotation glyph
+const DIR = {
+  falling: { stroke: 'var(--wp)',       cls: 'falling', glyph: '▼' }, // index down = improving = green
+  rising:  { stroke: 'var(--terra)',    cls: 'rising',  glyph: '▲' }, // index up = amber/red
+  flat:    { stroke: 'var(--faint)',    cls: 'flat',    glyph: '◆' },
+};
 
 const MOVE = {
   up:     { sym: '▲', cls: 'up' },
@@ -71,6 +80,8 @@ const MOVE = {
         {pr.rows.map((r) => {
           const mv = MOVE[r.movement] || MOVE.none;
           const sp = spark(r.series);
+          const dir = DIR[r.indexDir] || DIR.flat;
+          const showAnno = r.hasData && r.series.length > 1;
           return (
             <li class:list={['pr-row', { 'is-stale': r.stale, 'no-data': !r.hasData }]}>
               <div class="pr-rank">
@@ -82,47 +93,29 @@ const MOVE = {
                 <div class="pr-nameline">
                   {r.teamId && <TeamLogo teamId={r.teamId} size={22} />}
                   <a class="pr-name" href={`/players/${r.player.slug}`}>{r.player.name}</a>
+                  <span class:list={['pr-head', dir.cls]}>{r.headline}</span>
                   {r.isRookie && <span class="pr-tag rookie">Rookie</span>}
-                  {r.stale && <span class="pr-tag stale">Stale</span>}
                 </div>
-                <div class="pr-verdict">{r.verdict}</div>
-                <div class="pr-meta">
-                  {r.form != null && <span class="pr-chip"><b>Form</b> {signed1(r.form)}</span>}
-                  {r.trend != null && <span class="pr-chip"><b>Index</b> {r.trend > 0 ? '▼' : r.trend < 0 ? '▲' : '—'}{r.trend !== 0 ? Math.abs(r.trend) : ''} <span class="faint">trend</span></span>}
-                  {r.rounds != null && <span class="pr-chip"><b>{r.rounds}</b> round{r.rounds === 1 ? '' : 's'}</span>}
-                  {r.lastTournamentPct != null && <span class="pr-chip"><b>{r.lastTournamentPct}%</b> last Annual</span>}
-                </div>
+                <p class="pr-blurb">{r.blurb}</p>
+                {!r.stale && r.note && <p class="pr-note">“{r.note}”</p>}
               </div>
 
               <div class="pr-side">
                 <div class="pr-index"><span class="pr-index__v">{r.index ?? '—'}</span><span class="pr-index__l">index</span></div>
                 {sp && (
                   <svg class="pr-spark" viewBox={`0 0 ${sp.W} ${sp.H}`} width={sp.W} height={sp.H} aria-hidden="true">
-                    {!sp.single && <polyline points={sp.pts.join(' ')} fill="none" stroke={sp.improving ? 'var(--wp)' : 'var(--terra)'} stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />}
-                    <circle cx={sp.last.x} cy={sp.last.y} r="2.6" fill={sp.improving ? 'var(--wp)' : 'var(--terra)'} />
+                    {!sp.single && <polyline points={sp.pts.join(' ')} fill="none" stroke={dir.stroke} stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />}
+                    <circle cx={sp.last.x} cy={sp.last.y} r="2.6" fill={dir.stroke} />
                   </svg>
+                )}
+                {showAnno && (
+                  <span class:list={['pr-anno', dir.cls]}>{dir.glyph} {r.sinceSeed === 0 ? 'level' : Math.abs(r.sinceSeed)} <span class="faint">{r.sinceLabel}</span></span>
                 )}
               </div>
             </li>
           );
         })}
       </ol>
-    </div>
-  </section>
-
-  <!-- METHODOLOGY -->
-  <section class="section" style="padding-top:0">
-    <div class="wrap">
-      <div class="pr-method">
-        <div class="section-head" style="margin-bottom:1rem"><div><p class="eyebrow">How it's calculated</p><h2>The formula</h2></div></div>
-        <p class="muted" style="max-width:70ch;font-size:.94rem">A transparent weighted score (0–100). Each component is normalised across the field, then blended by these weights. A player missing a component is scored on the ones they have — never penalised for data that isn't in yet — and flagged <b>stale</b> if they skipped the latest check-in.</p>
-        <div class="pr-weights">
-          <div class="pr-w"><span class="pr-w__pct">{pctW(W.recentForm)}%</span><span class="pr-w__k">Recent form vs index</span><span class="pr-w__d">Recent scoring differentials against their handicap — are they beating their number?</span></div>
-          <div class="pr-w"><span class="pr-w__pct">{pctW(W.indexTrend)}%</span><span class="pr-w__k">Index trend</span><span class="pr-w__d">Which way the index is moving since the previous check-in (across the last {pr.trendDays} days once you've logged several). Falling = improving.</span></div>
-          <div class="pr-w"><span class="pr-w__pct">{pctW(W.activity)}%</span><span class="pr-w__k">Activity</span><span class="pr-w__d">Rounds posted since the last check-in. Rewards the grinders.</span></div>
-          <div class="pr-w"><span class="pr-w__pct">{pctW(W.lastTournament)}%</span><span class="pr-w__k">Last Annual</span><span class="pr-w__d">Points percentage at their most recent trip.</span></div>
-        </div>
-      </div>
     </div>
   </section>
 
@@ -149,6 +142,24 @@ const MOVE = {
     </div>
   </section>
 
+  <!-- METHODOLOGY (tucked away) -->
+  <section class="section" style="padding-top:0">
+    <div class="wrap">
+      <details class="pr-how">
+        <summary class="pr-how__toggle"><span class="pr-how__chev" aria-hidden="true">›</span> How the rankings work</summary>
+        <div class="pr-how__body">
+          <p class="muted" style="max-width:70ch;font-size:.92rem">A transparent weighted score out of 100. Each component is normalised across the field, then blended by the weights below. A player missing a component is scored only on the ones they have — never penalised for data that isn't in yet — and flagged <b>stale</b> if they skipped the latest check-in.</p>
+          <div class="pr-weights">
+            <div class="pr-w"><span class="pr-w__pct">{pctW(W.recentForm)}%</span><span class="pr-w__k">Recent form vs index</span><span class="pr-w__d">Recent scoring differentials against their handicap — are they beating their number?</span></div>
+            <div class="pr-w"><span class="pr-w__pct">{pctW(W.indexTrend)}%</span><span class="pr-w__k">Index trend</span><span class="pr-w__d">Which way the index is moving since the previous check-in (across the last {pr.trendDays} days once you've logged several). Falling = improving.</span></div>
+            <div class="pr-w"><span class="pr-w__pct">{pctW(W.activity)}%</span><span class="pr-w__k">Activity</span><span class="pr-w__d">Rounds posted since the last check-in. Rewards the grinders.</span></div>
+            <div class="pr-w"><span class="pr-w__pct">{pctW(W.lastTournament)}%</span><span class="pr-w__k">Last Annual</span><span class="pr-w__d">Points percentage at their most recent trip.</span></div>
+          </div>
+        </div>
+      </details>
+    </div>
+  </section>
+
 </Base>
 
 <style>
@@ -162,7 +173,7 @@ const MOVE = {
 
   /* THE BOARD — big, scannable, phone-first */
   .pr-board { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: .6rem; }
-  .pr-row { display: grid; grid-template-columns: 3.2rem 1fr auto; gap: clamp(.7rem, 2vw, 1.2rem); align-items: center; background: var(--panel); border-radius: var(--r); box-shadow: var(--shadow); padding: clamp(.8rem, 2.4vw, 1.1rem) clamp(.9rem, 2.6vw, 1.3rem); transition: transform .15s var(--ease), box-shadow .15s var(--ease); }
+  .pr-row { display: grid; grid-template-columns: 3.2rem 1fr auto; gap: clamp(.7rem, 2vw, 1.2rem); align-items: start; background: var(--panel); border-radius: var(--r); box-shadow: var(--shadow); padding: clamp(.9rem, 2.4vw, 1.2rem) clamp(.9rem, 2.6vw, 1.3rem); transition: transform .15s var(--ease), box-shadow .15s var(--ease); }
   .pr-row:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
   .pr-row.is-stale { opacity: .74; }
 
@@ -183,18 +194,32 @@ const MOVE = {
   .pr-tag { font-size: .58rem; font-weight: 800; letter-spacing: .09em; text-transform: uppercase; padding: .12rem .45rem; border-radius: 999px; }
   .pr-tag.stale { background: color-mix(in srgb, var(--terra) 16%, transparent); color: var(--terra-ink); }
   .pr-tag.rookie { background: var(--gold-soft); color: var(--gold); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--gold-bright) 40%, transparent); }
-  .pr-verdict { font-size: .9rem; color: var(--muted); margin-top: .12rem; }
-  .pr-meta { display: flex; flex-wrap: wrap; gap: .35rem .5rem; margin-top: .5rem; }
-  .pr-chip { font-size: .74rem; color: var(--muted); background: var(--panel-2); border-radius: 999px; padding: .16rem .55rem; font-variant-numeric: tabular-nums; }
-  .pr-chip b { color: var(--text); font-weight: 700; }
+  /* headline tag, coloured by index direction */
+  .pr-head { font-size: .62rem; font-weight: 800; letter-spacing: .09em; text-transform: uppercase; padding: .16rem .5rem; border-radius: 999px; white-space: nowrap; }
+  .pr-head.falling { color: var(--wp-ink); background: var(--wp-soft); }
+  .pr-head.rising { color: var(--terra-ink); background: color-mix(in srgb, var(--terra) 15%, transparent); }
+  .pr-head.flat { color: var(--muted); background: var(--panel-2); }
+  .pr-blurb { font-size: .92rem; line-height: 1.5; color: var(--text); margin-top: .4rem; max-width: 62ch; }
+  .pr-note { font-size: .82rem; font-style: italic; color: var(--muted); margin-top: .4rem; padding-left: .7rem; border-left: 2px solid color-mix(in srgb, var(--gold-bright) 45%, transparent); max-width: 62ch; }
 
-  .pr-side { display: flex; flex-direction: column; align-items: flex-end; gap: .3rem; }
+  .pr-side { display: flex; flex-direction: column; align-items: flex-end; gap: .3rem; flex: none; }
   .pr-index { display: flex; flex-direction: column; align-items: flex-end; line-height: 1; }
   .pr-index__v { font-family: var(--serif); font-weight: 600; font-size: clamp(1.5rem, 1.1rem + 1.6vw, 2rem); color: var(--text); font-variant-numeric: tabular-nums; }
   .pr-index__l { font-size: .58rem; letter-spacing: .12em; text-transform: uppercase; color: var(--faint); font-weight: 700; margin-top: .2rem; }
-  .pr-spark { display: block; }
+  .pr-spark { display: block; margin-top: .1rem; }
+  .pr-anno { font-size: .66rem; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: .01em; display: inline-flex; align-items: center; gap: .25rem; white-space: nowrap; }
+  .pr-anno.falling { color: var(--wp-ink); }
+  .pr-anno.rising { color: var(--terra-ink); }
+  .pr-anno.flat { color: var(--faint); }
+  .pr-anno .faint { font-weight: 600; }
 
-  /* methodology */
+  /* methodology — tucked-away collapsible */
+  .pr-how { background: var(--panel); border-radius: var(--r); box-shadow: var(--shadow); }
+  .pr-how__toggle { cursor: pointer; list-style: none; padding: 1rem 1.2rem; font-weight: 700; font-size: .9rem; color: var(--text); display: flex; align-items: center; gap: .5rem; }
+  .pr-how__toggle::-webkit-details-marker { display: none; }
+  .pr-how__chev { display: inline-block; transition: transform .2s var(--ease); color: var(--terra); font-size: 1.1rem; }
+  .pr-how[open] .pr-how__chev { transform: rotate(90deg); }
+  .pr-how__body { padding: 0 1.2rem 1.3rem; }
   .pr-method { background: var(--panel); border-radius: var(--r); box-shadow: var(--shadow); padding: clamp(1.2rem, 3vw, 1.8rem); }
   .pr-weights { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: .8rem; margin-top: 1.2rem; }
   .pr-w { background: var(--panel-2); border-radius: var(--r-sm); padding: .9rem 1rem; }

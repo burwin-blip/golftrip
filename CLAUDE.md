@@ -234,10 +234,19 @@ auto-generated in `powerVerdict()`.
 
 `powerRankings()` returns `{ weights, trendDays, staleDays, dataAsOf, checkInDates,
 hasRealData, rows[] }`; each row carries `rank, movement, movementBy, player,
-teamId, isRookie, ghin, score, index, trend, form, rounds, lastTournamentPct,
-series (sparkline), lastCheckIn, note, stale, verdict`. **The 2027 Draft Guide is
-meant to consume `powerRankings().rows` directly** — that's why the output is
-structured, not just rendered.
+teamId, isRookie, ghin, score, index, seedIndex, trend, sinceSeed, sinceLast,
+indexDir ('falling'|'rising'|'flat'), sinceLabel, form, avgDifferential, rounds,
+lastTournamentPct, series (sparkline), lastCheckIn, note, stale, verdict` — plus a
+short **`headline`** tag and a 2–3 sentence auto-generated **`blurb`** (the
+screenshot bit, written in the sports-coverage voice by `powerBlurb()`). **The 2027
+Draft Guide is meant to consume `powerRankings().rows` directly** — that's why the
+output is structured, not just rendered.
+
+The Power Rankings page renders headline + blurb + the snapshot note (as a quote;
+suppressed on stale rows), and a **sparkline that plots the index value literally**
+— a falling handicap draws a line going *down* (green = improving, amber = drifting
+up) with a "▼/▲ X since St George" annotation. The formula/weights live behind a
+"How the rankings work" expander at the bottom.
 
 Page: `/power-rankings` (nav label **Rankings**, also linked from Players). The
 check-in helper table is `handicapCheckInList()` (name · GHIN · index · last

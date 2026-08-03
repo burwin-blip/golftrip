@@ -1063,6 +1063,9 @@ function powerMetrics(pid, asOf) {
     lastTournamentPct = available ? round1(pct(earned, available)) : null;
   }
   return { hasData: true, snaps, index, form, trend, activity, lastTournamentPct,
+    avgDifferential: latest.avgDifferential ?? null,
+    seedIndex: snaps[0].index,                                   // first snapshot = the tournament seed
+    prevIndex: snaps.length > 1 ? snaps[snaps.length - 2].index : null,
     lastCheckIn: latest.date, note: latest.note ?? null };
 }
 
@@ -1126,6 +1129,76 @@ function powerVerdict(m, dataAsOf, seededOnly) {
   return 'Holding steady';
 }
 
+// ---- movement blurbs (the screenshot bit) --------------------------------
+// A short punchy headline + a 2–3 sentence, auto-generated read in the site's
+// sports-coverage voice, built from a player's own numbers. `b` is the enriched
+// per-player object assembled in powerRankings().
+const mag = (x) => {
+  const v = Math.round(Math.abs(x) * 10) / 10;
+  return Number.isInteger(v) ? String(v) : v.toFixed(1);
+};
+const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+
+function powerHeadline(b) {
+  if (!b.hasData) return 'No data';
+  if (b.stale) return 'Gone quiet';
+  if (b.seedOnly) return 'Seed data';
+  if (b.indexDir === 'falling' && b.sinceSeed >= 0.5) return 'Trending sharp';
+  if (b.indexDir === 'rising' && b.sinceSeed <= -0.5) return 'Cooling off';
+  if (b.rounds != null && b.rounds >= 8) return 'Grinding';
+  if (b.rounds === 0) return 'Not posting';
+  if (b.indexDir === 'falling') return 'Edging down';
+  if (b.indexDir === 'rising') return 'Slipping';
+  return 'Holding steady';
+}
+
+function powerBlurb(b) {
+  const F = b.first, He = 'He', he = 'he', his = 'his';
+  if (!b.hasData) return `${b.name} has no GHIN check-in on record yet.`;
+
+  if (b.stale) {
+    const wk = b.weeksSince;
+    const tail = b.lastTournamentPct != null
+      ? `, with ${his} ${b.lastTournamentPct}% return from the trip doing the ranking work for now`
+      : '';
+    return `${F} hasn't logged a GHIN check-in since St George — ${wk} week${wk === 1 ? '' : 's'} and counting. ${He}'s parked on ${his} tournament handicap of ${b.seedIndex}${tail}. Fresh scores will move ${him(b)}.`;
+  }
+  if (b.seedOnly) {
+    return `Seeded from St George — ${F} is ranked on ${his} ${b.index} tournament handicap. Log a GHIN check-in and ${his} form comes to life.`;
+  }
+
+  const s = [];
+  // 1) index trajectory
+  const d = b.sinceSeed, lbl = b.sinceLabel;
+  if (d != null && d >= 0.05) s.push(`${F} has shaved ${mag(d)} off ${his} index ${lbl}, down from ${b.seedIndex} to ${b.index}.`);
+  else if (d != null && d <= -0.05) s.push(`${F}'s index has crept up ${mag(d)} ${lbl}, from ${b.seedIndex} to ${b.index}.`);
+  else s.push(`${F}'s index has barely budged ${lbl}, holding at ${b.index}.`);
+  // a distinct recent move (only when there are 3+ check-ins and it differs)
+  if (b.sinceLast != null && d != null && Math.abs(b.sinceLast - d) > 0.05) {
+    if (b.sinceLast >= 0.05) s.push(`${He}'s down another ${mag(b.sinceLast)} just since the last check-in.`);
+    else if (b.sinceLast <= -0.05) s.push(`${He}'s ticked up ${mag(b.sinceLast)} since the last check-in, though.`);
+  }
+  // 2) activity + differential vs baseline
+  let act = null;
+  if (b.rounds === 0) act = `no rounds posted since the last check-in`;
+  else if (b.rounds != null && b.rounds <= 2) act = `just ${b.rounds} round${b.rounds === 1 ? '' : 's'} in the last 90 days keeps the sample thin`;
+  else if (b.rounds != null && b.rounds >= 8) act = `${he}'s putting in the work with ${b.rounds} rounds in the last 90 days`;
+  else if (b.rounds != null) act = `${b.rounds} rounds on the card over the last 90 days`;
+  let diff = null;
+  if (b.avgDifferential != null) {
+    const gap = b.avgDifferential - b.index;
+    if (gap <= 2) diff = `${his} differentials are averaging ${b.avgDifferential}, right around ${his} number`;
+    else if (gap <= 4) diff = `${his} differentials are averaging ${b.avgDifferential}, a touch above ${his} ${b.index} baseline`;
+    else diff = `${his} differentials are averaging ${b.avgDifferential}, still well north of ${his} ${b.index} baseline`;
+  }
+  if (act && diff) s.push(cap(`${act}, and ${diff}.`));
+  else if (act) s.push(cap(`${act}.`));
+  else if (diff) s.push(cap(`${diff}.`));
+  return s.join(' ');
+}
+// tiny helper for object pronoun ("move him")
+function him(_b) { return 'him'; }
+
 // THE PUBLIC ENTRY POINT. Returns everything the Power Rankings page (and the
 // future Draft Guide) needs.
 export function powerRankings() {
@@ -1158,16 +1231,43 @@ export function powerRankings() {
       movement = movementBy > 0 ? 'up' : movementBy < 0 ? 'down' : 'steady';
     }
     const stale = m.hasData ? (m.lastCheckIn < dataAsOf) : true;
+    const isRookie = car.played === 0;
+    // index deltas (positive ⇒ index fell ⇒ improving)
+    const sinceSeed = m.hasData ? round1(m.seedIndex - m.index) : null;
+    const sinceLast = m.hasData && m.prevIndex != null ? round1(m.prevIndex - m.index) : null;
+    const indexDir = sinceSeed == null || Math.abs(sinceSeed) < 0.05 ? 'flat'
+      : sinceSeed > 0 ? 'falling' : 'rising';
+    const weeksSince = m.hasData
+      ? Math.max(0, Math.round((dparse(dataAsOf) - dparse(m.lastCheckIn)) / (7 * DAY_MS))) : null;
+    const seedOnly = !hasRealData && !stale;
+
+    // Enriched object for the headline + blurb writers.
+    const b = {
+      hasData: m.hasData, stale, seedOnly, isRookie,
+      first: playerById[r.playerId].name.split(' ')[0],
+      name: playerById[r.playerId].name,
+      index: m.index, seedIndex: m.seedIndex,
+      sinceSeed, sinceLast, indexDir,
+      sinceLabel: isRookie ? `since ${playerById[r.playerId].name.split(' ')[0]}'s first check-in` : 'since St George',
+      rounds: m.activity, avgDifferential: m.avgDifferential,
+      lastTournamentPct: m.lastTournamentPct, weeksSince,
+    };
+
     return {
       rank: r.rank,
       player: playerById[r.playerId],
       teamId: lastApp ? lastApp.teamId : null,   // most recent team (null for a rookie)
-      isRookie: car.played === 0,
+      isRookie,
       ghin: playerById[r.playerId].ghin ?? null,
       score: r.score,
       index: m.index,
+      seedIndex: m.seedIndex,
       trend: m.trend,               // index change over window (− = improving)
+      sinceSeed, sinceLast,         // deltas for the blurb / annotation
+      indexDir,                     // 'falling' (improving) | 'rising' | 'flat'
+      sinceLabel: b.sinceLabel,
       form: m.form,                 // index − avg differential (+ = sharp)
+      avgDifferential: m.avgDifferential,
       rounds: m.activity,
       lastTournamentPct: m.lastTournamentPct,
       series: m.snaps.map((s) => ({ date: s.date, index: s.index })),
@@ -1177,7 +1277,9 @@ export function powerRankings() {
       stale,
       weightsUsed: r.weightsUsed,
       hasData: m.hasData,
-      verdict: powerVerdict(m, dataAsOf, !hasRealData),
+      verdict: powerVerdict(m, dataAsOf, !hasRealData),   // kept for compatibility
+      headline: powerHeadline(b),
+      blurb: powerBlurb(b),
     };
   });
 
