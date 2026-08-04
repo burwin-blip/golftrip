@@ -227,8 +227,12 @@ prior exists — so on the first real check-in after a long gap (e.g. the St Geo
 seed 20 weeks back) the "since last time" movement still counts. Each component is
 min-max normalised
 across the field; a player missing a component is scored **only on what they have**
-(never penalised), ranked last if they have nothing, and flagged `stale` if they
-skipped the latest check-in. Movement arrows compare each player's rank now vs the
+(never penalised) and flagged `stale` if they skipped the latest check-in.
+**Freshness tiers the board**: anyone who checked in at the latest date ranks
+above every `stale` (seed-only) player, who ranks above anyone with no data —
+so a stale player riding an old tournament result can't sit above someone posting
+fresh scores (the raw 0–100 score is only a within-tier tiebreak, and isn't shown
+in the UI). Movement arrows compare each player's rank now vs the
 previous check-in date. Verdicts ("Trending sharp", "Hasn't posted in 6 weeks") are
 auto-generated in `powerVerdict()`.
 

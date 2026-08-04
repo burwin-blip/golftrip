@@ -1106,8 +1106,13 @@ function rankingAsOf(asOf) {
     const score = totalW > 0 ? round1((comps.reduce((s, c) => s + c.w * c.n, 0) / totalW) * 100) : 0;
     return { playerId, score, metrics: m, weightsUsed: comps.map((c) => c.key) };
   });
-  // rank: score desc, then lower index (better golfer), then name
+  // Freshness tiers first: anyone who actually checked in at this date (0) ranks
+  // ABOVE stale seed-only players (1), who rank above players with no data (2).
+  // A stale player riding an old tournament result can't sit above someone who's
+  // posting fresh scores. Within a tier, sort by score, then lower index, name.
+  const tierOf = (m) => !m.hasData ? 2 : (m.lastCheckIn < asOf ? 1 : 0);
   rows.sort((a, b) =>
+    tierOf(a.metrics) - tierOf(b.metrics) ||
     b.score - a.score ||
     (a.metrics.index ?? 99) - (b.metrics.index ?? 99) ||
     playerById[a.playerId].name.localeCompare(playerById[b.playerId].name));
