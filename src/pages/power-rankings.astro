@@ -148,6 +148,14 @@ const MOVE = {
       <details class="pr-how">
         <summary class="pr-how__toggle"><span class="pr-how__chev" aria-hidden="true">›</span> How the rankings work</summary>
         <div class="pr-how__body">
+          <h3 class="pr-how__h">What's a differential?</h3>
+          <p class="pr-how__p">A differential is what a single round was <em>worth</em> in handicap terms — your score adjusted for how hard the course played that day. An 82 at a brute of a course can be a better round than a 78 at a pushover, and the differential sees straight through the raw number.</p>
+          <p class="pr-how__p">It comes from your score measured against the course's <b>rating</b> and <b>slope</b> — slope being how much harder a course plays for an everyday golfer than for a scratch one. The upshot: <b>a lower differential is a better round, on any course.</b></p>
+          <p class="pr-how__p">Your handicap index is the average of your <b>best 8 differentials from your last 20 rounds</b>. That's why one hot round nudges your index and one blow-up usually doesn't — the bad ones never crack your best 8.</p>
+          <p class="pr-how__p">It's also why the <b>average differential</b> shown on this page sits a few strokes <em>above</em> a player's index: the index only counts their best stuff. A player whose recent average differential is close to their index is in serious form; one running well above it is cooling off.</p>
+          <p class="pr-how__eg"><b>Quick read.</b> A 6.9 index posting rounds that average an 8.7 differential is playing roughly to expectations. A recent average nearer 12 means they're struggling against their own number.</p>
+
+          <h3 class="pr-how__h pr-how__h--gap">How the score is built</h3>
           <p class="muted" style="max-width:70ch;font-size:.92rem">A transparent weighted score out of 100. Each component is ranked across the field on a <b>percentile</b> (so one monster month tops its category without flattening everyone else), then blended by the weights below. A player missing a component is scored only on the ones they have — never penalised for data that isn't in yet — and flagged <b>stale</b> if they skipped the latest check-in.</p>
           <p class="muted" style="max-width:70ch;font-size:.86rem;margin-top:.5rem"><b>A note on “form”.</b> Two of the components read the index differently. <b>Recent form vs index</b> measures each player against <em>their own</em> number — how their recent scoring differentials sit against their own handicap — so it rewards playing to your own standard, not raw ability (a scratch player off his game can rate below a 20 who's on it). The <b>index trend</b> measures movement of that number over time. So a low index alone doesn't win — the board is about who's playing well <em>now</em>, relative to themselves.</p>
           <div class="pr-weights">
@@ -222,6 +230,12 @@ const MOVE = {
   .pr-how__chev { display: inline-block; transition: transform .2s var(--ease); color: var(--terra); font-size: 1.1rem; }
   .pr-how[open] .pr-how__chev { transform: rotate(90deg); }
   .pr-how__body { padding: 0 1.2rem 1.3rem; }
+  .pr-how__h { font-family: var(--serif); font-weight: 600; font-size: 1.15rem; color: var(--text); margin-bottom: .3rem; }
+  .pr-how__h--gap { margin-top: 1.6rem; padding-top: 1.3rem; border-top: 1px solid var(--line); }
+  .pr-how__p { max-width: 68ch; font-size: .9rem; line-height: 1.6; color: var(--muted); margin-top: .55rem; }
+  .pr-how__p b { color: var(--text); }
+  .pr-how__eg { max-width: 68ch; font-size: .88rem; line-height: 1.55; color: var(--text); margin-top: .9rem; background: var(--gold-soft); border-left: 3px solid var(--gold-bright); border-radius: 0 var(--r-sm) var(--r-sm) 0; padding: .7rem .9rem; }
+  .pr-how__eg b { color: var(--gold); }
   .pr-method { background: var(--panel); border-radius: var(--r); box-shadow: var(--shadow); padding: clamp(1.2rem, 3vw, 1.8rem); }
   .pr-weights { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: .8rem; margin-top: 1.2rem; }
   .pr-w { background: var(--panel-2); border-radius: var(--r-sm); padding: .9rem 1rem; }
