@@ -26,7 +26,16 @@ const { match } = Astro.props;
   .msum__chev { display: inline-block; transition: transform .2s var(--ease); font-size: 1rem; color: var(--gold); }
   .msum[open] .msum__chev { transform: rotate(90deg); }
   .msum__body { padding: 0 .9rem .9rem 1.7rem; }
-  .msum__text { font-size: .9rem; line-height: 1.62; color: var(--muted); }
-  .msum__standout { margin-top: .75rem; font-size: .85rem; line-height: 1.5; color: var(--text); background: var(--gold-soft); border-left: 3px solid var(--gold-bright); border-radius: 4px; padding: .55rem .75rem; }
+  /* cap the narrative at a comfortable reading measure instead of running the
+     full width of the match card on desktop */
+  .msum__text { font-size: .9rem; line-height: 1.62; color: var(--muted); max-width: 74ch; }
+  .msum__standout { margin-top: .75rem; font-size: .85rem; line-height: 1.5; color: var(--text); background: var(--gold-soft); border-left: 3px solid var(--gold-bright); border-radius: 4px; padding: .55rem .75rem; max-width: 74ch; }
+  /* Desktop: when there's a standout, lay narrative + standout side by side
+     (magazine story + pull-quote) so the summary uses the card's width. */
+  @media (min-width: 780px) {
+    .msum__body:has(.msum__standout) { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(220px, 1fr); gap: clamp(1.2rem, 3vw, 2.2rem); align-items: start; }
+    .msum__body:has(.msum__standout) .msum__text { max-width: 72ch; }
+    .msum__body:has(.msum__standout) .msum__standout { margin-top: 0; }
+  }
   .msum__slabel { display: inline-block; font-weight: 800; color: var(--gold); text-transform: uppercase; letter-spacing: .09em; font-size: .64rem; margin-right: .45rem; }
 </style>
