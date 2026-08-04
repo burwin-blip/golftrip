@@ -93,11 +93,11 @@ const MOVE = {
                 <div class="pr-nameline">
                   {r.teamId && <TeamLogo teamId={r.teamId} size={22} />}
                   <a class="pr-name" href={`/players/${r.player.slug}`}>{r.player.name}</a>
+                  {r.isRookie && <span class="pr-rookie" title="Rookie — debuts 2027">(R)</span>}
                   <span class:list={['pr-head', dir.cls]}>{r.headline}</span>
-                  {r.isRookie && <span class="pr-tag rookie">Rookie</span>}
                 </div>
                 <p class="pr-blurb">{r.blurb}</p>
-                {!r.stale && r.note && <p class="pr-note">“{r.note}”</p>}
+                {r.note && !/^Seed\b/.test(r.note) && <p class="pr-note">“{r.note}”</p>}
               </div>
 
               <div class="pr-side">
@@ -148,9 +148,10 @@ const MOVE = {
       <details class="pr-how">
         <summary class="pr-how__toggle"><span class="pr-how__chev" aria-hidden="true">›</span> How the rankings work</summary>
         <div class="pr-how__body">
-          <p class="muted" style="max-width:70ch;font-size:.92rem">A transparent weighted score out of 100. Each component is normalised across the field, then blended by the weights below. A player missing a component is scored only on the ones they have — never penalised for data that isn't in yet — and flagged <b>stale</b> if they skipped the latest check-in.</p>
+          <p class="muted" style="max-width:70ch;font-size:.92rem">A transparent weighted score out of 100. Each component is ranked across the field on a <b>percentile</b> (so one monster month tops its category without flattening everyone else), then blended by the weights below. A player missing a component is scored only on the ones they have — never penalised for data that isn't in yet — and flagged <b>stale</b> if they skipped the latest check-in.</p>
+          <p class="muted" style="max-width:70ch;font-size:.86rem;margin-top:.5rem"><b>A note on “form”.</b> Two of the components read the index differently. <b>Recent form vs index</b> measures each player against <em>their own</em> number — how their recent scoring differentials sit against their own handicap — so it rewards playing to your own standard, not raw ability (a scratch player off his game can rate below a 20 who's on it). The <b>index trend</b> measures movement of that number over time. So a low index alone doesn't win — the board is about who's playing well <em>now</em>, relative to themselves.</p>
           <div class="pr-weights">
-            <div class="pr-w"><span class="pr-w__pct">{pctW(W.recentForm)}%</span><span class="pr-w__k">Recent form vs index</span><span class="pr-w__d">Recent scoring differentials against their handicap — are they beating their number?</span></div>
+            <div class="pr-w"><span class="pr-w__pct">{pctW(W.recentForm)}%</span><span class="pr-w__k">Recent form vs index</span><span class="pr-w__d">Recent scoring differentials against their <em>own</em> handicap — are they beating their own number?</span></div>
             <div class="pr-w"><span class="pr-w__pct">{pctW(W.indexTrend)}%</span><span class="pr-w__k">Index trend</span><span class="pr-w__d">Which way the index is moving since the previous check-in (across the last {pr.trendDays} days once you've logged several). Falling = improving.</span></div>
             <div class="pr-w"><span class="pr-w__pct">{pctW(W.activity)}%</span><span class="pr-w__k">Activity</span><span class="pr-w__d">Rounds posted since the last check-in. Rewards the grinders.</span></div>
             <div class="pr-w"><span class="pr-w__pct">{pctW(W.lastTournament)}%</span><span class="pr-w__k">Last Annual</span><span class="pr-w__d">Points percentage at their most recent trip.</span></div>
@@ -191,6 +192,7 @@ const MOVE = {
   .pr-nameline :global(img) { border-radius: 50%; }
   .pr-name { font-family: var(--serif); font-weight: 600; font-size: clamp(1.15rem, 1rem + 1vw, 1.45rem); color: var(--text); }
   .pr-name:hover { color: var(--terra-ink); }
+  .pr-rookie { font-size: .7rem; font-weight: 800; color: var(--gold); letter-spacing: .02em; }
   .pr-tag { font-size: .58rem; font-weight: 800; letter-spacing: .09em; text-transform: uppercase; padding: .12rem .45rem; border-radius: 999px; }
   .pr-tag.stale { background: color-mix(in srgb, var(--terra) 16%, transparent); color: var(--terra-ink); }
   .pr-tag.rookie { background: var(--gold-soft); color: var(--gold); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--gold-bright) 40%, transparent); }

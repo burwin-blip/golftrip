@@ -133,5 +133,25 @@
     "rounds": 13,
     "avgDifferential": 12.1,
     "note": "Down from 12.6 at St George to 9.1 \u2014 steepest improvement in the field. 45 Stableford points at Royal Sydney on 17 Jun triggered an Exceptional Score Reduction."
+  },
+  {
+    "player": "steve-urwin",
+    "date": "2026-08-03",
+    "system": "ga",
+    "index": 18.8,
+    "homeClub": "Hawks Nest GC",
+    "rounds": 12,
+    "avgDifferential": 20.1,
+    "note": "Most active man in the field alongside Michael \u2014 weekly at Cumberland. Drifted to 19.7 in May, ground back to 18.8."
+  },
+  {
+    "player": "james-graham",
+    "date": "2026-08-03",
+    "system": "ghin",
+    "index": 11.5,
+    "homeClub": "EClub San Francisco",
+    "rounds": 0,
+    "avgDifferential": 14.6,
+    "note": "Hasn't posted since April; March included an 82 with an 8.8 diff. Enters the rankings as a ghost."
   }
 ]

@@ -92,7 +92,7 @@
   "nickname": null,
   "notes": null,
   "ghin": null,
-  "system": "ghin",
+  "system": "ga",
   "confirmedFor": []
  },
  {
@@ -142,5 +142,19 @@
   "ghin": null,
   "system": "ghin",
   "confirmedFor": []
+ },
+ {
+  "id": "james-graham",
+  "name": "James Graham",
+  "slug": "james-graham",
+  "active": true,
+  "country": null,
+  "nickname": null,
+  "notes": null,
+  "ghin": null,
+  "system": "ghin",
+  "confirmedFor": [
+   "duel-in-the-desert-2027"
+  ]
  }
 ]

@@ -210,11 +210,15 @@ message naming the offending record and field** — validated in
 **Seed:** ships with one snapshot per 2026 player, dated `2026-03-13`, at their
 tournament handicap, so the page works before any real check-in (flagged "seed").
 
-### GHIN numbers
+### GHIN numbers & handicap system
 `players.json` has a `ghin` field per player (their GHIN number), `null` until
-filled in. Shown as a small line on each profile and in the check-in sheet. Both
-`ghin` and `confirmedFor` are **hand-maintained**; `scripts/gen_data.py` **preserves
-them by id on regen** (a regen never wipes a GHIN number).
+filled in, and a `system` field — `"ghin"` (default) or `"ga"` for the Australian
+GA handicap system (indices are comparable numbers, no conversion). `ghin`,
+`system` and `confirmedFor` are all **hand-maintained**; `scripts/gen_data.py`
+**preserves them by id on regen**. Snapshots may also carry a per-check-in
+`system` and an optional `homeClub` (both validated). The UI labels the system
+subtly — **"GA index" / "GHIN index"** on the board, **"GA handicap · <club>"** /
+**"GHIN #<num> · <club>"** on the profile.
 
 ### The formula (`stats.js` → `powerRankings()`)
 A transparent weighted score (0–100). **Weights live in ONE place** —
@@ -225,14 +229,23 @@ earliest snapshot inside the 90-day window (`POWER_RANKING_TREND_DAYS`), but fal
 back to the **immediately-previous check-in regardless of age** when no in-window
 prior exists — so on the first real check-in after a long gap (e.g. the St George
 seed 20 weeks back) the "since last time" movement still counts. Each component is
-min-max normalised
-across the field; a player missing a component is scored **only on what they have**
-(never penalised) and flagged `stale` if they skipped the latest check-in.
-**Freshness tiers the board**: anyone who checked in at the latest date ranks
-above every `stale` (seed-only) player, who ranks above anyone with no data —
-so a stale player riding an old tournament result can't sit above someone posting
-fresh scores (the raw 0–100 score is only a within-tier tiebreak, and isn't shown
-in the UI). Movement arrows compare each player's rank now vs the
+**percentile (mid-rank) normalised**
+across the field — outlier-robust, so one monster month tops its category without
+flattening everyone else's spread (min-max did the opposite). A player missing a
+component is scored **only on what they have** (never penalised) and flagged
+`stale` if they skipped the latest check-in. The two index-based components differ:
+**recent form vs index** measures a player against *their own* number (rewards
+playing to your own standard, not raw ability — a scratch off his game can rate
+below a 20 who's on it), while **index trend** measures movement of that number.
+So a low index alone doesn't win; the rank measures "who's playing well now" and
+the improvement *story* lives in the blurb + sparkline, not the number.
+**Freshness tiers the board**: a *live* check-in (rounds posted or a measurable
+index trend) ranks above every `stale` seed-only player (still has a tournament
+result to stand on), which ranks above a **ghost** — a check-in with no rounds,
+no trend and no Annual behind it (a rookie who hasn't posted; headline "Ghost",
+sinks to the bottom until they post) — above no-data. So a stale result-rider
+can't sit above someone posting fresh scores (the raw 0–100 score is only a
+within-tier tiebreak, and isn't shown in the UI). Movement arrows compare each player's rank now vs the
 previous check-in date. Verdicts ("Trending sharp", "Hasn't posted in 6 weeks") are
 auto-generated in `powerVerdict()`.
 

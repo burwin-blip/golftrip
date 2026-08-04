@@ -1071,16 +1071,22 @@ function powerMetrics(pid, asOf) {
     lastCheckIn: latest.date, note: latest.note ?? null };
 }
 
-// Min–max normalise a set of {id, v} to 0..1 (higher raw ⇒ higher norm). Values
-// that are null are left out; if every value is equal, everyone gets 0.5.
+// Normalise a set of {id, v} to 0..1 (higher raw ⇒ higher norm) using a mid-rank
+// PERCENTILE, not min–max. This is outlier-robust: one monster month (a huge
+// index drop or a big round count) still lands top of its component, but it
+// doesn't blow out the scale and crush everyone else's spread — a player's score
+// reflects where they sit in the pack, not their distance from a lone extreme.
+// Nulls are left out; a lone value maps to 0.5; ties share the average rank.
 function normalise(pairs) {
-  const vals = pairs.filter((p) => p.v != null).map((p) => p.v);
+  const present = pairs.filter((p) => p.v != null);
   const out = new Map();
-  if (!vals.length) return out;
-  const min = Math.min(...vals), max = Math.max(...vals);
-  for (const p of pairs) {
-    if (p.v == null) continue;
-    out.set(p.id, max === min ? 0.5 : (p.v - min) / (max - min));
+  if (!present.length) return out;
+  const vals = present.map((p) => p.v);
+  const n = vals.length;
+  for (const p of present) {
+    const below = vals.filter((v) => v < p.v).length;
+    const equal = vals.filter((v) => v === p.v).length;
+    out.set(p.id, n === 1 ? 0.5 : (below + 0.5 * equal) / n);
   }
   return out;
 }
@@ -1106,11 +1112,14 @@ function rankingAsOf(asOf) {
     const score = totalW > 0 ? round1((comps.reduce((s, c) => s + c.w * c.n, 0) / totalW) * 100) : 0;
     return { playerId, score, metrics: m, weightsUsed: comps.map((c) => c.key) };
   });
-  // Freshness tiers first: anyone who actually checked in at this date (0) ranks
-  // ABOVE stale seed-only players (1), who rank above players with no data (2).
-  // A stale player riding an old tournament result can't sit above someone who's
-  // posting fresh scores. Within a tier, sort by score, then lower index, name.
-  const tierOf = (m) => !m.hasData ? 2 : (m.lastCheckIn < asOf ? 1 : 0);
+  // Freshness tiers first. A "live" player has a fresh signal — rounds posted or a
+  // measurable index trend. Live players (0) rank ABOVE stale seed-only players who
+  // still have a tournament result to stand on (1), who rank above "ghosts" — a
+  // check-in with no rounds, no trend and no Annual behind them (2) — and no-data
+  // (3). So a stale result-rider can't sit above someone posting fresh scores, and
+  // a ghost (checked in but nothing to go on) sinks to the bottom until they post.
+  const isLive = (m) => (m.activity != null && m.activity > 0) || m.trend != null;
+  const tierOf = (m) => !m.hasData ? 3 : isLive(m) ? 0 : (m.lastTournamentPct != null ? 1 : 2);
   rows.sort((a, b) =>
     tierOf(a.metrics) - tierOf(b.metrics) ||
     b.score - a.score ||
@@ -1148,6 +1157,7 @@ const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 
 function powerHeadline(b) {
   if (!b.hasData) return 'No data';
+  if (b.ghost) return 'Ghost';
   if (b.stale) return 'Gone quiet';
   if (b.seedOnly) return 'Seed data';
   if (b.indexDir === 'falling' && b.sinceSeed >= 0.5) return 'Trending sharp';
@@ -1161,8 +1171,11 @@ function powerHeadline(b) {
 
 function powerBlurb(b) {
   const F = b.first, He = 'He', he = 'he', his = 'his';
-  if (!b.hasData) return `${b.name} has no GHIN check-in on record yet.`;
+  if (!b.hasData) return `${b.name} has no check-in on record yet.`;
 
+  if (b.ghost) {
+    return `${F} enters the board as a ghost — an index of ${b.index} on the card, but nothing posted in the last 90 days. ${He} climbs the moment fresh scores land.`;
+  }
   if (b.stale) {
     const wk = b.weeksSince;
     const tail = b.lastTournamentPct != null
@@ -1175,10 +1188,11 @@ function powerBlurb(b) {
   }
 
   const s = [];
-  // 1) index trajectory
+  // 1) index trajectory — phrase whole strokes in words so a big move reads loud
+  const strokes = (x) => { const a = Math.abs(x); return a === 1 ? 'a full stroke' : a === 2 ? 'two full strokes' : `${mag(x)}`; };
   const d = b.sinceSeed, lbl = b.sinceLabel;
-  if (d != null && d >= 0.05) s.push(`${F} has shaved ${mag(d)} off ${his} index ${lbl}, down from ${b.seedIndex} to ${b.index}.`);
-  else if (d != null && d <= -0.05) s.push(`${F}'s index has crept up ${mag(d)} ${lbl}, from ${b.seedIndex} to ${b.index}.`);
+  if (d != null && d >= 0.05) s.push(`${F} has shaved ${strokes(d)} off ${his} index ${lbl}, down from ${b.seedIndex} to ${b.index}.`);
+  else if (d != null && d <= -0.05) s.push(`${F}'s index has crept up ${strokes(d)} ${lbl}, from ${b.seedIndex} to ${b.index}.`);
   else s.push(`${F}'s index has barely budged ${lbl}, holding at ${b.index}.`);
   // a distinct recent move (only when there are 3+ check-ins and it differs)
   if (b.sinceLast != null && d != null && Math.abs(b.sinceLast - d) > 0.05) {
@@ -1237,7 +1251,13 @@ export function powerRankings() {
       movementBy = pr - r.rank;
       movement = movementBy > 0 ? 'up' : movementBy < 0 ? 'down' : 'steady';
     }
-    const stale = m.hasData ? (m.lastCheckIn < dataAsOf) : true;
+    // "live" = a fresh signal (rounds posted or an index trend). Once any real
+    // check-in exists, a player without a live signal is stale; a stale player
+    // with no Annual to fall back on (a rookie who checked in but hasn't posted)
+    // is a "ghost".
+    const live = (m.activity != null && m.activity > 0) || m.trend != null;
+    const stale = hasRealData && m.hasData && !live;
+    const ghost = stale && m.lastTournamentPct == null;
     const isRookie = car.played === 0;
     // index deltas (positive ⇒ index fell ⇒ improving)
     const sinceSeed = m.hasData ? round1(m.seedIndex - m.index) : null;
@@ -1250,7 +1270,7 @@ export function powerRankings() {
 
     // Enriched object for the headline + blurb writers.
     const b = {
-      hasData: m.hasData, stale, seedOnly, isRookie,
+      hasData: m.hasData, stale, ghost, seedOnly, isRookie,
       first: playerById[r.playerId].name.split(' ')[0],
       name: playerById[r.playerId].name,
       index: m.index, seedIndex: m.seedIndex,
@@ -1283,10 +1303,10 @@ export function powerRankings() {
       lastCheckIn: m.lastCheckIn,
       note: m.note,
       movement, movementBy,
-      stale,
+      stale, ghost,
       weightsUsed: r.weightsUsed,
       hasData: m.hasData,
-      verdict: powerVerdict(m, dataAsOf, !hasRealData),   // kept for compatibility
+      verdict: ghost ? 'Awaiting first posted round' : powerVerdict(m, dataAsOf, !hasRealData),
       headline: powerHeadline(b),
       blurb: powerBlurb(b),
     };
