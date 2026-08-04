@@ -8,6 +8,7 @@
   "nickname": null,
   "notes": null,
   "ghin": "3202528",
+  "system": "ghin",
   "confirmedFor": []
  },
  {
@@ -19,6 +20,7 @@
   "nickname": null,
   "notes": null,
   "ghin": null,
+  "system": "ghin",
   "confirmedFor": []
  },
  {
@@ -30,6 +32,7 @@
   "nickname": null,
   "notes": null,
   "ghin": null,
+  "system": "ga",
   "confirmedFor": []
  },
  {
@@ -41,6 +44,7 @@
   "nickname": null,
   "notes": null,
   "ghin": null,
+  "system": "ghin",
   "confirmedFor": []
  },
  {
@@ -52,6 +56,7 @@
   "nickname": null,
   "notes": null,
   "ghin": null,
+  "system": "ghin",
   "confirmedFor": []
  },
  {
@@ -63,6 +68,7 @@
   "nickname": null,
   "notes": null,
   "ghin": null,
+  "system": "ghin",
   "confirmedFor": []
  },
  {
@@ -74,6 +80,7 @@
   "nickname": null,
   "notes": null,
   "ghin": null,
+  "system": "ghin",
   "confirmedFor": []
  },
  {
@@ -85,6 +92,7 @@
   "nickname": null,
   "notes": null,
   "ghin": null,
+  "system": "ghin",
   "confirmedFor": []
  },
  {
@@ -96,6 +104,7 @@
   "nickname": null,
   "notes": null,
   "ghin": null,
+  "system": "ghin",
   "confirmedFor": []
  },
  {
@@ -107,6 +116,7 @@
   "nickname": null,
   "notes": null,
   "ghin": null,
+  "system": "ghin",
   "confirmedFor": []
  },
  {
@@ -118,6 +128,7 @@
   "nickname": null,
   "notes": null,
   "ghin": null,
+  "system": "ghin",
   "confirmedFor": []
  },
  {
@@ -129,6 +140,7 @@
   "nickname": null,
   "notes": null,
   "ghin": null,
+  "system": "ghin",
   "confirmedFor": []
  }
 ]

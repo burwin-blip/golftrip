@@ -1066,6 +1066,8 @@ function powerMetrics(pid, asOf) {
     avgDifferential: latest.avgDifferential ?? null,
     seedIndex: snaps[0].index,                                   // first snapshot = the tournament seed
     prevIndex: snaps.length > 1 ? snaps[snaps.length - 2].index : null,
+    system: latest.system ?? null,        // handicap system on the latest check-in ("ghin" | "ga")
+    homeClub: latest.homeClub ?? null,
     lastCheckIn: latest.date, note: latest.note ?? null };
 }
 
@@ -1262,6 +1264,8 @@ export function powerRankings() {
       score: r.score,
       index: m.index,
       seedIndex: m.seedIndex,
+      system: m.system ?? playerById[r.playerId].system ?? 'ghin',   // resolved handicap system
+      homeClub: m.homeClub ?? null,
       trend: m.trend,               // index change over window (− = improving)
       sinceSeed, sinceLast,         // deltas for the blurb / annotation
       indexDir,                     // 'falling' (improving) | 'rising' | 'flat'

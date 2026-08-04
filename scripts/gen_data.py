@@ -83,6 +83,7 @@ for r in rows("DB Players"):
         "nickname": r["Nickname"] or None,
         "notes": r["Notes"] or None,
         "ghin": prev.get("ghin"),                 # hand-maintained; preserved on regen
+        "system": prev.get("system", "ghin"),     # handicap system: "ghin" | "ga"; hand-maintained
         "confirmedFor": prev.get("confirmedFor", []),  # hand-maintained; preserved on regen
     })
 dump("players.json", players)

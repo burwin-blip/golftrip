@@ -36,6 +36,8 @@ function validateHandicapSnapshots(rows, validPlayerIds) {
     if (r.rounds !== undefined && r.rounds !== null && (typeof r.rounds !== 'number' || r.rounds < 0)) throw new Error(`${where}: ${at} — optional "rounds" must be a non-negative number, got ${JSON.stringify(r.rounds)}.`);
     if (r.avgDifferential !== undefined && r.avgDifferential !== null && typeof r.avgDifferential !== 'number') throw new Error(`${where}: ${at} — optional "avgDifferential" must be a number, got ${JSON.stringify(r.avgDifferential)}.`);
     if (r.low !== undefined && r.low !== null && typeof r.low !== 'number') throw new Error(`${where}: ${at} — optional "low" (recent low index) must be a number, got ${JSON.stringify(r.low)}.`);
+    if (r.system !== undefined && r.system !== null && r.system !== 'ghin' && r.system !== 'ga') throw new Error(`${where}: ${at} — optional "system" must be "ghin" or "ga", got ${JSON.stringify(r.system)}.`);
+    if (r.homeClub !== undefined && r.homeClub !== null && typeof r.homeClub !== 'string') throw new Error(`${where}: ${at} — optional "homeClub" must be text in quotes, got ${JSON.stringify(r.homeClub)}.`);
     if (r.note !== undefined && r.note !== null && typeof r.note !== 'string') throw new Error(`${where}: ${at} — optional "note" must be text in quotes, got ${JSON.stringify(r.note)}.`);
   });
   return rows;

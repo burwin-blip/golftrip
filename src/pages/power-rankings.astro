@@ -101,7 +101,7 @@ const MOVE = {
               </div>
 
               <div class="pr-side">
-                <div class="pr-index"><span class="pr-index__v">{r.index ?? '—'}</span><span class="pr-index__l">index</span></div>
+                <div class="pr-index"><span class="pr-index__v">{r.index ?? '—'}</span><span class="pr-index__l">{r.system === 'ga' ? 'GA index' : 'GHIN index'}</span></div>
                 {sp && (
                   <svg class="pr-spark" viewBox={`0 0 ${sp.W} ${sp.H}`} width={sp.W} height={sp.H} aria-hidden="true">
                     {!sp.single && <polyline points={sp.pts.join(' ')} fill="none" stroke={dir.stroke} stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />}

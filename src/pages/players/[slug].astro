@@ -66,7 +66,9 @@ const FMT_SHORT = { 'Scramble': 'Scramble', 'Best Ball Match Play (NET)': 'Best 
               {prRow?.hasData && <span class="pill">Index {prRow.index}</span>}
               {prRow?.hasData && prRow.rank && <span class="pill gold">Power #{prRow.rank}</span>}
             </div>
-            {p.ghin && <p class="ghin-line">GHIN #{p.ghin}</p>}
+            {(p.system === 'ga' || p.ghin) && (
+              <p class="ghin-line">{p.system === 'ga' ? `GA handicap${prRow?.homeClub ? ` · ${prRow.homeClub}` : ''}` : `GHIN #${p.ghin}`}</p>
+            )}
             {p.notes && <p class="lede" style="margin-top:.9rem">{p.notes}</p>}
           </div>
           <div class="phero__record card card--pad" style="border-top:4px solid var(--gold-bright)">
@@ -125,7 +127,9 @@ const FMT_SHORT = { 'Scramble': 'Scramble', 'Best Ball Match Play (NET)': 'Best 
             {cur.dv?.label && <span class:list={["pill", { gold: cur.dv.label !== 'Draft Miss' }]}>{cur.dv.label}</span>}
             {prRow?.hasData && prRow.rank && <a class="pill" href="/power-rankings" style="text-decoration:none">Power #{prRow.rank}</a>}
           </div>
-          {p.ghin && <p class="ghin-line">GHIN #{p.ghin}</p>}
+          {(p.system === 'ga' || p.ghin) && (
+            <p class="ghin-line">{p.system === 'ga' ? `GA handicap${prRow?.homeClub ? ` · ${prRow.homeClub}` : ''}` : `GHIN #${p.ghin}`}</p>
+          )}
         </div>
         <div class="phero__record card card--pad">
           <p class="eyebrow">Career record</p>

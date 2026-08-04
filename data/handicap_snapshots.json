@@ -123,5 +123,15 @@
     "rounds": 6,
     "avgDifferential": 7.6,
     "note": "Drifted up from 2.8; cooling after a hot spring."
+  },
+  {
+    "player": "michael-herring",
+    "date": "2026-08-03",
+    "system": "ga",
+    "index": 9.1,
+    "homeClub": "Elanora CC",
+    "rounds": 13,
+    "avgDifferential": 12.1,
+    "note": "Down from 12.6 at St George to 9.1 \u2014 steepest improvement in the field. 45 Stableford points at Royal Sydney on 17 Jun triggered an Exceptional Score Reduction."
   }
 ]
