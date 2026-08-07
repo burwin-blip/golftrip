@@ -153,5 +153,15 @@
     "rounds": 0,
     "avgDifferential": 14.6,
     "note": "Hasn't posted since April; March included an 82 with an 8.8 diff. Enters the rankings as a ghost."
+  },
+  {
+    "player": "tanner-curley",
+    "date": "2026-08-07",
+    "system": "ghin",
+    "index": 5.7,
+    "homeClub": "EClub San Francisco",
+    "rounds": 9,
+    "avgDifferential": 9.4,
+    "note": "ESTIMATED index 5.7 — computed from the best 8 of his last 20 differentials; his actual GHIN index wasn't visible yet and will be confirmed later. Active and dangerous — a 73 (3.7 diff) in May, but June was cold: five straight rounds between 9 and 12. If the estimate holds, one of the lowest indexes in the field."
   }
 ]

@@ -156,5 +156,19 @@
   "confirmedFor": [
    "duel-in-the-desert-2027"
   ]
+ },
+ {
+  "id": "tanner-curley",
+  "name": "Tanner Curley",
+  "slug": "tanner-curley",
+  "active": true,
+  "country": null,
+  "nickname": null,
+  "notes": null,
+  "ghin": null,
+  "system": "ghin",
+  "confirmedFor": [
+   "duel-in-the-desert-2027"
+  ]
  }
 ]
