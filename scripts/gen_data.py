@@ -198,8 +198,9 @@ upcoming = [{
     "championPlayerId": None,
     "notes": "The desert calls. Four days of golf under the San Jacinto mountains.",
     "flyer": {"display": "/next-trip-2027.jpg", "full": "/next-trip-2027.png"},
-    # Where we're staying. `photos` are site-relative image paths (e.g. under
-    # /accommodation/) — drop them in and they render as a gallery.
+    # Where we're staying. `photos` are {full, thumb, alt} — the first is the
+    # hero, the rest form the gallery strip. Web-optimised jpgs live under
+    # public/photos/2027/airbnb/ (generated with sips from the source .avif).
     "accommodation": {
         "name": "The Compound",
         "type": "Home in Indio · Palm Springs area",
@@ -208,7 +209,11 @@ upcoming = [{
         "beds": 25,
         "baths": 10.5,
         "url": "https://www.airbnb.com.au/rooms/1209088157940154534",
-        "photos": [],
+        "photos": [
+            {"full": "/photos/2027/airbnb/lake-homes.jpg", "thumb": "/photos/2027/airbnb/lake-homes-thumb.jpg", "alt": "Aerial of the lakefront homes and pools with the San Jacinto mountains behind"},
+            {"full": "/photos/2027/airbnb/golden-hour.jpg", "thumb": "/photos/2027/airbnb/golden-hour-thumb.jpg", "alt": "The lake community at golden hour, mountains in the distance"},
+            {"full": "/photos/2027/airbnb/overhead.jpg", "thumb": "/photos/2027/airbnb/overhead-thumb.jpg", "alt": "Overhead view of the homes curving around the lake"},
+        ],
     },
     "teams": [],
     "courses": [],

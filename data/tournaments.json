@@ -647,7 +647,23 @@
       "beds": 25,
       "baths": 10.5,
       "url": "https://www.airbnb.com.au/rooms/1209088157940154534",
-      "photos": []
+      "photos": [
+        {
+          "full": "/photos/2027/airbnb/lake-homes.jpg",
+          "thumb": "/photos/2027/airbnb/lake-homes-thumb.jpg",
+          "alt": "Aerial of the lakefront homes and pools with the San Jacinto mountains behind"
+        },
+        {
+          "full": "/photos/2027/airbnb/golden-hour.jpg",
+          "thumb": "/photos/2027/airbnb/golden-hour-thumb.jpg",
+          "alt": "The lake community at golden hour, mountains in the distance"
+        },
+        {
+          "full": "/photos/2027/airbnb/overhead.jpg",
+          "thumb": "/photos/2027/airbnb/overhead-thumb.jpg",
+          "alt": "Overhead view of the homes curving around the lake"
+        }
+      ]
     },
     "teams": [],
     "courses": [],
