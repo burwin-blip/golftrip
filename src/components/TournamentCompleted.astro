@@ -27,7 +27,7 @@ const draft = draftForTournament(t.id);
 const awards = awardsForTournament(t.id);
 // Awards display: FEATURE Team Champions + Champion Golfer on the top row; the
 // "Shot of the Tournament" card is intentionally NOT shown here (the award stays
-// in the data, and its hole-in-one story lives in Moments/Lore).
+// in the data, and its hole-in-one story lives in the Moments tab).
 const isTeamChampions = (a) => /team champions/i.test(a.name);
 const isChampionGolfer = (a) => /champion golfer/i.test(a.name);
 const isShotOfTournament = (a) => /shot of the tournament/i.test(a.name);
@@ -489,7 +489,7 @@ const TABS = [
   <!-- MOMENTS -->
   <section class="tabpanel section" data-panel="moments">
     <div class="wrap">
-      <div class="section-head"><div><p class="eyebrow">Beyond the Numbers</p><h2>Moments of the tournament</h2></div><a class="back-link" href="/lore">Full lore →</a></div>
+      <div class="section-head"><div><p class="eyebrow">Beyond the Numbers</p><h2>Moments of the tournament</h2></div></div>
       <div class="moments-list">
         {t.rounds.map((rnd) => {
           const ms2 = moments.filter((m) => m.roundNumber === rnd.number);

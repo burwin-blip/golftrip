@@ -1,9 +1,10 @@
 /* ===========================================================================
-   THE ANNUAL — design system  ·  clubhouse × modern app
-   A classic golf-clubhouse feel (deep-green lacquer, engraved gold, cream
-   paper) crossed with a modern app (pill nav/tabs, rounded tiles, soft
-   shadows, hover lift). Palette + retro poster language drawn from the 2027
-   "Duel in the Desert" flyer. Team colours appear only in team contexts.
+   THE ANNUAL — design system  ·  desert sunset × modern app
+   The event identity is the sunset banner (public/hero-banner.jpg): terracotta
+   accents + navy-ink chrome over warm cream paper, crossed with a modern app
+   (pill nav/tabs, rounded tiles, soft shadows, hover lift). Gold stays a
+   restrained prestige metal; deep green + team colours appear only in team
+   contexts (and a couple of deliberate clubhouse spots).
    =========================================================================== */
 
 :root {
@@ -45,10 +46,21 @@
   --gold-soft:   #F1E4BE;
   --gold-line:   #E3CF8F;   /* engraved lines on dark green */
 
-  /* --- terracotta (the one accent — CTAs, focus, spark) --- */
-  --terra:      #D9784A;
-  --terra-ink:  #B4551F;    /* text-safe on cream */
-  --terra-soft: #F6DDCB;
+  /* --- sunset terracotta (the event's own accent — drawn from the banner:
+         CTAs, section labels, focus, spark) --- */
+  --terra:       #E06A2E;   /* banner sunset orange */
+  --terra-bright:#F5813A;   /* vivid fills / hover */
+  --terra-ink:   #A73820;   /* mesa red — text-safe on cream */
+  --terra-soft:  #F7DFC9;
+
+  /* --- banner navy-ink (the sunset identity's deep foreground — used as the
+         brand chrome: masthead active, footer, logo). NOT a team colour. --- */
+  --sky:        #FB8241;   /* the banner's orange sky */
+  --sun:        #FCD79A;   /* the pale desert sun */
+  --navy-ink:   #17293F;   /* banner dune — brand chrome surface */
+  --navy-deep:  #0C1B2C;   /* deepest dune — footer */
+  --navy-line:  #4A5F79;   /* engraved line on navy */
+  --navy-text:  #E7ECF2;   /* pale text on navy */
 
   --serif: 'Fraunces Variable', 'Fraunces', Georgia, 'Times New Roman', serif;
   --sans:  'Archivo Variable', 'Archivo', system-ui, -apple-system, sans-serif;
@@ -112,7 +124,9 @@ h1, h2, h3, h4 { font-family: var(--serif); font-weight: 600; line-height: 1.05;
   text-transform: uppercase;
   color: var(--faint);
 }
-.eyebrow.gold { color: var(--gold); }
+/* section labels wear the banner's terracotta (the class name is legacy;
+   true prestige gold lives on .gold text, .pill.gold, .tile--gold, crowns). */
+.eyebrow.gold { color: var(--terra-ink); }
 
 .display {
   font-family: var(--serif);
@@ -148,7 +162,7 @@ h1, h2, h3, h4 { font-family: var(--serif); font-weight: 600; line-height: 1.05;
 .brand__logos { display: flex; align-items: center; }
 .brand__logos img { height: 30px; width: auto; }
 .brand__logos img + img { margin-left: -6px; }
-.brand__name .gold { color: var(--gold); }
+.brand__name .gold { color: var(--terra-ink); }
 
 /* pill rail */
 .nav {
@@ -162,13 +176,14 @@ h1, h2, h3, h4 { font-family: var(--serif); font-weight: 600; line-height: 1.05;
   transition: color 0.2s var(--ease), background 0.2s var(--ease);
   white-space: nowrap;
 }
-.nav a:hover { color: var(--text); background: color-mix(in srgb, var(--green-800) 8%, transparent); }
-.nav a[aria-current="page"] { color: var(--green-ink); background: var(--green-800); box-shadow: 0 2px 8px -3px rgba(18,43,29,.5); }
+.nav a:hover { color: var(--text); background: color-mix(in srgb, var(--navy-ink) 8%, transparent); }
+.nav a[aria-current="page"] { color: var(--navy-text); background: var(--navy-ink); box-shadow: 0 2px 8px -3px rgba(12,27,44,.55); }
 .nav-toggle { display: none; }
 
-.footer { border-top: 0; margin-top: 3rem; color: color-mix(in srgb, var(--green-ink) 62%, transparent); font-size: 0.82rem; background: var(--green-900); }
+/* footer echoes the banner's navy dune — the page ends where the poster does */
+.footer { border-top: 0; margin-top: 3rem; color: color-mix(in srgb, var(--navy-text) 66%, transparent); font-size: 0.82rem; background: var(--navy-deep); }
 .footer .wrap { padding-block: 2.4rem; display: flex; flex-wrap: wrap; gap: 0.8rem 2rem; align-items: center; justify-content: space-between; }
-.footer .faint { color: color-mix(in srgb, var(--green-ink) 42%, transparent); }
+.footer .faint { color: color-mix(in srgb, var(--navy-text) 44%, transparent); }
 
 /* ---- team logo ----------------------------------------------------------- */
 .tlogo { display: block; width: auto; object-fit: contain; }
@@ -222,8 +237,8 @@ h1, h2, h3, h4 { font-family: var(--serif); font-weight: 600; line-height: 1.05;
 .btn { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.62rem 1.15rem; border-radius: 999px; font-weight: 700; font-size: 0.9rem; letter-spacing: 0.01em; transition: transform 0.15s var(--ease), filter 0.15s var(--ease), box-shadow 0.15s var(--ease); }
 .btn--terra { background: var(--terra); color: #fff; box-shadow: 0 8px 20px -8px color-mix(in srgb, var(--terra) 75%, transparent); }
 .btn--terra:hover { transform: translateY(-1px); filter: brightness(1.04); }
-.btn--green { background: var(--green-800); color: var(--green-ink); }
-.btn--green:hover { transform: translateY(-1px); background: var(--green-700); }
+.btn--navy { background: var(--navy-ink); color: var(--navy-text); }
+.btn--navy:hover { transform: translateY(-1px); background: var(--navy-deep); }
 
 /* ---- cards / tiles ------------------------------------------------------- */
 .card { background: var(--panel); border-radius: var(--r); box-shadow: var(--shadow); }
@@ -329,7 +344,7 @@ table.data a:hover { box-shadow: inset 0 -1px 0 var(--terra); }
   }
   .nav a { padding: 0.85rem 0.7rem; border-bottom: 1px solid var(--line); border-radius: var(--r-sm); }
   .nav a:last-child { border-bottom: 0; }
-  .nav a[aria-current="page"] { background: var(--green-800); }
+  .nav a[aria-current="page"] { background: var(--navy-ink); }
   .nav.open { transform: translateY(0); }
   .nav-toggle { display: inline-flex; margin-left: auto; align-items: center; gap: 0.45rem; background: var(--paper); border-radius: 999px; box-shadow: inset 0 0 0 1px var(--line-strong); padding: 0.44rem 0.85rem; font-size: 0.8rem; font-weight: 700; color: var(--muted); }
 }

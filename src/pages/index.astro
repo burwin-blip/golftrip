@@ -22,14 +22,12 @@ const tiles = [
   { href: '/matches', k: 'Scorecards', d: 'Every match, hole by hole', icon: 'flag' },
   { href: `/tournaments/${t.id}#stats`, k: 'Stats', d: 'Leaderboards & analytics', icon: 'chart' },
   { href: '/records', k: 'Records', d: 'Honour boards & marks to beat', icon: 'trophy' },
-  { href: '/lore', k: 'Lore', d: 'Moments, awards & legend', icon: 'book' },
 ];
 // Crafted line-icons (stroke follows currentColor).
 const ICONS = {
   flag: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 21V4"/><path d="M6 4.5c3-1.6 5 1.2 8 0 2-.8 3.5-.3 4 .2v8c-.9-.6-2.4-1-4-.2-3 1.2-5-1.6-8 0"/></svg>',
   chart: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16"/><rect x="6" y="11" width="3" height="6" rx="1"/><rect x="11" y="7" width="3" height="10" rx="1"/><rect x="16" y="13" width="3" height="4" rx="1"/></svg>',
   trophy: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4h10v5a5 5 0 0 1-10 0V4Z"/><path d="M7 6H4v2a3 3 0 0 0 3 3M17 6h3v2a3 3 0 0 1-3 3"/><path d="M10 15v2.5M14 15v2.5M8 20h8M9 20l.5-2.5h5L15 20"/></svg>',
-  book: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4.5A2.5 2.5 0 0 1 7.5 2H19v16H7.5A2.5 2.5 0 0 0 5 20.5V4.5Z"/><path d="M5 20.5A2.5 2.5 0 0 1 7.5 18H19v3H7.5A2.5 2.5 0 0 1 5 20.5Z"/></svg>',
 };
 
 // Next trip — details pulled from the 2027 flyer / upcoming tournament.
@@ -43,87 +41,19 @@ const next = {
 ---
 <Base active="home" title={null} description="The official home of the annual boys' golf trip.">
 
-  <!-- 1 · HERO — retro poster + floating scoreboard -->
+  <!-- 1 · HERO — the banner poster (title + tagline are in the art) + scoreboard -->
   <section class="hero">
     <div class="wrap">
-      <div class="hero__poster reveal" data-d="0">
-        <svg class="hero__art" viewBox="0 0 1200 520" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
-          <defs>
-            <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0" stop-color="#0F2417" />
-              <stop offset="0.62" stop-color="#173A2A" />
-              <stop offset="1" stop-color="#1B4332" />
-            </linearGradient>
-            <radialGradient id="glow" cx="0.5" cy="0.86" r="0.62">
-              <stop offset="0" stop-color="#C9A227" stop-opacity="0.42" />
-              <stop offset="1" stop-color="#C9A227" stop-opacity="0" />
-            </radialGradient>
-            <linearGradient id="sun" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0" stop-color="#E3CF8F" />
-              <stop offset="1" stop-color="#C9A227" />
-            </linearGradient>
-          </defs>
-          <rect width="1200" height="520" fill="url(#sky)" />
-          <ellipse cx="600" cy="470" rx="760" ry="240" fill="url(#glow)" />
-          <!-- sun -->
-          <circle cx="600" cy="300" r="118" fill="url(#sun)" />
-          <g stroke="#0F2417" stroke-opacity="0.18">
-            <line x1="482" y1="290" x2="718" y2="290" stroke-width="7" />
-            <line x1="482" y1="312" x2="718" y2="312" stroke-width="7" />
-            <line x1="490" y1="334" x2="710" y2="334" stroke-width="7" />
-          </g>
-          <!-- far ridge -->
-          <path d="M0 360 L150 320 L330 356 L520 316 L700 356 L900 318 L1080 356 L1200 330 L1200 520 L0 520 Z" fill="#2E6B43" fill-opacity="0.5" />
-          <!-- mid ridge -->
-          <path d="M0 400 L180 360 L400 402 L620 356 L840 404 L1040 366 L1200 400 L1200 520 L0 520 Z" fill="#1D5232" />
-          <!-- fairway sweep -->
-          <path d="M0 452 C 260 420 420 470 640 452 C 860 434 1020 470 1200 448 L1200 520 L0 520 Z" fill="#24603F" />
-          <path d="M0 486 C 300 466 520 502 760 484 C 980 468 1080 494 1200 486 L1200 520 L0 520 Z" fill="#2E6B43" fill-opacity="0.85" />
-          <!-- palms -->
-          <g stroke="#0C1E14" stroke-width="6" stroke-linecap="round" fill="none">
-            <path d="M150 520 C 146 450 150 410 158 372" />
-            <path d="M990 520 C 996 452 992 408 984 372" />
-          </g>
-          <g fill="#0C1E14">
-            <g transform="translate(158 372)">
-              <path d="M0 0 C -34 -14 -58 -12 -78 4 C -52 -6 -26 -4 -2 6 Z" />
-              <path d="M0 0 C 34 -14 58 -12 78 4 C 52 -6 26 -4 2 6 Z" />
-              <path d="M0 0 C -20 -34 -18 -58 0 -80 C 6 -54 4 -28 4 -2 Z" />
-              <path d="M0 0 C 22 -30 44 -40 70 -40 C 48 -28 26 -14 4 4 Z" />
-              <path d="M0 0 C -22 -30 -44 -40 -70 -40 C -48 -28 -26 -14 -4 4 Z" />
-            </g>
-            <g transform="translate(984 372) scale(0.92)">
-              <path d="M0 0 C -34 -14 -58 -12 -78 4 C -52 -6 -26 -4 -2 6 Z" />
-              <path d="M0 0 C 34 -14 58 -12 78 4 C 52 -6 26 -4 2 6 Z" />
-              <path d="M0 0 C -20 -34 -18 -58 0 -80 C 6 -54 4 -28 4 -2 Z" />
-              <path d="M0 0 C 22 -30 44 -40 70 -40 C 48 -28 26 -14 4 4 Z" />
-              <path d="M0 0 C -22 -30 -44 -40 -70 -40 C -48 -28 -26 -14 -4 4 Z" />
-            </g>
-          </g>
-          <!-- atomic starbursts (kept clear of the title, upper-right sky) -->
-          <g stroke-linecap="round">
-            <g transform="translate(1092 132)" stroke="#D9784A" stroke-width="3">
-              <line x1="-15" y1="0" x2="15" y2="0" /><line x1="0" y1="-15" x2="0" y2="15" />
-              <line x1="-10" y1="-10" x2="10" y2="10" /><line x1="-10" y1="10" x2="10" y2="-10" />
-            </g>
-            <g transform="translate(905 100)" stroke="#E3CF8F" stroke-width="2.4">
-              <line x1="-11" y1="0" x2="11" y2="0" /><line x1="0" y1="-11" x2="0" y2="11" />
-              <line x1="-8" y1="-8" x2="8" y2="8" /><line x1="-8" y1="8" x2="8" y2="-8" />
-            </g>
-          </g>
-          <!-- thin double frame -->
-          <rect x="14" y="14" width="1172" height="492" rx="16" fill="none" stroke="#E3CF8F" stroke-opacity="0.34" stroke-width="2" />
-          <rect x="22" y="22" width="1156" height="476" rx="12" fill="none" stroke="#E3CF8F" stroke-opacity="0.18" stroke-width="1" />
-        </svg>
-        <div class="hero__head">
-          <p class="hero__eyebrow">The Annual · Est. 2026</p>
-          <h1 class="hero__title">The&nbsp;Annual</h1>
-          <p class="hero__tag">The official home of the annual boys' golf trip.</p>
-        </div>
+      <div class="hero__banner reveal" data-d="0">
+        <h1 class="hero__mark">
+          <img class="hero__img" src="/hero-banner.jpg" width="1586" height="858"
+               alt="The Annual — the official home of the annual boys' golf trip"
+               fetchpriority="high" decoding="async" />
+        </h1>
+        <p class="hero__results">{t.year} Results · {city}</p>
       </div>
 
       <div class="hero__board reveal" data-d="1">
-        <p class="eyebrow gold" style="margin-bottom:.7rem">{t.year} Results · {city}</p>
         <Scorebug
           aId={teams[0].id} bId={teams[1].id}
           aScore={ptsOf(teams[0].id)} bScore={ptsOf(teams[1].id)}
@@ -134,7 +64,7 @@ const next = {
           big={true}
         />
         <div class="hero-underbug">
-          <a class="btn btn--green" href={`/tournaments/${t.id}`}>{t.name} <span aria-hidden="true">→</span></a>
+          <a class="btn btn--navy" href={`/tournaments/${t.id}`}>{t.name} <span aria-hidden="true">→</span></a>
           <span class="faint">{dateRange(t.startDate, t.endDate)} · {t.location}</span>
         </div>
       </div>
@@ -211,27 +141,27 @@ const next = {
 </div>
 
 <style>
-  /* ---- HERO ---- */
+  /* ---- HERO — the sunset banner poster ---- */
   .hero { padding-top: clamp(1.2rem, 3vw, 2rem); }
-  .hero__poster { position: relative; border-radius: var(--r-lg); overflow: hidden; box-shadow: var(--shadow-lg); min-height: clamp(340px, 46vw, 460px); display: flex; align-items: flex-start; }
-  .hero__art { position: absolute; inset: 0; width: 100%; height: 100%; }
-  .hero__head { position: relative; z-index: 1; padding: clamp(1.6rem, 5vw, 3rem) clamp(1.5rem, 5vw, 3.2rem); max-width: 40ch; }
-  .hero__eyebrow { font-family: var(--sans); font-weight: 700; font-size: 0.72rem; letter-spacing: 0.24em; text-transform: uppercase; color: var(--gold-line); }
-  .hero__title { font-family: var(--serif); font-weight: 600; color: var(--green-ink); font-size: clamp(2.8rem, 9vw, 5.6rem); line-height: 0.96; letter-spacing: -0.02em; margin: 0.5rem 0 0; text-shadow: 0 2px 24px rgba(12,30,20,0.5); }
-  .hero__tag { font-family: var(--serif); font-style: italic; color: color-mix(in srgb, var(--green-ink) 88%, transparent); font-size: clamp(1rem, 0.95rem + 0.5vw, 1.3rem); margin-top: 0.7rem; max-width: 26ch; }
+  .hero__banner { position: relative; border-radius: var(--r-lg); overflow: hidden; box-shadow: var(--shadow-lg); }
+  .hero__mark { margin: 0; line-height: 0; }
+  .hero__img { width: 100%; height: auto; display: block; }
+  /* auto-updating results line sits where the banner's baked strip was —
+     terracotta on the flat navy dune (a dark, uncluttered area → strong contrast) */
+  .hero__results { position: absolute; left: clamp(1rem, 3.6vw, 2.5rem); bottom: clamp(.6rem, 2.4vw, 1.4rem); z-index: 1;
+    font-family: var(--sans); font-weight: 800; font-size: clamp(.6rem, .48rem + 1vw, 1.02rem);
+    letter-spacing: .16em; text-transform: uppercase; color: var(--terra-bright); text-shadow: 0 1px 12px rgba(12,27,44,.7); }
 
-  .hero__board { position: relative; z-index: 2; margin-top: clamp(-3.6rem, -6vw, -5rem); margin-inline: clamp(0px, 2vw, 2.5rem); }
-  /* the results eyebrow overlaps the green poster — use the lighter engraved gold */
-  .hero__board > .eyebrow.gold { color: var(--gold-line); }
+  .hero__board { position: relative; z-index: 2; margin-top: clamp(1rem, 2.4vw, 1.6rem); }
   .hero-underbug { display: flex; flex-wrap: wrap; align-items: center; gap: .7rem 1rem; margin-top: 1rem; font-size: .85rem; }
 
   /* ---- app-style tiles ---- */
-  .tiles-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: clamp(.7rem, 1.6vw, 1rem); }
+  .tiles-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: clamp(.7rem, 1.6vw, 1rem); }
   .ntile { display: flex; flex-direction: column; gap: .3rem; padding: clamp(1.1rem,3vw,1.5rem); background: var(--panel); border-radius: var(--r); box-shadow: var(--shadow); position: relative; overflow: hidden; transition: transform .2s var(--ease), box-shadow .2s var(--ease); }
   .ntile::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: var(--terra); transform: scaleX(0); transform-origin: left; transition: transform .25s var(--ease); }
   .ntile:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); }
   .ntile:hover::after { transform: scaleX(1); }
-  .ntile__ic { color: var(--green-800); }
+  .ntile__ic { color: var(--navy-ink); }
   .ntile__ic :global(svg) { width: 28px; height: 28px; display: block; }
   .ntile__k { font-family: var(--serif); font-weight: 600; font-size: 1.28rem; margin-top: .5rem; }
   .ntile__d { font-size: .82rem; color: var(--muted); }
@@ -270,8 +200,8 @@ const next = {
   .lightbox[hidden] { display: none; }
   .lightbox img { max-width: 100%; max-height: 92vh; border-radius: var(--r-sm); box-shadow: 0 30px 80px -20px #000; }
 
-  @media (max-width: 860px) {
-    .tiles-grid { grid-template-columns: 1fr 1fr; }
+  @media (max-width: 620px) {
+    .tiles-grid { grid-template-columns: 1fr; }
   }
   @media (max-width: 720px) {
     .hero__board { margin-inline: 0; }

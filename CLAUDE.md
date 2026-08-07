@@ -286,15 +286,29 @@ Draft Pool. To add one: add a player row to `players.json` with `confirmedFor` s
 **Light, clean, official golf-tournament coverage** — bright like the Masters /
 PGA Tour sites, played completely straight. Mobile-first (that's where everyone
 views it).
-- **Team colours do the heavy lifting.** Woodpeckers **green** (`--wp` #2E6B43),
-  Silver Spoons **navy** (`--ss` #2E4B70). Scoreboards, match results, rosters and
-  player profiles are always colour-coded by team. **Gold** (`--gold`) is a
-  restrained metallic for championship prestige only.
+- **The event's brand identity is the sunset banner** (`public/hero-banner.jpg`):
+  an orange desert-sunset illustration with a deep **navy-ink** foreground. The
+  whole palette is pulled from it. **Terracotta** (`--terra` #E06A2E, ink
+  `--terra-ink` #A73820) is *the* accent — CTAs, focus, section-label eyebrows
+  (`.eyebrow.gold` is a legacy class name that now renders terracotta), the tile
+  hover bar, and link hovers. **Navy-ink** (`--navy-ink` #17293F, `--navy-deep`
+  #0C1B2C) is the brand chrome — the masthead active pill, the `.btn--navy`
+  secondary button, the footer, and the logo. Banner tokens `--sky` / `--sun` are
+  available too.
+- **Team colours are for team contexts ONLY.** Woodpeckers **green** (`--wp`
+  #2E6B43), Silver Spoons **navy** (`--ss` #2E4B70). Scoreboards, match results,
+  rosters and player profiles are always colour-coded by team — never use them as
+  event branding. The clubhouse **green** (`--green-900/800`) survives as event
+  chrome in only a couple of deliberate "where it works" spots: the Next-Trip band
+  and the Roll-of-Champions honour board. **Gold** (`--gold`) stays a restrained
+  metallic for championship prestige only (champion names, trophy fills,
+  `.pill.gold`, `.tile--gold`, crowns — NOT section labels).
 - **Logos feature throughout.** The two official crests live in `public/logos/`
   (transparent PNGs, extracted from the source art). Render them with
   `src/components/TeamLogo.astro` — next to every team name on scoreboards, match
-  rows, rosters, drafts, leaderboards; both appear in the header and on the home
-  hero; the favicon (`public/favicon.png`) is a combined mark of the two.
+  rows, rosters, drafts, leaderboards. The **site mark** is separate: an "A" seal
+  (`BrandMark.astro` + `favicon.svg`/`favicon.png`/`apple-touch-icon.png`), now
+  drawn in navy-ink with a terracotta flag to match the banner.
 - **Signature:** the *scorebug* (`Scorebug.astro` + compact `MatchRow.astro`) —
   two colour-coded team panels with logos meeting at a centre gutter. Winner panel
   is solid team colour with white text; the loser recedes to a soft tint. Reuse
@@ -354,9 +368,15 @@ views it).
 
 ## Layout
 
-- **Home** — four sections: title + tagline; **Results** (most recent *completed*
-  tournament, dynamic "YEAR RESULTS · CITY" heading); Awards (Team Champions +
-  Champion Golfer); Next Trip (the flyer + link to the upcoming event).
+- **Home** — the **sunset banner** hero (`public/hero-banner.jpg` — the title and
+  tagline are *in the art*, so there is no duplicated HTML heading; the banner's
+  baked "YEAR RESULTS · CITY" strip was cropped off and re-added as a real,
+  auto-updating terracotta overlay on the navy dune, `.hero__results`); then the
+  **Results** scorebug (most recent *completed* tournament); three **section tiles**
+  (Scorecards, Stats, Records); Awards (Team Champions + Champion Golfer); Next Trip
+  (the flyer + link to the upcoming event). To refresh the banner, drop a new image
+  at `public/hero-banner.jpg` (crop any baked results strip so the overlay isn't
+  doubled).
 - **Tournament pages** (`tournaments/[id]`) branch on `status`:
   - **completed** → `TournamentCompleted.astro`: **tabbed** (client-side, hash-linked,
     degrades to all-visible with no JS): Overview, Teams, Draft (board + Composite
@@ -365,7 +385,7 @@ views it).
     Moments. The **Awards** tab features **Team Champions + Champion Golfer** on a
     top row, then the joke awards; the **"Shot of the Tournament"** card is
     deliberately hidden from this tab (the award stays in `awards.json`, and its
-    hole-in-one story lives in Moments/Lore) — see the `isShotOfTournament` filter
+    hole-in-one story lives in the Moments tab) — see the `isShotOfTournament` filter
     in `TournamentCompleted.astro`.
   - **upcoming** → `TournamentUpcoming.astro`: only **Overview** (flyer + dates +
     "Teams/Captains to be announced"), **Draft Pool** (eligible players → profiles),
@@ -376,7 +396,8 @@ views it).
 - **Player profile** (`players/[slug]`) — a **scouting report**: career totals,
   format record, best partners, head-to-head vs everyone, handicap + draft-value
   history with labels, honours, moments, full match log.
-- **Matches / Records / Lore** as before.
+- **Matches / Records** as before. (There is **no Lore page** — it was removed; the
+  moments data and each tournament's **Moments tab** remain. Don't re-add `/lore`.)
 
 ## Tournament status: `completed` vs `upcoming`
 
@@ -430,10 +451,10 @@ src/lib/format.js     display-only formatting helpers
 src/layouts/Base.astro   <head>, noindex, nav, footer
 src/components/        Scorebug, MatchRow, MatchSummary, HoleScorecard, TeamLogo, …
 src/pages/            index, tournaments/[id] (tabbed), players/index (comparison),
-                      players/[slug] (scouting report), matches, records, lore
+                      players/[slug] (scouting report), matches, records
 public/logos/         woodpeckers.png, silver-spoons.png (transparent)
 public/scorecards/<year>/  original per-match card images (full PNG + thumb JPG)
-public/               robots.txt, favicon.png, apple-touch-icon.png
+public/               robots.txt, hero-banner.jpg (home hero), favicon.svg/png, apple-touch-icon.png
 ```
 
 ## Not done yet
