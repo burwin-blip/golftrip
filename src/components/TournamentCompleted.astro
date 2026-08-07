@@ -12,6 +12,7 @@ import {
   formatRecords, normalizeFormat, stablefordLeaderboard, ANALYTICS_CAVEAT,
   mostNetBirdies, lowestNetRounds, scoringAverageLeaderboard, holeStatsLeaderboard,
   tournamentHasHoleData, HOLE_STATS_COVERAGE,
+  photosForTournament, photosForMoment,
 } from '../lib/stats.js';
 import { fullName, dateRange, num, pctText } from '../lib/format.js';
 
@@ -36,6 +37,12 @@ const featuredAwards = awards
   .sort((a, b) => (isTeamChampions(a) ? 0 : 1) - (isTeamChampions(b) ? 0 : 1));
 const restAwards = awards.filter((a) => !isTeamChampions(a) && !isChampionGolfer(a) && !isShotOfTournament(a));
 const moments = momentsForTournament(t.id);
+// Trip photos — the album on the Photos tab; a few also link to a moment.
+const photos = photosForTournament(t.id);
+// "Full album →" button target. Placeholder '#' until the owner supplies the
+// shared album link (e.g. a Google Photos / iCloud URL) — swap it here. A real
+// URL opens in a new tab; the '#' placeholder is inert.
+const albumUrl = '#';
 const champTeam = teamById[st.winnerTeamId];
 const champPlayer = playerById[t.championPlayerId];
 const champMatch = ms.find((m) => /championship/i.test(m.format));
@@ -108,6 +115,7 @@ const outc = (rec) => rec ? (rec.w ? 'w' : rec.h ? 'h' : 'l') : null;
 const TABS = [
   ['overview', 'Overview'], ['teams', 'Teams'], ['draft', 'Draft'],
   ['matches', 'Matches'], ['stats', 'Stats'], ['awards', 'Awards'], ['moments', 'Moments'],
+  ...(photos.length ? [['photos', 'Photos']] : []),
 ];
 ---
 <!-- HEADER -->
@@ -504,6 +512,12 @@ const TABS = [
                     <h3 style="font-size:1.1rem;margin:.2rem 0 .3rem">{m.title}</h3>
                     <p class="muted" style="font-size:.92rem">{m.description}</p>
                     {m.subjectPlayerIds && <div class="chips" style="margin-top:.6rem">{m.subjectPlayerIds.map((id) => <a class="pill" href={`/players/${playerById[id].slug}`}>{fullName(id)}</a>)}</div>}
+                    {photosForMoment(m.id).map((p) => (
+                      <a class="mom-photo" href={p.full} data-full={p.full} data-alt={p.alt} aria-label={`View photo — ${p.alt}`}>
+                        <img src={p.thumb} alt={p.alt} loading="lazy" decoding="async" />
+                        <span class="mom-photo__cue" aria-hidden="true">⤢ Photo</span>
+                      </a>
+                    ))}
                   </article>
                 ))}
               </div>
@@ -513,7 +527,39 @@ const TABS = [
       </div>
     </div>
   </section>
+
+  <!-- PHOTOS -->
+  {photos.length > 0 && (
+    <section class="tabpanel section" data-panel="photos">
+      <div class="wrap">
+        <div class="section-head">
+          <div><p class="eyebrow">The Album</p><h2>Photos from {t.shortName}</h2></div>
+          <a class="btn btn--navy" href={albumUrl} target={albumUrl === '#' ? undefined : '_blank'} rel={albumUrl === '#' ? undefined : 'noopener'}>Full album <span aria-hidden="true">→</span></a>
+        </div>
+        <div class="gallery" id="sg-gallery">
+          {photos.map((p, i) => (
+            <a class="gphoto" href={p.full} data-full={p.full} data-alt={p.alt} data-idx={i}
+               aria-label={`View photo ${i + 1} of ${photos.length} full size`}>
+              <img src={p.thumb} alt={p.alt} loading="lazy" decoding="async" />
+            </a>
+          ))}
+        </div>
+      </div>
+    </section>
+  )}
 </div>
+
+{photos.length > 0 && (
+  <div class="glightbox" id="glightbox" hidden aria-hidden="true">
+    <button class="glb__btn glb__close" type="button" aria-label="Close">✕</button>
+    <button class="glb__btn glb__prev" type="button" aria-label="Previous photo">‹</button>
+    <figure class="glb__stage">
+      <img id="glb-img" src="" alt="" />
+      <figcaption class="glb__cap"><span id="glb-count"></span><span id="glb-alt"></span></figcaption>
+    </figure>
+    <button class="glb__btn glb__next" type="button" aria-label="Next photo">›</button>
+  </div>
+)}
 
 <noscript><style>.tabpanel{display:block!important}.tabbar{display:none}</style></noscript>
 
@@ -625,6 +671,40 @@ const TABS = [
   .hrec__unit { font-family: var(--sans, inherit); font-size: .85rem; color: var(--faint); }
   .hrec__who { font-size: .8rem; color: var(--muted); }
   .hrec__who a { color: var(--wp); font-weight: 600; }
+
+  /* ---- Photo gallery (the Album tab) ---- */
+  .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(clamp(130px, 20vw, 200px), 1fr)); gap: clamp(.4rem, 1vw, .7rem); margin-top: 1.4rem; }
+  .gphoto { position: relative; display: block; aspect-ratio: 1; border-radius: var(--r-sm); overflow: hidden; box-shadow: var(--shadow); background: var(--panel-2); transition: transform .18s var(--ease), box-shadow .18s var(--ease); }
+  .gphoto img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .35s var(--ease); }
+  .gphoto::after { content: ''; position: absolute; inset: 0; background: radial-gradient(120% 90% at 50% 120%, rgba(12,27,44,.28), transparent 70%); opacity: 0; transition: opacity .2s var(--ease); }
+  .gphoto:hover { transform: translateY(-3px); box-shadow: var(--shadow-lg); }
+  .gphoto:hover img { transform: scale(1.05); }
+  .gphoto:hover::after { opacity: 1; }
+
+  /* photo attached to a moment card */
+  .mom-photo { position: relative; display: block; margin-top: .7rem; border-radius: var(--r-sm); overflow: hidden; box-shadow: var(--shadow); aspect-ratio: 3 / 2; }
+  .mom-photo img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .35s var(--ease); }
+  .mom-photo:hover img { transform: scale(1.04); }
+  .mom-photo__cue { position: absolute; bottom: .5rem; right: .5rem; padding: .28rem .55rem; font-size: .64rem; font-weight: 800; letter-spacing: .04em; color: #fff; background: rgba(12,27,44,.72); border-radius: 999px; backdrop-filter: blur(2px); }
+
+  /* ---- gallery lightbox (swipeable) ---- */
+  .glightbox { position: fixed; inset: 0; z-index: 100; display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: clamp(.2rem, 2vw, 1rem); padding: clamp(.6rem, 3vmin, 2.4rem); background: rgba(9,17,28,.94); backdrop-filter: blur(5px); }
+  .glightbox[hidden] { display: none; }
+  .glb__stage { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .7rem; min-width: 0; min-height: 0; }
+  .glb__stage img { max-width: 100%; max-height: 84vh; border-radius: var(--r-sm); box-shadow: 0 30px 80px -20px #000; object-fit: contain; touch-action: pan-y; }
+  .glb__cap { display: flex; gap: .8rem; align-items: baseline; color: var(--navy-text, #E7ECF2); font-size: .82rem; max-width: 90vw; text-align: center; flex-wrap: wrap; justify-content: center; }
+  .glb__cap #glb-count { font-weight: 800; letter-spacing: .06em; color: var(--terra-bright, #F5813A); font-variant-numeric: tabular-nums; }
+  .glb__cap #glb-alt { color: color-mix(in srgb, #E7ECF2 72%, transparent); }
+  .glb__btn { flex: none; width: clamp(38px, 9vw, 52px); height: clamp(38px, 9vw, 52px); border: 0; border-radius: 999px; background: rgba(255,255,255,.1); color: #fff; font-size: 1.6rem; line-height: 1; display: grid; place-items: center; transition: background .15s var(--ease), transform .15s var(--ease); }
+  .glb__btn:hover { background: rgba(255,255,255,.2); transform: scale(1.06); }
+  .glb__close { position: absolute; top: clamp(.6rem, 3vmin, 1.6rem); right: clamp(.6rem, 3vmin, 1.6rem); width: clamp(36px, 8vw, 46px); height: clamp(36px, 8vw, 46px); font-size: 1.1rem; z-index: 2; }
+  @media (max-width: 620px) {
+    /* on phones the arrows overlay the image corners to keep the photo big */
+    .glightbox { grid-template-columns: 1fr; }
+    .glb__prev, .glb__next { position: absolute; top: 50%; transform: translateY(-50%); z-index: 2; }
+    .glb__prev { left: .5rem; } .glb__next { right: .5rem; }
+    .glb__prev:hover, .glb__next:hover { transform: translateY(-50%) scale(1.06); }
+  }
 </style>
 
 <script is:inline>
@@ -672,5 +752,63 @@ const TABS = [
 
     const hash = location.hash.replace('#', '');
     if (hash && tabs.some((t) => t.dataset.tab === hash)) activate(hash, false);
+  })();
+</script>
+
+<script is:inline>
+  // Gallery lightbox — full-size viewer with prev/next, keyboard and swipe.
+  (() => {
+    const box = document.getElementById('glightbox');
+    const gallery = document.getElementById('sg-gallery');
+    if (!box || !gallery) return;
+    const imgEl = document.getElementById('glb-img');
+    const countEl = document.getElementById('glb-count');
+    const altEl = document.getElementById('glb-alt');
+    // The album order = the gallery DOM order. Moment-attached photos link in by URL.
+    const items = [...gallery.querySelectorAll('.gphoto')].map((a) => ({
+      full: a.getAttribute('data-full'), alt: a.getAttribute('data-alt') || '',
+    }));
+    let i = 0;
+    const show = (n) => {
+      i = (n + items.length) % items.length;
+      const it = items[i];
+      imgEl.src = it.full; imgEl.alt = it.alt;
+      countEl.textContent = `${i + 1} / ${items.length}`;
+      altEl.textContent = it.alt;
+      // preload neighbours for snappy swiping
+      [i + 1, i - 1].forEach((k) => { const p = items[(k + items.length) % items.length]; new Image().src = p.full; });
+    };
+    const open = (n) => { show(n); box.hidden = false; box.setAttribute('aria-hidden', 'false'); document.body.style.overflow = 'hidden'; };
+    const close = () => { box.hidden = true; box.setAttribute('aria-hidden', 'true'); imgEl.src = ''; document.body.style.overflow = ''; };
+
+    gallery.querySelectorAll('.gphoto').forEach((a, idx) =>
+      a.addEventListener('click', (e) => { e.preventDefault(); open(idx); }));
+    // moment-attached photos open the album at the matching image
+    document.querySelectorAll('.mom-photo[data-full]').forEach((a) =>
+      a.addEventListener('click', (e) => {
+        e.preventDefault();
+        const url = a.getAttribute('data-full');
+        const idx = items.findIndex((it) => it.full === url);
+        open(idx >= 0 ? idx : 0);
+      }));
+
+    box.querySelector('.glb__next').addEventListener('click', (e) => { e.stopPropagation(); show(i + 1); });
+    box.querySelector('.glb__prev').addEventListener('click', (e) => { e.stopPropagation(); show(i - 1); });
+    box.querySelector('.glb__close').addEventListener('click', close);
+    // click the dark backdrop (not the image or buttons) to close
+    box.addEventListener('click', (e) => { if (e.target === box || e.target.classList.contains('glb__stage')) close(); });
+    document.addEventListener('keydown', (e) => {
+      if (box.hidden) return;
+      if (e.key === 'Escape') close();
+      else if (e.key === 'ArrowRight') show(i + 1);
+      else if (e.key === 'ArrowLeft') show(i - 1);
+    });
+    // touch swipe (horizontal)
+    let sx = 0, sy = 0;
+    box.addEventListener('touchstart', (e) => { sx = e.changedTouches[0].clientX; sy = e.changedTouches[0].clientY; }, { passive: true });
+    box.addEventListener('touchend', (e) => {
+      const dx = e.changedTouches[0].clientX - sx, dy = e.changedTouches[0].clientY - sy;
+      if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy)) show(i + (dx < 0 ? 1 : -1));
+    }, { passive: true });
   })();
 </script>

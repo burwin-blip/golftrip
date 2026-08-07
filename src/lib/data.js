@@ -7,6 +7,7 @@ import drafts from '../../data/drafts.json';
 import moments from '../../data/moments.json';
 import awards from '../../data/awards.json';
 import holeScores from '../../data/hole_scores.json';
+import photos from '../../data/photos.json';
 import rawHandicapSnapshots from '../../data/handicap_snapshots.json';
 
 // ---------------------------------------------------------------------------
@@ -48,7 +49,7 @@ const handicapSnapshots = validateHandicapSnapshots(
   new Set(players.map((p) => p.id)),
 );
 
-export { players, tournaments, matches, drafts, moments, awards, holeScores, handicapSnapshots };
+export { players, tournaments, matches, drafts, moments, awards, holeScores, photos, handicapSnapshots };
 
 // Hole rows for one match (by match id), sorted by hole. Individual-score rows
 // only (excludes scramble team rows) unless includeTeam is set.

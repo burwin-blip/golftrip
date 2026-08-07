@@ -14,7 +14,7 @@
 //     win percentage independent of a match's point weight.
 // ============================================================================
 import {
-  players, tournaments, matches, drafts, awards, moments, holeScores,
+  players, tournaments, matches, drafts, awards, moments, holeScores, photos,
   handicapSnapshots,
   playerById, teamById, matchById, roundById, tournamentById,
   matchesForTournament, rosterForTournament,
@@ -418,6 +418,19 @@ export function momentsForTournament(tid) {
 }
 export function draftForTournament(tid) {
   return drafts.filter((d) => d.tournamentId === tid).sort((a, b) => a.pick - b.pick);
+}
+
+// Trip photos (data/photos.json). Preserves the order they're listed in the file
+// (curated: highlights first, then scenery). A photo may optionally carry a
+// `momentId` (linking it to a moment) and/or `playerIds` (linking it to players).
+export function photosForTournament(tid) {
+  return photos.filter((p) => p.tournamentId === tid);
+}
+export function photosForMoment(momentId) {
+  return photos.filter((p) => p.momentId === momentId);
+}
+export function photosForPlayer(playerId) {
+  return photos.filter((p) => Array.isArray(p.playerIds) && p.playerIds.includes(playerId));
 }
 
 // Net Stableford leaderboard for a tournament's Stableford round. Higher points =

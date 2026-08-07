@@ -173,6 +173,32 @@ Adding a new year's scorecards changes **no component code**:
    hole functions accept a `tid` and each surface gates on `tournamentHasHoleData`.
    An event with **no** scorecards simply shows none of the hole UI.
 
+## Trip photos (`data/photos.json`)
+
+The per-event photo album. `data/photos.json` is a **flat JSON array**, one object
+per photo, **in display order** (curated: highlights first, then scenery). Fields:
+`id`, `tournamentId`, `full` + `thumb` (paths under `public/photos/<year>/<event>/`),
+`w`/`h` (pixels of the full), `alt` (a **neutral** description — no player-name
+guesses), and two optional links: `momentId` (ties the photo to a moment) and
+`playerIds` (an array, ties it to players). Helpers in `stats.js`:
+`photosForTournament(tid)`, `photosForMoment(momentId)`, `photosForPlayer(playerId)`.
+
+Where it surfaces (all in `TournamentCompleted.astro`):
+- A **Photos tab** (only shown when the event has photos) — a responsive grid of
+  square thumbnails opening a **swipeable lightbox** (`#glightbox`: prev/next,
+  counter, caption, arrow-keys, touch-swipe, Esc/backdrop to close).
+- A **"Full album →"** button next to the gallery → `albumUrl` in the frontmatter
+  (a `'#'` placeholder until the owner drops in the shared album link).
+- Any photo with a `momentId` renders as a thumbnail inside that **moment card**
+  and opens the album lightbox at that image.
+
+Adding a year's photos (purely additive, no component changes): web-optimise them
+(sips: full ~1600px q82, thumb ~560px q68 — sips bakes in EXIF rotation and
+converts HEIC/PNG) into `public/photos/<year>/<event>/`, then append records to
+`photos.json`. Attach to a moment/player only when the match is **unambiguous**
+(the scoreboard, trophy shots, clear group shots); leave anything you can't verify
+in the main gallery rather than guessing an attribution.
+
 ## Power Rankings & GHIN check-ins (`data/handicap_snapshots.json`)
 
 A living form guide between trips, driven by GHIN handicap check-ins the owner
@@ -386,7 +412,8 @@ views it).
     top row, then the joke awards; the **"Shot of the Tournament"** card is
     deliberately hidden from this tab (the award stays in `awards.json`, and its
     hole-in-one story lives in the Moments tab) — see the `isShotOfTournament` filter
-    in `TournamentCompleted.astro`.
+    in `TournamentCompleted.astro`. A **Photos** tab appears when the event has any
+    photos (see **Trip photos** below).
   - **upcoming** → `TournamentUpcoming.astro`: only **Overview** (flyer + dates +
     "Teams/Captains to be announced"), **Draft Pool** (eligible players → profiles),
     **Draft Guide** (placeholder). No Matches/Stats/Awards until results exist.
@@ -442,6 +469,7 @@ npm run preview  # serve the built /dist
 ```
 data/                 JSON source of truth (players, tournaments, matches, drafts,
                       moments, awards) + hole_scores.json + scorecard_images.json
+                      + photos.json (trip album) + handicap_snapshots.json
 scripts/gen_data.py         regenerates the 6 core files from the source workbook
 scripts/gen_hole_scores.py  regenerates hole_scores.json (holds the raw hole reads)
 scripts/verify_holes.mjs    reconciles the hole layer (54 checks)
@@ -454,6 +482,7 @@ src/pages/            index, tournaments/[id] (tabbed), players/index (compariso
                       players/[slug] (scouting report), matches, records
 public/logos/         woodpeckers.png, silver-spoons.png (transparent)
 public/scorecards/<year>/  original per-match card images (full PNG + thumb JPG)
+public/photos/<year>/<event>/  trip album images (full + -thumb.jpg per photo)
 public/               robots.txt, hero-banner.jpg (home hero), favicon.svg/png, apple-touch-icon.png
 ```
 
