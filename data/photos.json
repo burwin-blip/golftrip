@@ -16,8 +16,11 @@
   "thumb": "/photos/2026/st-george/sg26-02-thumb.jpg",
   "w": 1600,
   "h": 1200,
-  "alt": "Holding the ST GEORGE 2026 championship board on the clubhouse balcony",
-  "momentId": "st-george-2026-moment-8"
+  "alt": "Michael Herring, in the champion's jacket, holds the ST GEORGE 2026 board",
+  "momentId": "st-george-2026-moment-8",
+  "playerIds": [
+   "michael-herring"
+  ]
  },
  {
   "id": "sg26-03",
@@ -98,7 +101,10 @@
   "thumb": "/photos/2026/st-george/sg26-11-thumb.jpg",
   "w": 1600,
   "h": 1200,
-  "alt": "A player at golden hour"
+  "alt": "Tom Brunskill at golden hour",
+  "playerIds": [
+   "tom-brunskill"
+  ]
  },
  {
   "id": "sg26-12",
@@ -107,7 +113,10 @@
   "thumb": "/photos/2026/st-george/sg26-12-thumb.jpg",
   "w": 1600,
   "h": 1200,
-  "alt": "Laughs on the balcony at sunset"
+  "alt": "Tom Brunskill sharing a laugh on the balcony at sunset",
+  "playerIds": [
+   "tom-brunskill"
+  ]
  },
  {
   "id": "sg26-13",
@@ -116,7 +125,10 @@
   "thumb": "/photos/2026/st-george/sg26-13-thumb.jpg",
   "w": 736,
   "h": 1600,
-  "alt": "On the clubhouse balcony"
+  "alt": "Michael Herring in the champion's jacket on the clubhouse balcony",
+  "playerIds": [
+   "michael-herring"
+  ]
  },
  {
   "id": "sg26-14",
@@ -125,7 +137,10 @@
   "thumb": "/photos/2026/st-george/sg26-14-thumb.jpg",
   "w": 736,
   "h": 1600,
-  "alt": "Presenting on the clubhouse balcony"
+  "alt": "Michael Herring, the first Champion Golfer, in the champion's jacket",
+  "playerIds": [
+   "michael-herring"
+  ]
  },
  {
   "id": "sg26-15",
@@ -134,7 +149,10 @@
   "thumb": "/photos/2026/st-george/sg26-15-thumb.jpg",
   "w": 1200,
   "h": 1600,
-  "alt": "On the clubhouse balcony at St George"
+  "alt": "Michael Herring wears the champion's jacket at St George",
+  "playerIds": [
+   "michael-herring"
+  ]
  },
  {
   "id": "sg26-16",

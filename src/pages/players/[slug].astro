@@ -1,11 +1,12 @@
 ---
 import Base from '../../layouts/Base.astro';
 import TeamLogo from '../../components/TeamLogo.astro';
+import PhotoGallery from '../../components/PhotoGallery.astro';
 import { players, teamById, playerById, roundById, getCourse, tournamentById, moments } from '../../lib/data.js';
 import {
   careerStats, formatRecords, opponentRecords,
   handicapAnalysis, draftValue, scorecardIndex, ANALYTICS_CAVEAT,
-  playerHoleStats, HOLE_STATS_COVERAGE, powerRankings,
+  playerHoleStats, HOLE_STATS_COVERAGE, powerRankings, photosForPlayer,
 } from '../../lib/stats.js';
 import { fullName, num, pctText } from '../../lib/format.js';
 
@@ -15,6 +16,7 @@ export function getStaticPaths() {
 const { p } = Astro.props;
 const c = careerStats(p.id);
 const bright = { woodpeckers: 'var(--wp-bright)', 'silver-spoons': 'var(--ss-bright)' };
+const myPhotos = photosForPlayer(p.id);
 
 // A "rookie" is confirmed for an upcoming event but has no completed record yet.
 const isProspect = c.appearances.length === 0;
@@ -299,6 +301,15 @@ const FMT_SHORT = { 'Scramble': 'Scramble', 'Best Ball Match Play (NET)': 'Best 
       </div>
     </div>
   </section>
+
+  {myPhotos.length > 0 && (
+    <section class="section" style="padding-top:0">
+      <div class="wrap">
+        <div class="section-head"><div><p class="eyebrow">The Album</p><h2>Photos</h2></div><span class="faint">{myPhotos.length} from {t.shortName}</span></div>
+        <PhotoGallery photos={myPhotos} galleryId={`pp-${p.slug}`} />
+      </div>
+    </section>
+  )}
 
   <!-- MATCH LOG -->
   <section class="section" style="padding-top:0">

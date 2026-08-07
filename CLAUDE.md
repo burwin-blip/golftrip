@@ -183,14 +183,27 @@ guesses), and two optional links: `momentId` (ties the photo to a moment) and
 `playerIds` (an array, ties it to players). Helpers in `stats.js`:
 `photosForTournament(tid)`, `photosForMoment(momentId)`, `photosForPlayer(playerId)`.
 
-Where it surfaces (all in `TournamentCompleted.astro`):
-- A **Photos tab** (only shown when the event has photos) — a responsive grid of
-  square thumbnails opening a **swipeable lightbox** (`#glightbox`: prev/next,
-  counter, caption, arrow-keys, touch-swipe, Esc/backdrop to close).
-- A **"Full album →"** button next to the gallery → `albumUrl` in the frontmatter
-  (a `'#'` placeholder until the owner drops in the shared album link).
-- Any photo with a `momentId` renders as a thumbnail inside that **moment card**
-  and opens the album lightbox at that image.
+The grid + lightbox are a **reusable component**, `PhotoGallery.astro`
+(props: `photos`, `galleryId`) — a responsive grid of square thumbnails opening a
+**swipeable lightbox** (prev/next, counter, caption, arrow-keys, touch-swipe,
+Esc/backdrop to close). It moves its fixed overlay to `<body>` on init so it works
+from any tab. Anything **elsewhere on the page** can open a gallery at a specific
+photo by carrying `data-open-gallery="<galleryId>"` + `data-full="<that full url>"`.
+
+Where it surfaces:
+- **Tournament Photos tab** (`TournamentCompleted.astro`, `galleryId="sg"`) — only
+  shown when the event has photos; with a **"Full album →"** button → `albumUrl`
+  in the frontmatter (a `'#'` placeholder until the owner drops in the shared link).
+- **Overview tab** leads with the `featured` photo (the whole-field shot) as a
+  banner that opens the album (`data-open-gallery="sg"`).
+- A photo with a **`momentId`** renders inside that **moment card** and opens the
+  album at that image.
+- **Player profiles** (`players/[slug].astro`) get a **Photos** section
+  (`photosForPlayer`) using the same component — e.g. Michael Herring's champion's
+  jacket, Tom Brunskill's portraits.
+- **Teams tab**: the Woodpeckers **victory art** (`woodpeckers-victory.jpg`) leads
+  the champions' side as a banner (it's illustration, not a gallery photo, so it's
+  referenced directly, not in `photos.json`).
 
 Adding a year's photos (purely additive, no component changes): web-optimise them
 (sips: full ~1600px q82, thumb ~560px q68 — sips bakes in EXIF rotation and
@@ -477,7 +490,8 @@ src/lib/data.js       loads JSON, builds id lookups (+ holesForMatch)
 src/lib/stats.js      ALL derived statistics (build-time), incl. the hole-stat block
 src/lib/format.js     display-only formatting helpers
 src/layouts/Base.astro   <head>, noindex, nav, footer
-src/components/        Scorebug, MatchRow, MatchSummary, HoleScorecard, TeamLogo, …
+src/components/        Scorebug, MatchRow, MatchSummary, HoleScorecard, TeamLogo,
+                      PhotoGallery (reusable grid + swipeable lightbox), …
 src/pages/            index, tournaments/[id] (tabbed), players/index (comparison),
                       players/[slug] (scouting report), matches, records
 public/logos/         woodpeckers.png, silver-spoons.png (transparent)
