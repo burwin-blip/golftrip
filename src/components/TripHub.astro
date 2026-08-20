@@ -21,6 +21,28 @@ const address = travel?.address ?? null;
 const costs = trip?.costs ?? null;
 const costItems = costs?.items ?? [];
 
+// THE DAMAGE — per-person cost, which swings on how many turn up, so each line
+// is priced for every headcount scenario and shown side by side. The totals are
+// SUMMED from the line items (never typed), so correcting one figure corrects
+// the bottom line. A scenario missing a figure on any line is flagged as partial
+// rather than quietly under-totalling.
+const cur = costs?.currency ?? '$';
+const money = (n) => `${cur}${Number.isInteger(n) ? n.toLocaleString('en-US') : n.toFixed(2)}`;
+const scenarios = (costs?.scenarios ?? []).map((s) => {
+  const priced = costItems.map((c) => c.amounts?.[s.id]).filter((v) => typeof v === 'number');
+  return {
+    ...s,
+    total: priced.reduce((a, b) => a + b, 0),
+    complete: priced.length === costItems.length,
+  };
+});
+const hasScenarios = scenarios.length > 0;
+// The cell for one line under one scenario.
+const cellFor = (item, sid) => {
+  const v = item.amounts?.[sid];
+  return typeof v === 'number' ? `${item.approx ? '~' : ''}${money(v)}` : null;
+};
+
 // KEY DATES — the trip itself is always the anchor (read off the tournament, so
 // it can never disagree with the rest of the site). Everything the owner has
 // actually dated sorts in around it; anything still undated falls to the tail as
@@ -186,25 +208,59 @@ const KIND_ICON = { golf: '⛳', draft: '🎯', awards: '🏆', travel: '✈', s
   <!-- COSTS -->
   {costItems.length > 0 && (
     <section class="tsec">
-      <div class="section-head"><div><p class="eyebrow gold">Budget</p><h2>The damage</h2></div><span class="faint">a checklist, not an invoice</span></div>
-      <div class="card damage">
+      <div class="section-head"><div><p class="eyebrow gold">Budget</p><h2>The damage</h2></div>{!costs?.estimate && <span class="faint">a checklist, not an invoice</span>}</div>
+
+      {costs?.estimate && (
+        <p class="estimate"><span class="estimate__k">Estimates</span>Every figure below is a working number. The final ones come once the house, the golf and the headcount are locked.</p>
+      )}
+
+      <div class:list={["card damage", { "damage--scenarios": hasScenarios }]} style={hasScenarios ? `--cols:${scenarios.length}` : undefined}>
+        {hasScenarios && (
+          <div class="damage__row damage__row--head">
+            <div class="damage__what"><span class="damage__k">Per person</span></div>
+            {scenarios.map((s) => <div class="damage__amt damage__amt--head">{s.label}</div>)}
+          </div>
+        )}
+
         {costItems.map((c) => (
           <div class="damage__row">
             <div class="damage__what">
               <b>{c.label}</b>
               {c.note && <span class="damage__note">{c.note}</span>}
+              {c.due && <span class="damage__due">Due {longDate(c.due)}</span>}
             </div>
-            <div class="damage__due">
-              <span class="damage__k">Due</span>
-              {c.due ? <b class="tabnums">{longDate(c.due)}</b> : <span class="itin__tba">TBA</span>}
-            </div>
-            <div class="damage__amt">
-              {c.amount
-                ? <Fragment><b class="tabnums">{c.amount}</b>{c.per && <span class="damage__per">per {c.per}</span>}</Fragment>
-                : <span class="itin__tba">TBA</span>}
-            </div>
+            {hasScenarios
+              ? scenarios.map((s) => (
+                  <div class="damage__amt">
+                    {cellFor(c, s.id)
+                      ? <b class="tabnums">{cellFor(c, s.id)}</b>
+                      : <span class="itin__tba">TBA</span>}
+                  </div>
+                ))
+              : (
+                <div class="damage__amt">
+                  {c.amount
+                    ? <Fragment><b class="tabnums">{c.amount}</b>{c.per && <span class="damage__per">per {c.per}</span>}</Fragment>
+                    : <span class="itin__tba">TBA</span>}
+                </div>
+              )}
           </div>
         ))}
+
+        {hasScenarios && (
+          <div class="damage__row damage__row--total">
+            <div class="damage__what">
+              <b>Total per person</b>
+              <span class="damage__note">Summed from the lines above{scenarios.every((s) => s.complete) ? '' : ' — only the lines costed so far'}.</span>
+            </div>
+            {scenarios.map((s) => (
+              <div class="damage__amt">
+                <b class="tabnums">{money(Math.round(s.total))}</b>
+                <span class="damage__per">{s.label}</span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
       {costs?.note && <p class="muted travel-note">{costs.note}</p>}
     </section>
@@ -310,18 +366,30 @@ const KIND_ICON = { golf: '⛳', draft: '🎯', awards: '🏆', travel: '✈', s
   .bc-addr__note { font-weight: 400; color: var(--muted); font-size: .85rem; }
 
   /* ---- costs ---- */
+  .estimate { display: flex; flex-wrap: wrap; align-items: baseline; gap: .4rem .8rem; padding: .8rem 1.1rem; margin-bottom: 1rem; border-radius: var(--r-sm); background: var(--gold-soft); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--gold-bright) 40%, transparent); font-size: .9rem; color: var(--text); }
+  .estimate__k { font-size: .62rem; letter-spacing: .14em; text-transform: uppercase; font-weight: 700; color: var(--gold); }
+
   .damage { overflow: hidden; }
   .damage__row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: .6rem clamp(1rem, 3vw, 2.4rem); align-items: center; padding: clamp(.9rem, 2.2vw, 1.15rem) clamp(1rem, 3vw, 1.5rem); border-bottom: 1px solid var(--line); }
+  /* One amount column per headcount scenario, sized off --cols. */
+  .damage--scenarios .damage__row { grid-template-columns: minmax(0, 1fr) repeat(var(--cols, 2), minmax(72px, auto)); }
   .damage__row:last-child { border-bottom: 0; }
   .damage__what { display: flex; flex-direction: column; gap: .15rem; min-width: 0; }
   .damage__what b { font-family: var(--serif); font-weight: 600; font-size: 1.1rem; }
   .damage__note { font-size: .82rem; color: var(--muted); }
-  .damage__due { display: flex; flex-direction: column; gap: .2rem; align-items: flex-end; text-align: right; }
+  .damage__due { font-size: .78rem; font-weight: 700; color: var(--terra-ink); margin-top: .1rem; }
   .damage__k { font-size: .58rem; letter-spacing: .13em; text-transform: uppercase; font-weight: 700; color: var(--faint); }
-  .damage__due b { font-size: .84rem; font-weight: 700; }
-  .damage__amt { text-align: right; display: flex; flex-direction: column; gap: .15rem; align-items: flex-end; min-width: 88px; }
+  .damage__amt { text-align: right; display: flex; flex-direction: column; gap: .15rem; align-items: flex-end; min-width: 72px; }
   .damage__amt b { font-family: var(--serif); font-weight: 600; font-size: 1.4rem; line-height: 1; }
   .damage__per { font-size: .66rem; letter-spacing: .08em; text-transform: uppercase; font-weight: 700; color: var(--faint); }
+
+  /* column header + bottom line */
+  .damage__row--head { padding-block: .7rem; background: var(--panel-2); align-items: baseline; }
+  .damage__amt--head { font-size: .62rem; letter-spacing: .13em; text-transform: uppercase; font-weight: 700; color: var(--muted); }
+  .damage__row--total { background: var(--ink-2); align-items: center; }
+  .damage__row--total .damage__what b { font-size: 1.15rem; }
+  .damage__row--total .damage__amt b { font-size: clamp(1.6rem, 1.3rem + 1vw, 2rem); color: var(--terra-ink); }
+  .damage__row--total .damage__per { font-size: .58rem; }
 
   /* ---- key dates ---- */
   .timeline { list-style: none; padding: 0; margin: 0; position: relative; }
@@ -376,12 +444,16 @@ const KIND_ICON = { golf: '⛳', draft: '🎯', awards: '🏆', travel: '✈', s
     .itin__day { grid-template-columns: 1fr; gap: .7rem; }
     .itin__when { flex-direction: row; align-items: baseline; gap: .5rem; flex-wrap: wrap; }
     .itin__label { margin-top: 0; margin-left: auto; }
-    /* Every cell placed explicitly — the DOM order is what / due / amount, so
-       auto-placement drops the amount on top of the label here. */
-    .damage__row { grid-template-columns: minmax(0, 1fr) auto; }
-    .damage__what { grid-column: 1; grid-row: 1; }
-    .damage__amt { grid-column: 2; grid-row: 1; align-self: start; }
-    .damage__due { grid-column: 1 / -1; grid-row: 2; flex-direction: row; align-items: baseline; gap: .45rem; text-align: left; }
+    /* The scenario columns stay — comparing the two headcounts is the whole
+       point of the section — so the label column gives up the room instead. */
+    .damage__row { gap: .4rem .6rem; padding-inline: .9rem; }
+    .damage--scenarios .damage__row { grid-template-columns: minmax(0, 1fr) repeat(var(--cols, 2), minmax(56px, auto)); }
+    .damage__what b { font-size: 1rem; }
+    .damage__note { font-size: .76rem; }
+    .damage__amt { min-width: 56px; }
+    .damage__amt b { font-size: 1.15rem; }
+    .damage__amt--head { font-size: .54rem; letter-spacing: .06em; }
+    .damage__row--total .damage__amt b { font-size: 1.35rem; }
     .timeline__node { grid-template-columns: 1fr; gap: .1rem; }
     .timeline__note { grid-column: 1; }
   }

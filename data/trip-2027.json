@@ -42,7 +42,7 @@
   },
   {
    "round": "Round 2",
-   "date": "2027-03-27",
+   "date": "2027-03-26",
    "name": null,
    "location": null,
    "url": null,
@@ -51,6 +51,24 @@
   },
   {
    "round": "Round 3",
+   "date": "2027-03-27",
+   "name": null,
+   "location": null,
+   "url": null,
+   "format": null,
+   "note": null
+  },
+  {
+   "round": "Round 4",
+   "date": "2027-03-27",
+   "name": null,
+   "location": null,
+   "url": null,
+   "format": null,
+   "note": null
+  },
+  {
+   "round": "Round 5",
    "date": "2027-03-28",
    "name": null,
    "location": null,
@@ -72,7 +90,7 @@
     },
     {
      "time": null,
-     "title": "The Draft",
+     "title": "Draft Night",
      "detail": "Captains named, picks made, and the first sledging of the trip.",
      "kind": "draft",
      "tba": true
@@ -81,7 +99,7 @@
   },
   {
    "date": "2027-03-26",
-   "title": "Round 1",
+   "title": "Rounds 1 & 2",
    "items": [
     {
      "time": null,
@@ -89,13 +107,7 @@
      "detail": null,
      "kind": "golf",
      "tba": true
-    }
-   ]
-  },
-  {
-   "date": "2027-03-27",
-   "title": "Round 2",
-   "items": [
+    },
     {
      "time": null,
      "title": "Round 2",
@@ -106,8 +118,8 @@
    ]
   },
   {
-   "date": "2027-03-28",
-   "title": "Final day",
+   "date": "2027-03-27",
+   "title": "Rounds 3 & 4",
    "items": [
     {
      "time": null,
@@ -118,37 +130,96 @@
     },
     {
      "time": null,
-     "title": "Awards night",
-     "detail": "Champion Golfer, the team title, and the joke awards nobody wants.",
-     "kind": "awards",
+     "title": "Round 4",
+     "detail": null,
+     "kind": "golf",
+     "tba": true
+    },
+    {
+     "time": "Evening",
+     "title": "Awards Night",
+     "detail": "The silverware, and the joke awards nobody wants.",
+     "kind": "awards"
+    }
+   ]
+  },
+  {
+   "date": "2027-03-28",
+   "title": "Round 5 & the Championship",
+   "items": [
+    {
+     "time": null,
+     "title": "Round 5",
+     "detail": null,
+     "kind": "golf",
+     "tba": true
+    },
+    {
+     "time": null,
+     "title": "Championship Match",
+     "detail": "The individual title decided.",
+     "kind": "golf",
      "tba": true
     }
    ]
   }
  ],
  "costs": {
-  "note": "Nothing is due yet. Amounts fill in here as the house and the golf get booked.",
+  "estimate": true,
+  "note": "Estimates only — the final numbers land once the house, the golf and the headcount are locked.",
+  "currency": "$",
+  "scenarios": [
+   {
+    "id": "16",
+    "label": "16 players"
+   },
+   {
+    "id": "20",
+    "label": "20 players"
+   }
+  ],
   "items": [
    {
     "label": "House share",
-    "amount": null,
     "per": "person",
+    "amounts": {
+     "16": 524,
+     "20": 418
+    },
     "due": null,
-    "note": "The Compound, split across the field once the final number is locked."
+    "note": "The Compound, split across the field."
    },
    {
     "label": "Golf",
-    "amount": null,
     "per": "person",
+    "amounts": {
+     "16": 910,
+     "20": 910
+    },
+    "approx": true,
     "due": null,
-    "note": "Green fees and carts for every round."
+    "note": "All five rounds."
    },
    {
-    "label": "The kitty",
-    "amount": null,
+    "label": "Rental cars",
     "per": "person",
+    "amounts": {
+     "16": 78,
+     "20": 63
+    },
     "due": null,
-    "note": "Food, drink and anything the group buys together."
+    "note": null
+   },
+   {
+    "label": "House food & essentials",
+    "per": "person",
+    "amounts": {
+     "16": 62.5,
+     "20": 50
+    },
+    "approx": true,
+    "due": null,
+    "note": "The Costco run — about $1,000 across the house. Doesn't cover dinners out or anything bought at the clubs."
    }
   ]
  },

@@ -126,13 +126,48 @@ function validateTrip(trip, file, validTournamentIds) {
   if (trip.costs !== undefined && trip.costs !== null) {
     if (typeof trip.costs !== 'object' || Array.isArray(trip.costs)) bad('"costs" must be an object { "note": ..., "items": [ ... ] }.');
     str(trip.costs.note, '"costs" → "note"');
+    str(trip.costs.currency, '"costs" → "currency"');
+    if (trip.costs.estimate !== undefined && trip.costs.estimate !== null && typeof trip.costs.estimate !== 'boolean') {
+      bad(`"costs" → "estimate" must be true or false (no quotes), got ${JSON.stringify(trip.costs.estimate)}.`);
+    }
+    // Scenarios are the headcounts the trip could land on. Costs per person swing
+    // on the final number, so each line carries an amount for each scenario and
+    // the page shows them side by side.
+    const scenarioIds = [];
+    arr(trip.costs.scenarios, '"costs" → "scenarios"').forEach((s, i) => {
+      const at = `costs.scenarios[${i}]` + (s?.id ? ` ("${s.id}")` : '');
+      if (s === null || typeof s !== 'object' || Array.isArray(s)) bad(`${at} must be an object { "id": "16", "label": "16 players" }.`);
+      if (!s.id) bad(`${at} is missing "id" (a short key like "16" — it's what each item's "amounts" are keyed by).`);
+      if (!s.label) bad(`${at} is missing "label" (e.g. "16 players").`);
+      ['id', 'label'].forEach((k) => str(s[k], `${at} → "${k}"`));
+      if (scenarioIds.includes(s.id)) bad(`${at} — duplicate "id" "${s.id}". Each scenario needs its own key.`);
+      scenarioIds.push(s.id);
+    });
     arr(trip.costs.items, '"costs" → "items"').forEach((c, i) => {
       const at = `costs.items[${i}]` + (c?.label ? ` ("${c.label}")` : '');
-      if (c === null || typeof c !== 'object' || Array.isArray(c)) bad(`${at} must be an object { "label": "Golf", "amount": null, ... }.`);
+      if (c === null || typeof c !== 'object' || Array.isArray(c)) bad(`${at} must be an object { "label": "Golf", "amounts": { ... }, ... }.`);
       if (!c.label) bad(`${at} is missing "label".`);
-      // `amount` is deliberately TEXT ("US$450", "~$400 pp"), so the owner writes
-      // whatever's true without a currency or rounding argument. null = TBA.
+      // Two ways to price a line. `amounts` are NUMBERS per scenario so the
+      // per-person total can be computed rather than typed (and stay right when
+      // a figure changes). `amount` is free TEXT for a line that doesn't move
+      // with the headcount and isn't worth totalling. null / absent = TBA.
       ['label', 'amount', 'per', 'note'].forEach((k) => str(c[k], `${at} → "${k}"`));
+      if (c.approx !== undefined && c.approx !== null && typeof c.approx !== 'boolean') {
+        bad(`${at} → "approx" must be true or false (no quotes), got ${JSON.stringify(c.approx)}.`);
+      }
+      if (c.amounts !== undefined && c.amounts !== null) {
+        if (typeof c.amounts !== 'object' || Array.isArray(c.amounts)) {
+          bad(`${at} → "amounts" must be an object keyed by scenario id, e.g. { "16": 524, "20": 418 }.`);
+        }
+        for (const [k, v] of Object.entries(c.amounts)) {
+          if (!scenarioIds.includes(k)) {
+            bad(`${at} → "amounts" has key "${k}", which isn't a scenario id. Known ids: ${scenarioIds.map((s) => `"${s}"`).join(', ') || '(none defined)'}.`);
+          }
+          if (v !== null && (typeof v !== 'number' || Number.isNaN(v))) {
+            bad(`${at} → "amounts"."${k}" must be a number with no quotes or symbols (524, not "$524"), or null for TBA — got ${JSON.stringify(v)}.`);
+          }
+        }
+      }
       optDate(c.due, `${at} → "due"`);   // the payment deadline for this line
     });
   }

@@ -298,8 +298,12 @@ field** (`costs.items[1] ("Golf") → "amount" must be text in quotes…`).
   "itinerary": [ { "date": "2027-03-25", "title": "Arrival", "items": [
                    { "time": null, "title": "The Draft", "detail": "…",
                      "kind": "draft", "tba": true } ] } ],
-  "costs":     { "note": "…", "items": [ { "label": "Golf", "amount": null,
-                   "per": "person", "due": null, "note": "…" } ] },
+  "costs":     { "estimate": true, "currency": "$", "note": "…",
+                 "scenarios": [ { "id": "16", "label": "16 players" },
+                                { "id": "20", "label": "20 players" } ],
+                 "items": [ { "label": "Golf", "per": "person", "approx": true,
+                              "amounts": { "16": 910, "20": 910 },
+                              "due": null, "note": "All five rounds." } ] },
   "keyDates":  [ { "label": "Deposits due", "date": null, "note": "…" } ]
 }
 ```
@@ -311,9 +315,24 @@ Field notes:
 - **`itinerary[].items[].kind`** is one of `golf` · `draft` · `awards` ·
   `travel` · `social`, and drives the row's treatment. **`draft` gets the gold**
   — it's the pre-trip main event. `"tba": true` adds a small TBA pill.
-- **`costs.items[].amount` is TEXT, not a number** (`"US$450"`, `"~$400 pp"`),
-  deliberately: the owner writes whatever's true without a currency or rounding
-  argument, and `null` means TBA. `due` is that line's payment deadline.
+- **Costs are priced per headcount.** Per-person cost swings on how many turn up,
+  so `costs.scenarios` lists the headcounts (`id` + `label`) and each item's
+  **`amounts`** gives a figure per scenario id. They render as **side-by-side
+  columns**, not a toggle — both numbers matter at once when you're deciding
+  whether to chase more players, and columns need no JS.
+  - **`amounts` values are plain NUMBERS** (`524`, not `"$524"`) — that's what
+    lets the **per-person total be summed rather than typed**, so correcting one
+    line corrects the bottom line. `currency` is the prefix; a non-integer prints
+    to 2 dp (`62.5` → `$62.50`). `approx: true` prefixes `~`.
+  - A scenario missing a figure on any line is flagged **"only the lines costed
+    so far"** rather than quietly under-totalling.
+  - **`amount` (TEXT)** is still there for a line that doesn't move with the
+    headcount and isn't worth totalling (`"US$450"`, `"~$400 pp"`); it's used
+    only when there are no `scenarios`. `null`/absent on either → **TBA**.
+  - `estimate: true` puts the gold **"Estimates"** banner above the table (and
+    drops the "a checklist, not an invoice" aside — the banner says it better).
+  - `due` is that line's payment deadline; it renders under the label **only when
+    set**, so untouched rows stay clean and the deadlines live in **Key dates**.
 - **`keyDates`**: the timeline renders **dated** entries chronologically; entries
   still on `date: null` fall to the tail as a dimmed **"Not set"** node, so the
   four things everyone asks about are all visible without inventing a date. The
