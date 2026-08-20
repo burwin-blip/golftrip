@@ -1,26 +1,72 @@
 ---
 import Base from '../../layouts/Base.astro';
+import PlayerCard from '../../components/PlayerCard.astro';
 import TeamLogo from '../../components/TeamLogo.astro';
-import { playersComparison, allRookies, powerRankings } from '../../lib/stats.js';
+import { playersComparison, allRookies, powerRankings, careerStats } from '../../lib/stats.js';
 import { num, pctText } from '../../lib/format.js';
-import { tournamentById } from '../../lib/data.js';
+import { tournamentById, teamById } from '../../lib/data.js';
 
 const rows = playersComparison();
 const rookies = allRookies();
 const prRows = powerRankings().rows;
 const prFor = (id) => prRows.find((r) => r.player.id === id) || null;
+
+// The wall: everyone who has played, ordered by career points (same order the
+// table opens in), then the rookies confirmed for the next Annual.
+const veteranCards = rows.map((r) => {
+  const c = careerStats(r.player.id);
+  const title = c.appearances.find((a) => a.isChampion);
+  return {
+    player: r.player,
+    teamId: r.teamId,
+    teamName: teamById[r.teamId]?.name ?? null,
+    handicap: r.handicap,
+    isChampion: Boolean(title),
+    championYear: title?.tournament.year ?? null,
+    stats: [
+      { k: 'Points', v: num(r.pointsEarned), lead: true },
+      { k: 'Win rate', v: pctText(r.matchPct) },
+    ],
+  };
+});
+
+const rookieCards = rookies.map((p) => {
+  const pr = prFor(p.id);
+  const year = tournamentById[(p.confirmedFor || [])[0]]?.year ?? null;
+  return {
+    player: p,
+    isRookie: true,
+    rookieYear: year,
+    stats: [{ k: 'Handicap index', v: pr?.hasData ? String(pr.index) : 'TBC' }],
+  };
+});
+
+const wall = [...veteranCards, ...rookieCards];
+const rookieYear = rookieCards[0]?.rookieYear ?? null;
 ---
-<Base active="players" title="Players" description="Every player in The Annual, compared — points, win %, handicap and draft position. Sortable for sizing up the field.">
-  <section class="section">
+<Base active="players" title="Players" description="Every player in The Annual — the full field, with career points, win % and the full scouting report behind each face.">
+  <section class="section" style="padding-bottom:clamp(1.6rem,4vw,2.4rem)">
     <div class="wrap">
       <p class="eyebrow gold">The Field</p>
       <h1 class="display" style="font-size:clamp(2.1rem,6vw,3.6rem);margin:.3rem 0 .4rem">Players</h1>
-      <p class="lede">Career totals across every edition. Tap a column to sort — points, win %, handicap or draft slot — then open a profile for the full scouting report.</p>
+      <p class="lede">Everyone who has teed it up{rookieYear ? `, plus the rookies confirmed for ${rookieYear}` : ''}. Pick a face for the full scouting report — career record, format splits, head-to-heads and honours.</p>
       <div class="chips" style="margin-top:1rem">
         <a class="btn btn--navy" href="/power-rankings">Power Rankings <span aria-hidden="true">→</span></a>
       </div>
 
-      <div class="table-scroll" style="margin-top:1.4rem">
+      <div class="wall" style="margin-top:clamp(1.4rem,4vw,2rem)">
+        {wall.map((c, i) => <PlayerCard {...c} loading={i < 6 ? 'eager' : 'lazy'} />)}
+      </div>
+    </div>
+  </section>
+
+  <section class="section" style="padding-top:0">
+    <div class="wrap">
+      <div class="section-head">
+        <div><p class="eyebrow gold">Side by side</p><h2>Career comparison</h2></div>
+        <span class="faint">Tap a column to sort</span>
+      </div>
+      <div class="table-scroll">
         <table class="data sortable" id="ptable">
           <thead>
             <tr>
@@ -61,53 +107,27 @@ const prFor = (id) => prRows.find((r) => r.player.id === id) || null;
           </tbody>
         </table>
       </div>
-      <p class="faint" style="font-size:.78rem;margin-top:.7rem">Pts = tournament points earned (Scramble &amp; Shamble worth 1; Best Ball, Stableford &amp; Singles worth 2). Pt % = points ÷ available. Win % = wins + ½ halves ÷ matches. “C” = team captain (undrafted).</p>
-
-      {rookies.length > 0 && (() => {
-        const year = tournamentById[rookies[0].confirmedFor[0]]?.year;
-        return (
-          <div class="rookies">
-            <div class="section-head" style="margin-top:clamp(2.2rem,5vw,3rem)"><div><p class="eyebrow gold">New blood</p><h2>Confirmed for {year ?? 'the next Annual'}</h2></div><span class="faint">{rookies.length} rookie{rookies.length === 1 ? '' : 's'} · debut{rookies.length === 1 ? 's' : ''} {year}</span></div>
-            <div class="grid rookie-grid">
-              {rookies.map((rp) => {
-                const pr = prFor(rp.id);
-                return (
-                  <a class="card card--pad rookie-card" href={`/players/${rp.slug}`}>
-                    <div class="rookie-card__head">
-                      <span class="rookie-card__star" aria-hidden="true">★</span>
-                      <span class="rookie-card__name">{rp.name}</span>
-                      <span class="pill gold" style="margin-left:auto">Rookie</span>
-                    </div>
-                    <div class="rookie-card__meta">
-                      {pr?.hasData ? <span>Index <b class="mono-nums">{pr.index}</b></span> : <span class="faint">No handicap on file yet</span>}
-                      {rp.ghin && <span class="faint">GHIN #{rp.ghin}</span>}
-                    </div>
-                    <span class="rookie-card__link">Rookie profile →</span>
-                  </a>
-                );
-              })}
-            </div>
-          </div>
-        );
-      })()}
+      <p class="faint" style="font-size:.78rem;margin-top:.7rem">Pts = tournament points earned (Scramble &amp; Shamble worth 1; Best Ball, Stableford &amp; Singles worth 2). Pt % = points ÷ available. Win % = wins + ½ halves ÷ matches. “C” = team captain (undrafted). Rookies are absent from this table until they play.</p>
     </div>
   </section>
 </Base>
 
 <style>
+  /* The wall of faces. Two up on a phone — the portrait stays the hero at every
+     width; the tiles just get narrower. */
+  .wall {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    gap: clamp(0.7rem, 2vw, 1.15rem);
+  }
+  @media (max-width: 720px) {
+    .wall { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+
   table.sortable thead th[data-k] { cursor: pointer; user-select: none; white-space: nowrap; }
   table.sortable thead th[data-k]:hover { color: var(--text); }
   table.sortable thead th.sort-active { color: var(--text); }
   table.sortable thead th.sort-active::after { content: attr(data-arrow); margin-left: .3rem; color: var(--gold); }
-
-  .rookie-grid { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 1rem; }
-  .rookie-card { display: flex; flex-direction: column; gap: .7rem; border-top: 3px solid var(--gold-bright); }
-  .rookie-card__head { display: flex; align-items: center; gap: .5rem; }
-  .rookie-card__star { width: 26px; height: 26px; display: grid; place-items: center; border-radius: 50%; background: var(--gold-soft); color: var(--gold); font-size: .8rem; }
-  .rookie-card__name { font-family: var(--serif); font-weight: 600; font-size: 1.15rem; color: var(--text); }
-  .rookie-card__meta { display: flex; flex-direction: column; gap: .25rem; font-size: .88rem; color: var(--muted); }
-  .rookie-card__meta b { color: var(--text); }
-  .rookie-card__link { font-size: .78rem; font-weight: 700; color: var(--gold); margin-top: auto; }
 </style>
 
 <script is:inline>

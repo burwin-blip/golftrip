@@ -2,6 +2,7 @@
 import Base from '../../layouts/Base.astro';
 import TeamLogo from '../../components/TeamLogo.astro';
 import PhotoGallery from '../../components/PhotoGallery.astro';
+import PlayerPortrait from '../../components/PlayerPortrait.astro';
 import { players, teamById, playerById, roundById, getCourse, tournamentById, moments } from '../../lib/data.js';
 import {
   careerStats, formatRecords, opponentRecords,
@@ -55,32 +56,59 @@ if (!isProspect) {
 }
 const signed = (x) => (x <= 0 ? String(x) : `+${x}`);
 
+// Team history for the card header — every side this player has worn, oldest
+// first. One line per appearance, so it grows on its own as editions are added.
+const teamHistory = isProspect
+  ? []
+  : c.appearances.map((ap) => ({
+      teamId: ap.teamId,
+      name: teamById[ap.teamId].name,
+      year: ap.tournament.year,
+      captain: ap.draftPick == null,
+    }));
+
 const FMT_SHORT = { 'Scramble': 'Scramble', 'Best Ball Match Play (NET)': 'Best Ball', '9-hole Shamble': 'Shamble',
   'Team Average Stableford': 'Stableford', 'Singles Match Play': 'Singles', 'Individual Championship / Singles': 'Championship' };
 ---
 <Base active="players" title={p.name} description={isProspect ? `${p.name} — draft prospect for the upcoming season.` : `Scouting report for ${p.name} — career record, format splits, partners, head-to-heads, handicap and draft value.`}>
 
   {isProspect && (<Fragment>
-    <section class="section" style="--accent:var(--gold-bright);--accent-bright:var(--gold-bright)">
+    <section class="section" style="--accent:var(--navy-ink);--accent-bright:var(--gold-bright)">
       <div class="wrap">
         <a class="back-link" href="/players">← All players</a>
-        <div class="phero reveal">
-          <div class="phero__id">
-            <span class="pill gold">★ Rookie{rookieYear ? ` — debuts ${rookieYear}` : ''}</span>
-            <h1 class="display" style="font-size:clamp(2.2rem,6vw,4rem);margin:.5rem 0 .1rem">{p.name}</h1>
-            {p.nickname && <p class="muted" style="font-style:italic">“{p.nickname}”</p>}
-            <div class="chips" style="margin-top:.7rem">
-              {rookieYear && <span class="pill">Confirmed for {rookieYear}</span>}
+
+        <div class="tcard reveal">
+          <div class="tcard__bar">
+            <span class="tcard__seal" aria-hidden="true">A</span>
+            <span class="tcard__barteam">The Annual</span>
+            {rookieYear && <span class="tcard__barmeta">Confirmed for {rookieYear}</span>}
+          </div>
+
+          <div class="tcard__photo">
+            <PlayerPortrait player={p} loading="eager" sizes="(max-width: 780px) 42vw, 264px" />
+            <span class="tcard__flag">★ Rookie</span>
+          </div>
+
+          <div class="tcard__id">
+            <h1 class="tcard__name">{p.name}</h1>
+            {p.nickname && <p class="tcard__nick">“{p.nickname}”</p>}
+            <p class="tcard__history tcard__history--none">
+              No editions played{rookieYear ? ` — first tee shot comes in ${rookieYear}` : ''}
+            </p>
+            <div class="chips" style="margin-top:.75rem">
               {prRow?.hasData && <span class="pill">Index {prRow.index}</span>}
-              {prRow?.hasData && prRow.rank && <span class="pill gold">Power #{prRow.rank}</span>}
+              {prRow?.hasData && prRow.rank && <a class="pill gold" href="/power-rankings" style="text-decoration:none">Power #{prRow.rank}</a>}
             </div>
             {hcLabel && <p class="ghin-line">{hcLabel}</p>}
-            {p.notes && <p class="lede" style="margin-top:.9rem">{p.notes}</p>}
+            {p.notes && <p class="muted" style="margin-top:.8rem;font-size:.9rem;max-width:52ch">{p.notes}</p>}
           </div>
-          <div class="phero__record card card--pad" style="border-top:4px solid var(--gold-bright)">
-            <p class="eyebrow gold">Status</p>
-            <p style="font-family:var(--serif);font-size:1.5rem;line-height:1.1;margin:.35rem 0 .4rem">First Annual awaits</p>
-            <p class="muted" style="font-size:.85rem">No tournament record yet — the scouting numbers fill in after {fullName(p.id).split(' ')[0]}’s debut.</p>
+
+          <div class="tcard__stats tcard__stats--rookie">
+            <div class="tcard__stat">
+              <span class="tcard__stat-k">Status</span>
+              <span class="tcard__stat-v tcard__stat-v--text">First Annual awaits</span>
+              <span class="tcard__stat-sub">The scouting numbers fill in after {fullName(p.id).split(' ')[0]}’s debut.</span>
+            </div>
           </div>
         </div>
       </div>
@@ -116,45 +144,78 @@ const FMT_SHORT = { 'Scramble': 'Scramble', 'Best Ball Match Play (NET)': 'Best 
 
   {!isProspect && (<Fragment>
 
-  <!-- HERO -->
+  <!-- CARD HEADER — portrait, identity and the headline numbers in one block -->
   <section class="section" style={`padding-bottom:clamp(1.2rem,3vw,1.8rem);--accent:${team.color};--accent-bright:${accentBright}`}>
     <div class="wrap">
       <a class="back-link" href="/players">← All players</a>
-      <div class="phero reveal">
-        <div class="phero__id">
-          <span class="tbadge" style="font-size:.95rem;color:color-mix(in srgb, var(--accent) 80%, #10130f)"><TeamLogo teamId={team.id} size={34} />{team.name}{p.id === team.captainId && <span class="pill" style="margin-left:.4rem;font-size:.6rem;padding:.1rem .4rem">Captain</span>}</span>
-          <h1 class="display" style="font-size:clamp(2.2rem,6vw,4rem);margin:.35rem 0 .1rem">{p.name}</h1>
-          <div class="chips" style="margin-top:.7rem">
+
+      <div class="tcard reveal">
+        <div class="tcard__bar">
+          <TeamLogo teamId={team.id} size={22} chip={true} />
+          <span class="tcard__barteam">{team.name}</span>
+          <span class="tcard__barmeta">Hcp {app.handicapIndex.toFixed(1)}</span>
+        </div>
+
+        <div class="tcard__photo">
+          <i class="tcard__ratio" aria-hidden="true"></i>
+          <PlayerPortrait player={p} loading="eager" sizes="(max-width: 780px) 42vw, 320px" />
+          {app.isChampion && (
+            <span class="tcard__crown" title={`Champion Golfer ${t.year}`}>
+              <span class="crown" aria-hidden="true">♛</span>
+              <span class="sr-only">Champion Golfer {t.year}</span>
+            </span>
+          )}
+        </div>
+
+        <div class="tcard__id">
+          <h1 class="tcard__name">{p.name}</h1>
+          {p.nickname && <p class="tcard__nick">“{p.nickname}”</p>}
+          <ul class="tcard__history">
+            {teamHistory.map((h) => (
+              <li>
+                <TeamLogo teamId={h.teamId} size={15} />
+                <span>{h.name}</span>
+                <span class="faint tabnums">{h.year}</span>
+                {h.captain && <span class="tcard__cap">Captain</span>}
+              </li>
+            ))}
+          </ul>
+          <div class="chips" style="margin-top:.75rem">
             {app.isChampion && <span class="pill gold">♛ Champion Golfer {t.year}</span>}
             {app.wonTeamTitle && <span class="pill gold">Team Champion {t.year}</span>}
-            <span class="pill">Hcp {app.handicapIndex.toFixed(1)}</span>
             {cur.ha && <span class="pill">{cur.ha.tier} handicap</span>}
-            {app.draftPick ? <span class="pill">Draft #{app.draftPick}</span> : <span class="pill">Captain</span>}
+            {app.draftPick && <span class="pill">Draft #{app.draftPick}</span>}
             {cur.dv?.label && <span class:list={["pill", { gold: cur.dv.label !== 'Draft Miss' }]}>{cur.dv.label}</span>}
             {prRow?.hasData && prRow.rank && <a class="pill" href="/power-rankings" style="text-decoration:none">Power #{prRow.rank}</a>}
           </div>
           {hcLabel && <p class="ghin-line">{hcLabel}</p>}
         </div>
-        <div class="phero__record card card--pad">
-          <p class="eyebrow">Career record</p>
-          <div class="phero__wlh"><b class="mono-nums">{c.w}</b><i>–</i><b class="mono-nums">{c.h}</b><i>–</i><b class="mono-nums">{c.l}</b></div>
-          <div class="faint" style="font-size:.72rem;letter-spacing:.1em;text-transform:uppercase">Won · Halved · Lost</div>
-          <div class="form" style="margin-top:.8rem">
-            {c.log.map((e) => <b class={e.outcome === 'win' ? 'w' : e.outcome === 'loss' ? 'l' : 'h'} title={`Match ${e.match.number}: ${e.outcome}`}>{e.outcome === 'win' ? 'W' : e.outcome === 'loss' ? 'L' : 'H'}</b>)}
+
+        <div class="tcard__stats">
+          <div class="tcard__stat">
+            <span class="tcard__stat-k">Career record</span>
+            <span class="tcard__stat-v tcard__stat-v--rec"><b>{c.w}</b><i>–</i><b>{c.h}</b><i>–</i><b>{c.l}</b></span>
+            <span class="tcard__stat-sub">won · halved · lost, over {c.played} matches</span>
+            <div class="form" style="margin-top:.5rem">
+              {c.log.map((e) => <b class={e.outcome === 'win' ? 'w' : e.outcome === 'loss' ? 'l' : 'h'} title={`Match ${e.match.number}: ${e.outcome}`}>{e.outcome === 'win' ? 'W' : e.outcome === 'loss' ? 'L' : 'H'}</b>)}
+            </div>
+          </div>
+          <div class="tcard__stat is-lead">
+            <span class="tcard__stat-k">Points earned</span>
+            <span class="tcard__stat-v">{num(c.pointsEarned)}<i> / {num(c.pointsAvailable)}</i></span>
+            <span class="tcard__stat-sub">{pctText(c.pointPct)} of available</span>
+          </div>
+          <div class="tcard__stat">
+            <span class="tcard__stat-k">Win rate</span>
+            <span class="tcard__stat-v">{pctText(c.matchPct)}</span>
+            <span class="tcard__stat-sub">wins + ½ halves ÷ matches</span>
+          </div>
+          <div class="tcard__stat">
+            <span class="tcard__stat-k">Titles</span>
+            <span class="tcard__stat-v">{c.teamTitles + c.individualTitles}</span>
+            <span class="tcard__stat-sub">{c.individualTitles} individual · {c.teamTitles} team</span>
           </div>
         </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- STAT TILES -->
-  <section class="section" style="padding-top:0">
-    <div class="wrap">
-      <div class="grid tiles">
-        <div class="tile"><div class="tile__k">Matches</div><div class="tile__v mono-nums">{c.played}</div></div>
-        <div class="tile tile--gold"><div class="tile__k">Points earned</div><div class="tile__v mono-nums">{num(c.pointsEarned)}<span class="faint" style="font-size:1rem"> / {num(c.pointsAvailable)}</span></div><div class="tile__sub">{pctText(c.pointPct)} of available</div></div>
-        <div class="tile"><div class="tile__k">Win rate</div><div class="tile__v mono-nums">{pctText(c.matchPct)}</div><div class="tile__sub">wins + ½ halves ÷ matches</div></div>
-        <div class="tile"><div class="tile__k">Titles</div><div class="tile__v mono-nums">{c.teamTitles + c.individualTitles}</div><div class="tile__sub">{c.individualTitles} individual · {c.teamTitles} team</div></div>
       </div>
     </div>
   </section>
@@ -341,11 +402,99 @@ const FMT_SHORT = { 'Scramble': 'Scramble', 'Best Ball Match Play (NET)': 'Best 
 </Base>
 
 <style>
-  .phero { display: grid; grid-template-columns: 1fr auto; gap: 1.4rem; align-items: end; margin-top: 1rem; }
-  .phero__record { min-width: 230px; border-color: color-mix(in srgb, var(--accent) 34%, var(--line)); border-top: 4px solid var(--accent); }
-  .phero__wlh { display: flex; align-items: baseline; gap: .35rem; margin-top: .4rem; }
-  .phero__wlh b { font-family: var(--serif); font-size: clamp(2.2rem, 1.6rem + 3vw, 3.2rem); line-height: 1; color: var(--accent-bright); }
-  .phero__wlh i { font-style: normal; color: var(--faint); font-size: 1.6rem; }
+  /* ---- the trading card ---------------------------------------------------
+     Same object as the tile on the Players wall, at reading size: team bar
+     across the top, portrait on the left, identity and the headline numbers
+     beside it. Everything else on the profile hangs below. */
+  .tcard {
+    display: grid;
+    grid-template-columns: clamp(240px, 27vw, 320px) minmax(0, 1fr);
+    grid-template-areas: "bar bar" "photo id" "photo stats";
+    grid-template-rows: auto auto 1fr;
+    margin-top: 1rem;
+    background: var(--panel);
+    border-radius: var(--r);
+    overflow: hidden;
+    box-shadow: var(--shadow-lg);
+  }
+  .tcard__bar {
+    grid-area: bar;
+    display: flex; align-items: center; gap: .5rem;
+    padding: .5rem clamp(.8rem, 2vw, 1.2rem);
+    background: var(--accent); color: #fff;
+  }
+  .tcard__barteam { font-family: var(--serif); font-size: 1.02rem; font-weight: 600; }
+  .tcard__barmeta {
+    font-size: .62rem; letter-spacing: .12em; text-transform: uppercase; font-weight: 700;
+    margin-left: auto; font-variant-numeric: tabular-nums; opacity: .92;
+  }
+  .tcard__seal {
+    width: 22px; height: 22px; flex: none; display: grid; place-items: center;
+    border-radius: 50%; background: #fff; color: var(--navy-ink);
+    font-family: var(--serif); font-size: .74rem; font-weight: 600; line-height: 1;
+  }
+
+  /* The in-flow spacer holds the cell open to 4:5 when the identity column is
+     short; when that column is taller the cell stretches past it. Either way the
+     portrait is absolutely filling the cell, so the photo edge always meets the
+     card edge — an aspect-ratio on the cell itself would defeat the stretch. */
+  .tcard__photo { grid-area: photo; position: relative; background: var(--panel-2); }
+  .tcard__ratio { display: block; width: 100%; aspect-ratio: 4 / 5; }
+  .tcard__photo :global(.pportrait) {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%; aspect-ratio: auto; object-fit: cover;
+  }
+  .tcard__crown {
+    position: absolute; top: .6rem; right: .6rem;
+    width: 1.9rem; height: 1.9rem; display: grid; place-items: center;
+    border-radius: 50%; background: rgba(251,247,238,.94);
+    box-shadow: 0 2px 8px -3px rgba(18,43,29,.5); font-size: 1rem; line-height: 1;
+  }
+  .tcard__flag {
+    position: absolute; top: .6rem; left: .6rem;
+    display: inline-flex; align-items: center; gap: .3rem;
+    padding: .22rem .6rem; border-radius: 999px;
+    font-size: .6rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+    background: linear-gradient(180deg, #D8B23A, var(--gold-bright)); color: #33280A;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.45), 0 3px 10px -4px rgba(18,43,29,.6);
+  }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+  /* Centred in its row, so a player with few pills doesn't leave a hole between
+     the name and the numbers. */
+  .tcard__id { grid-area: id; align-self: center; padding: clamp(1rem, 2.6vw, 1.5rem) clamp(1rem, 2.6vw, 1.5rem); }
+  .tcard__name {
+    font-family: var(--serif); font-weight: 600; line-height: 1.02; letter-spacing: -.02em;
+    font-size: clamp(1.9rem, 1.3rem + 2.4vw, 3rem);
+  }
+  .tcard__nick { font-family: var(--serif); font-style: italic; color: var(--muted); font-size: 1.05rem; margin-top: .15rem; }
+  .tcard__history { list-style: none; padding: 0; margin-top: .7rem; display: flex; flex-wrap: wrap; gap: .3rem .9rem; }
+  .tcard__history li { display: inline-flex; align-items: center; gap: .35rem; font-size: .84rem; font-weight: 600; color: var(--muted); }
+  .tcard__history--none { font-size: .88rem; color: var(--muted); }
+  .tcard__cap { font-size: .58rem; letter-spacing: .1em; text-transform: uppercase; font-weight: 700; color: var(--gold); background: var(--gold-soft); border-radius: 999px; padding: .08rem .4rem; }
+
+  .tcard__stats {
+    grid-area: stats; align-self: end;
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1px; background: var(--line);
+    margin: clamp(1rem, 2.6vw, 1.4rem) 0 0;
+    border-top: 1px solid var(--line);
+  }
+  .tcard__stats--rookie { grid-template-columns: 1fr; }
+  .tcard__stat { background: var(--panel); padding: .85rem clamp(1rem, 2.6vw, 1.5rem) 1rem; }
+  .tcard__stat-k { display: block; font-size: .62rem; letter-spacing: .13em; text-transform: uppercase; font-weight: 700; color: var(--faint); }
+  .tcard__stat-v {
+    display: block; margin-top: .3rem;
+    font-family: var(--serif); font-weight: 600; font-size: 1.85rem; line-height: 1;
+    font-variant-numeric: tabular-nums; color: var(--text);
+  }
+  .tcard__stat-v i { font-style: normal; font-size: .9rem; color: var(--faint); }
+  .tcard__stat-v--rec b { font-weight: 600; color: var(--accent-bright); }
+  .tcard__stat-v--rec i { font-style: normal; color: var(--faint); font-size: 1.2rem; }
+  .tcard__stat-v--text { font-size: 1.3rem; line-height: 1.15; }
+  .tcard__stat.is-lead .tcard__stat-v { color: var(--gold); }
+  .tcard__stat-sub { display: block; margin-top: .3rem; font-size: .75rem; color: var(--muted); }
+
   .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(1.4rem, 4vw, 2.4rem); align-items: start; }
   .ghin-line { font-size: .78rem; color: var(--faint); font-weight: 600; letter-spacing: .03em; margin-top: .7rem; font-variant-numeric: tabular-nums; }
   /* rookie treatment */
@@ -368,8 +517,21 @@ const FMT_SHORT = { 'Scramble': 'Scramble', 'Best Ball Match Play (NET)': 'Best 
   .holemeta { display: flex; flex-wrap: wrap; gap: .5rem 1.4rem; margin-top: .9rem; font-size: .88rem; color: var(--muted); }
   .holemeta strong { color: var(--text); font-variant-numeric: tabular-nums; }
   @media (max-width: 780px) {
-    .phero { grid-template-columns: 1fr; align-items: start; }
-    .phero__record { min-width: 0; }
+    /* Photo keeps its column beside the name so the card still reads as a card;
+       the numbers drop to a full-width block underneath. */
+    .tcard {
+      grid-template-columns: minmax(112px, 40%) minmax(0, 1fr);
+      grid-template-areas: "bar bar" "photo id" "stats stats";
+      grid-template-rows: auto 1fr auto;
+    }
+    .tcard__id { padding: .9rem .9rem 1rem 1rem; }
+    .tcard__name { font-size: clamp(1.45rem, 1.1rem + 2vw, 2.1rem); overflow-wrap: break-word; }
+    .tcard__nick { font-size: .92rem; }
+    .tcard__id .chips { gap: .3rem; }
+    .tcard__id .pill { font-size: .66rem; padding: .22rem .55rem; }
+    .tcard__stats { margin-top: 0; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .tcard__stat { padding: .75rem .9rem .8rem; }
+    .tcard__stat-v { font-size: 1.5rem; }
     .two-col { grid-template-columns: 1fr; }
     .holebar { grid-template-columns: repeat(5, 1fr); gap: .3rem; }
     .holebar__n { font-size: 1.4rem; }

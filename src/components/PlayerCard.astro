@@ -1,0 +1,151 @@
+---
+// One player, photo first — the tile the Players wall is built from.
+//
+// Shape borrows the site's signature scorebug: two panels meeting at a colour
+// gutter. Here the panels are the portrait and the numbers, and the gutter is
+// the player's team — logo in a white chip, tournament handicap on the right —
+// so a wall of faces still reads as a Ryder-Cup field at a glance.
+import TeamLogo from './TeamLogo.astro';
+import PlayerPortrait from './PlayerPortrait.astro';
+
+const {
+  player,
+  teamId = null,
+  teamName = null,
+  handicap = null,
+  isRookie = false,
+  rookieYear = null,
+  isChampion = false,
+  championYear = null,
+  stats = [],
+  loading = 'lazy',
+} = Astro.props;
+
+const teamColor = { woodpeckers: 'var(--wp)', 'silver-spoons': 'var(--ss)' }[teamId] || 'var(--navy-ink)';
+---
+<a class="pcard" href={`/players/${player.slug}`} style={`--accent:${teamColor}`}>
+  <div class="pcard__frame">
+    <PlayerPortrait player={player} loading={loading} />
+    {isRookie && <span class="pill gold pcard__flag">★ Rookie</span>}
+    {isChampion && (
+      <span class="pcard__crown" title={`Champion Golfer${championYear ? ` ${championYear}` : ''}`}>
+        <span class="crown" aria-hidden="true">♛</span>
+        <span class="sr-only">Champion Golfer{championYear ? ` ${championYear}` : ''}</span>
+      </span>
+    )}
+  </div>
+
+  <div class="pcard__gutter">
+    {teamId
+      ? <TeamLogo teamId={teamId} size={17} chip={true} />
+      : <span class="pcard__seal" aria-hidden="true">A</span>}
+    <span class="pcard__team">{teamName || (rookieYear ? `Debuts ${rookieYear}` : 'The Annual')}</span>
+    {handicap != null && <span class="pcard__hcp tabnums">{handicap.toFixed(1)}</span>}
+  </div>
+
+  <div class="pcard__body">
+    <h3 class="pcard__name">{player.name}</h3>
+    {player.nickname && <p class="pcard__nick">“{player.nickname}”</p>}
+    <div class="pcard__stats">
+      {stats.map((s) => (
+        <div class:list={["pcard__stat", { "is-lead": s.lead }]}>
+          <span class="pcard__stat-v tabnums">{s.v}</span>
+          <span class="pcard__stat-k">{s.k}</span>
+        </div>
+      ))}
+    </div>
+  </div>
+</a>
+
+<style>
+  .pcard {
+    display: flex;
+    flex-direction: column;
+    background: var(--panel);
+    border-radius: var(--r);
+    overflow: hidden;
+    box-shadow: var(--shadow);
+    transition: transform 0.2s var(--ease), box-shadow 0.2s var(--ease);
+  }
+  .pcard:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); }
+
+  .pcard__frame { position: relative; overflow: hidden; background: var(--panel-2); }
+  .pcard__frame :global(.pportrait) { transition: transform 0.5s var(--ease); }
+  .pcard:hover .pcard__frame :global(.pportrait) { transform: scale(1.035); }
+
+  /* Solid metallic gold — the pale sunset placeholder is too close to
+     --gold-soft for the house pill to read against it. */
+  .pcard__flag {
+    position: absolute; top: 0.55rem; left: 0.55rem;
+    font-size: 0.58rem; letter-spacing: 0.1em; text-transform: uppercase;
+    padding: 0.2rem 0.55rem; gap: 0.3rem;
+    background: linear-gradient(180deg, #D8B23A, var(--gold-bright));
+    color: #33280A;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.45), 0 3px 10px -4px rgba(18,43,29,0.6);
+  }
+  .pcard__crown {
+    position: absolute; top: 0.5rem; right: 0.5rem;
+    width: 1.6rem; height: 1.6rem; display: grid; place-items: center;
+    border-radius: 50%; background: rgba(251,247,238,0.94);
+    box-shadow: 0 2px 8px -3px rgba(18,43,29,0.5);
+    font-size: 0.85rem; line-height: 1;
+  }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+  /* the team gutter — white text on the team's own colour, per the house rule */
+  .pcard__gutter {
+    display: flex; align-items: center; gap: 0.4rem;
+    padding: 0.34rem 0.6rem;
+    background: var(--accent); color: #fff;
+  }
+  .pcard__team {
+    font-size: 0.65rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .pcard__hcp {
+    margin-left: auto; font-size: 0.68rem; font-weight: 700;
+    padding-left: 0.5rem; opacity: 0.92; white-space: nowrap;
+  }
+  .pcard__hcp::before { content: 'HCP '; font-size: 0.54rem; letter-spacing: 0.1em; opacity: 0.72; }
+  .pcard__seal {
+    width: 17px; height: 17px; flex: none; display: grid; place-items: center;
+    border-radius: 50%; background: #fff; color: var(--navy-ink);
+    font-family: var(--serif); font-size: 0.6rem; font-weight: 600; line-height: 1;
+  }
+
+  .pcard__body { padding: 0.7rem 0.75rem 0.8rem; display: flex; flex-direction: column; flex: 1; }
+  .pcard__name {
+    font-size: clamp(0.98rem, 0.9rem + 0.4vw, 1.12rem);
+    line-height: 1.12; letter-spacing: -0.015em;
+  }
+  .pcard__nick { font-size: 0.78rem; font-style: italic; color: var(--muted); margin-top: 0.12rem; }
+
+  .pcard__stats {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+    margin-top: auto; padding-top: 0.6rem;
+  }
+  .pcard__stat { padding-top: 0.42rem; border-top: 1px solid var(--line); }
+  .pcard__stat + .pcard__stat { padding-left: 0.6rem; margin-left: 0.6rem; border-left: 1px solid var(--line); }
+  .pcard__stat-v {
+    display: block; font-family: var(--serif); font-weight: 600;
+    font-size: 1.3rem; line-height: 1; color: var(--text);
+  }
+  .pcard__stat.is-lead .pcard__stat-v { color: var(--gold); }
+  .pcard__stat-k {
+    display: block; margin-top: 0.2rem;
+    font-size: 0.58rem; letter-spacing: 0.11em; text-transform: uppercase;
+    font-weight: 700; color: var(--faint); white-space: nowrap;
+  }
+
+  /* Two-up on a phone the gutter is only ~150px wide — not enough for the team
+     name AND a handicap without one of them ellipsing. The name wins; the
+     handicap is a tap away on the profile and sits in the table below. */
+  @media (max-width: 720px) {
+    .pcard__gutter { padding: 0.3rem 0.5rem; gap: 0.35rem; }
+    .pcard__team { font-size: 0.58rem; letter-spacing: 0.03em; }
+    .pcard__hcp { display: none; }
+    .pcard__body { padding: 0.6rem 0.6rem 0.7rem; }
+    .pcard__stat-v { font-size: 1.15rem; }
+    .pcard__stat + .pcard__stat { padding-left: 0.45rem; margin-left: 0.45rem; }
+  }
+</style>

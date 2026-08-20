@@ -212,6 +212,51 @@ converts HEIC/PNG) into `public/photos/<year>/<event>/`, then append records to
 (the scoreboard, trophy shots, clear group shots); leave anything you can't verify
 in the main gallery rather than guessing an attribution.
 
+## Player portraits (`public/players/`) — photo-first Players pages
+
+Players are presented photo-first: a **wall of faces** at the top of `/players`
+and a **trading-card header** at the top of every profile. Both are fed by one
+convention — **the filename is the wiring**.
+
+- Drop a portrait at **`public/players/<player-id>.jpg`** (the `id`/`slug` from
+  `players.json`) and it replaces that player's placeholder on the next build.
+  No JSON to edit, no component to touch. `.jpeg`/`.png`/`.webp`/`.avif` also
+  resolve, in that preference order after `.jpg`.
+- **`src/lib/portraits.js`** reads the folder at build time (`fs.readdirSync`,
+  path resolved off `import.meta.url` so it holds wherever the build runs) and
+  exposes `playerPortrait(id)`, `playersMissingPortraits()`, `playerInitials()`
+  and `portraitSun(id)`. It also `console.info`s the still-missing ids on every
+  build — that's the "who still needs a photo" list.
+- **`PlayerPortrait.astro`** renders the photo *or* the placeholder in the same
+  **4:5** frame, so a dropped-in file lands exactly where the placeholder sat.
+  The placeholder is a miniature of the sunset banner — orange sky, navy dune,
+  initials in Fraunces — with the sun position and one of three dune silhouettes
+  chosen deterministically off the player id, so the photo-less tiles read as a
+  matched set rather than as broken images. **It is a designed state, not a gap:
+  don't replace it with a grey avatar.**
+- **`PlayerCard.astro`** is the wall tile: portrait, then a **team-colour gutter**
+  (crest in a white chip + tournament handicap — the scorebug's centre-gutter
+  idea turned on its side), then name, nickname and two headline numbers (career
+  points in gold, win rate). Rookies get the gold **ROOKIE** pill on the photo
+  and a navy "Debuts <year>" gutter; the Champion Golfer gets a gold crown.
+  Two-up on phones, where the gutter drops the handicap so the team name fits.
+- **Profile header** (`.tcard` in `players/[slug].astro`) is the same object at
+  reading size: team bar across the top, portrait filling the left column, then
+  name / nickname / **team history** (one row per appearance, so it grows by
+  itself) / pills, with the headline numbers along the bottom. The old separate
+  `.tiles` row was folded into it — every number and sub-line survived, it just
+  moved inside the card. Everything else on the profile sits below, unchanged.
+- The portrait cell uses an in-flow `.tcard__ratio` spacer for its 4:5 floor and
+  an absolutely-positioned image on top. An `aspect-ratio` on the cell itself
+  defeats the grid stretch and leaves a gap under the photo — don't "simplify"
+  it back. Likewise `.pportrait` needs `height:auto`, or the `<img>`'s `height`
+  attribute wins over the aspect ratio.
+- **`scripts/gen_portraits.py`** cuts the two portraits that only exist as album
+  frames (Tom Brunskill from `sg26-11`, Michael Herring from `sg26-15`) down to
+  4:5 head-and-torso. Crop boxes are fractions of the source, so they survive a
+  re-export. Everyone else's portrait is expected to be dropped in by hand;
+  `public/players/README.md` is the note for the owner on how.
+
 ## Power Rankings & GHIN check-ins (`data/handicap_snapshots.json`)
 
 A living form guide between trips, driven by GHIN handicap check-ins the owner
@@ -432,10 +477,15 @@ views it).
     **Draft Guide** (placeholder). No Matches/Stats/Awards until results exist.
   `[id].astro` is a thin wrapper that picks the component so the completed
   frontmatter never runs for an upcoming event.
-- **Players** (`players/index`) — sortable all-players comparison table.
-- **Player profile** (`players/[slug]`) — a **scouting report**: career totals,
+- **Players** (`players/index`) — the **wall of faces** first (a photo card per
+  player, veterans by career points then rookies), then the sortable all-players
+  comparison table under it. The old separate "Confirmed for <year>" rookie grid
+  was removed — rookies are in the wall with their gold ROOKIE pill. See
+  **Player portraits** above.
+- **Player profile** (`players/[slug]`) — a **trading-card header** (portrait,
+  name, nickname, team history, headline numbers) over the **scouting report**:
   format record, best partners, head-to-head vs everyone, handicap + draft-value
-  history with labels, honours, moments, full match log.
+  history with labels, honours, moments, photos, full match log.
 - **Matches / Records** as before. (There is **no Lore page** — it was removed; the
   moments data and each tournament's **Moments tab** remain. Don't re-add `/lore`.)
 
@@ -485,16 +535,21 @@ data/                 JSON source of truth (players, tournaments, matches, draft
                       + photos.json (trip album) + handicap_snapshots.json
 scripts/gen_data.py         regenerates the 6 core files from the source workbook
 scripts/gen_hole_scores.py  regenerates hole_scores.json (holds the raw hole reads)
+scripts/gen_portraits.py    cuts the two album-sourced player portraits to 4:5
 scripts/verify_holes.mjs    reconciles the hole layer (54 checks)
 src/lib/data.js       loads JSON, builds id lookups (+ holesForMatch)
 src/lib/stats.js      ALL derived statistics (build-time), incl. the hole-stat block
+src/lib/portraits.js  build-time scan of public/players/ (portrait or placeholder)
 src/lib/format.js     display-only formatting helpers
 src/layouts/Base.astro   <head>, noindex, nav, footer
 src/components/        Scorebug, MatchRow, MatchSummary, HoleScorecard, TeamLogo,
-                      PhotoGallery (reusable grid + swipeable lightbox), …
-src/pages/            index, tournaments/[id] (tabbed), players/index (comparison),
-                      players/[slug] (scouting report), matches, records
+                      PhotoGallery (reusable grid + swipeable lightbox),
+                      PlayerCard + PlayerPortrait (the Players wall), …
+src/pages/            index, tournaments/[id] (tabbed), players/index (wall +
+                      comparison), players/[slug] (card header + scouting
+                      report), matches, records
 public/logos/         woodpeckers.png, silver-spoons.png (transparent)
+public/players/       <player-id>.jpg portraits — drop one in, it just appears
 public/scorecards/<year>/  original per-match card images (full PNG + thumb JPG)
 public/photos/<year>/<event>/  trip album images (full + -thumb.jpg per photo)
 public/               robots.txt, hero-banner.jpg (home hero), favicon.svg/png, apple-touch-icon.png
@@ -502,5 +557,12 @@ public/               robots.txt, hero-banner.jpg (home hero), favicon.svg/png, 
 
 ## Not done yet
 
-- Not pushed to GitHub. The owner has an empty repo ready and will ask to connect
-  it once happy with the site.
+- **12 of the 14 players have no portrait yet** — they're on the initials
+  placeholder until a photo lands in `public/players/`. Missing: `ben-urwin`,
+  `rupert-pedler`, `chase-hellmers`, `colton-mckivitz`, `anthony-herring`,
+  `steve-urwin`, `scott-benesh`, `alan-lozer`, `ed-nelson`, `miles-honens`,
+  `james-graham`, `tanner-curley`. The build prints the current list every time.
+- **No nicknames on file.** `players.json` has a `nickname` field on every player
+  and both the wall card and the profile header render it when it's set — every
+  one is currently `null`, so nothing shows. Filling them in is a data edit, not
+  a code change. Don't invent them.
