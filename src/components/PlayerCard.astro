@@ -48,7 +48,7 @@ const teamColor = { woodpeckers: 'var(--wp)', 'silver-spoons': 'var(--ss)' }[tea
     {player.nickname && <p class="pcard__nick">“{player.nickname}”</p>}
     <div class="pcard__stats">
       {stats.map((s) => (
-        <div class:list={["pcard__stat", { "is-lead": s.lead }]}>
+        <div class:list={["pcard__stat", { "is-live": s.tone === 'live' }]}>
           <span class="pcard__stat-v tabnums">{s.v}</span>
           <span class="pcard__stat-k">{s.k}</span>
         </div>
@@ -130,7 +130,9 @@ const teamColor = { woodpeckers: 'var(--wp)', 'silver-spoons': 'var(--ss)' }[tea
     display: block; font-family: var(--serif); font-weight: 600;
     font-size: 1.3rem; line-height: 1; color: var(--text);
   }
-  .pcard__stat.is-lead .pcard__stat-v { color: var(--gold); }
+  /* Terracotta marks the number that moves between trips — the career figure
+     beside it stays in ink. Gold is reserved for championship prestige. */
+  .pcard__stat.is-live .pcard__stat-v { color: var(--terra-ink); }
   .pcard__stat-k {
     display: block; margin-top: 0.2rem;
     font-size: 0.58rem; letter-spacing: 0.11em; text-transform: uppercase;

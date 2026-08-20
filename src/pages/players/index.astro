@@ -11,6 +11,17 @@ const rookies = allRookies();
 const prRows = powerRankings().rows;
 const prFor = (id) => prRows.find((r) => r.player.id === id) || null;
 
+// Each card carries one number that is settled and one that moves: a career
+// figure, then the live power ranking. Raw career points deliberately aren't
+// used — the points available change with every edition's format mix, so the
+// total isn't comparable across years the way a win rate is.
+// A player with no GHIN check-in has no rank (or no ranking row at all), which
+// reads as "—" rather than a number that would be a guess.
+const powerStat = (id) => {
+  const rank = prFor(id)?.rank ?? null;
+  return { k: 'Power', v: rank == null ? '—' : `#${rank}`, tone: 'live' };
+};
+
 // The wall: everyone who has played, ordered by career points (same order the
 // table opens in), then the rookies confirmed for the next Annual.
 const veteranCards = rows.map((r) => {
@@ -24,12 +35,13 @@ const veteranCards = rows.map((r) => {
     isChampion: Boolean(title),
     championYear: title?.tournament.year ?? null,
     stats: [
-      { k: 'Points', v: num(r.pointsEarned), lead: true },
       { k: 'Win rate', v: pctText(r.matchPct) },
+      powerStat(r.player.id),
     ],
   };
 });
 
+// A rookie has no career number yet, so their handicap index stands in for it.
 const rookieCards = rookies.map((p) => {
   const pr = prFor(p.id);
   const year = tournamentById[(p.confirmedFor || [])[0]]?.year ?? null;
@@ -37,7 +49,10 @@ const rookieCards = rookies.map((p) => {
     player: p,
     isRookie: true,
     rookieYear: year,
-    stats: [{ k: 'Handicap index', v: pr?.hasData ? String(pr.index) : 'TBC' }],
+    stats: [
+      { k: 'Index', v: pr?.hasData ? String(pr.index) : '—' },
+      powerStat(p.id),
+    ],
   };
 });
 

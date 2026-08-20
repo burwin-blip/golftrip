@@ -236,8 +236,16 @@ convention — **the filename is the wiring**.
   don't replace it with a grey avatar.**
 - **`PlayerCard.astro`** is the wall tile: portrait, then a **team-colour gutter**
   (crest in a white chip + tournament handicap — the scorebug's centre-gutter
-  idea turned on its side), then name, nickname and two headline numbers (career
-  points in gold, win rate). Rookies get the gold **ROOKIE** pill on the photo
+  idea turned on its side), then name, nickname and **two headline numbers: one
+  settled, one live**. Win rate (career) sits in ink; the **power ranking**
+  (`powerRankings().rows` → `rank`) sits beside it in terracotta, the accent for
+  things that move between trips. Rookies swap the career cell for their handicap
+  index. A player with no GHIN check-in has `rank: null` — or no ranking row at
+  all — and shows **"—"**, never a guessed number.
+  **Career points are deliberately NOT on the card**: points available change with
+  each edition's format mix, so a raw career total isn't comparable across years
+  the way a win rate is. (The full points columns live in the table below, where
+  `Pt %` carries its own denominator.) Rookies get the gold **ROOKIE** pill on the photo
   and a navy "Debuts <year>" gutter; the Champion Golfer gets a gold crown.
   Two-up on phones, where the gutter drops the handicap so the team name fits.
 - **Profile header** (`.tcard` in `players/[slug].astro`) is the same object at
