@@ -265,6 +265,83 @@ convention — **the filename is the wiring**.
   re-export. Everyone else's portrait is expected to be dropped in by hand;
   `public/players/README.md` is the note for the owner on how.
 
+## The Trip hub (`data/trip-2027.json`) — the lead-up page
+
+An upcoming event's page is the one everyone checks *before* the trip, so it
+carries a **Trip** tab: the official programme. Tabs are Overview · **Trip** ·
+Draft Pool · Draft Guide (the Trip tab only appears when a planner file exists).
+
+### The planner file — this is the one the owner edits
+`data/trip-<year>.json` is a **single JSON object**, hand-edited the same way as
+the handicap check-ins (often from a phone via the GitHub web editor, which
+auto-deploys). Loaded and validated in `src/lib/data.js` → `validateTrip()`;
+read with **`tripFor(tournamentId)`**.
+
+**Everything is optional.** A missing section doesn't render; a `null` value
+renders as a deliberate **TBA**. That is the whole design goal — the page has to
+look finished on day one with nothing booked, and fill in as things get locked.
+If anything is malformed the **build fails with a message naming the exact
+field** (`costs.items[1] ("Golf") → "amount" must be text in quotes…`).
+
+```jsonc
+{
+  "tournamentId": "duel-in-the-desert-2027",   // must exist in tournaments.json
+  "utcOffset": "-07:00",                       // the VENUE's offset (see countdown)
+  "travel": {
+    "landingWindow": "Be on the ground by Thursday afternoon…",
+    "note": "PSP is closest, but the fares are often worse than LAX…",
+    "airports": [ { "code": "PSP", "name": "…", "drive": "35 min", "note": "…" } ],
+    "address": { "area": "Indio, California", "line": null, "note": "…" }
+  },
+  "courses":   [ { "round": "Round 1", "date": "2027-03-26", "name": null,
+                   "location": null, "url": null, "format": null, "note": null } ],
+  "itinerary": [ { "date": "2027-03-25", "title": "Arrival", "items": [
+                   { "time": null, "title": "The Draft", "detail": "…",
+                     "kind": "draft", "tba": true } ] } ],
+  "costs":     { "note": "…", "items": [ { "label": "Golf", "amount": null,
+                   "per": "person", "due": null, "note": "…" } ] },
+  "keyDates":  [ { "label": "Deposits due", "date": null, "note": "…" } ]
+}
+```
+
+Field notes:
+- **`courses[].name: null`** → a styled **"Course TBA — being scouted"** card, so
+  the rota looks intentional before anything is booked. `url` must be a full
+  `https://…` and renders as a "Course website ↗" link.
+- **`itinerary[].items[].kind`** is one of `golf` · `draft` · `awards` ·
+  `travel` · `social`, and drives the row's treatment. **`draft` gets the gold**
+  — it's the pre-trip main event. `"tba": true` adds a small TBA pill.
+- **`costs.items[].amount` is TEXT, not a number** (`"US$450"`, `"~$400 pp"`),
+  deliberately: the owner writes whatever's true without a currency or rounding
+  argument, and `null` means TBA. `due` is that line's payment deadline.
+- **`keyDates`**: the timeline renders **dated** entries chronologically; entries
+  still on `date: null` fall to the tail as a dimmed **"Not set"** node, so the
+  four things everyone asks about are all visible without inventing a date. The
+  trip itself is added automatically from `tournaments.json` — never hardcode it.
+
+### Not duplicated in the planner (single source of truth)
+- **Dates and location** come from `tournaments.json` (`startDate` / `endDate` /
+  `location`), so the countdown, the itinerary headings and the rest of the site
+  can't disagree. **Weekday names are always derived** (`weekday()` in
+  `format.js`) — never hand-typed. (March 25, 2027 is a **Thursday**.)
+- **Accommodation** stays in `tournaments.json` — it's written by
+  `scripts/gen_data.py`, so moving it would fight the generator. The Trip tab
+  renders it *inside* "Getting there" so a bed and how to reach it read together.
+- **The field size** is computed by `draftPoolFor(tid)`.
+
+### The countdown (`TripCountdown.astro`)
+Sits at the top of the **Overview**. Three states: the big day count, **"It's on"**
+while the trip is running, and it **removes itself** once the trip is over.
+Rendered at build time so it's right without JS, then corrected by a script that
+ticks each minute. The flip points are anchored to the **venue's** clock via
+`utcOffset` — half the field is in Australia and would otherwise see "It's on"
+most of a day early. It reuses the clubhouse-green band the home page already
+uses for "what's next".
+
+### Adding 2028
+Drop in `data/trip-2028.json` with its own `tournamentId`, import it in
+`data.js` and add it to the `trips` array. No component changes.
+
 ## Power Rankings & GHIN check-ins (`data/handicap_snapshots.json`)
 
 A living form guide between trips, driven by GHIN handicap check-ins the owner
@@ -480,9 +557,11 @@ views it).
     hole-in-one story lives in the Moments tab) — see the `isShotOfTournament` filter
     in `TournamentCompleted.astro`. A **Photos** tab appears when the event has any
     photos (see **Trip photos** below).
-  - **upcoming** → `TournamentUpcoming.astro`: only **Overview** (flyer + dates +
-    "Teams/Captains to be announced"), **Draft Pool** (eligible players → profiles),
-    **Draft Guide** (placeholder). No Matches/Stats/Awards until results exist.
+  - **upcoming** → `TournamentUpcoming.astro`: **Overview** (countdown band + flyer
+    + dates + "Teams/Captains to be announced"), **Trip** (the programme —
+    `TripHub.astro`; see **The Trip hub** above), **Draft Pool** (eligible players
+    → profiles), **Draft Guide** (placeholder). No Matches/Stats/Awards until
+    results exist.
   `[id].astro` is a thin wrapper that picks the component so the completed
   frontmatter never runs for an upcoming event.
 - **Players** (`players/index`) — the **wall of faces** first (a photo card per
@@ -541,6 +620,7 @@ npm run preview  # serve the built /dist
 data/                 JSON source of truth (players, tournaments, matches, drafts,
                       moments, awards) + hole_scores.json + scorecard_images.json
                       + photos.json (trip album) + handicap_snapshots.json
+                      + trip-<year>.json (the lead-up programme for an upcoming trip)
 scripts/gen_data.py         regenerates the 6 core files from the source workbook
 scripts/gen_hole_scores.py  regenerates hole_scores.json (holds the raw hole reads)
 scripts/gen_portraits.py    cuts the two album-sourced player portraits to 4:5
@@ -552,7 +632,8 @@ src/lib/format.js     display-only formatting helpers
 src/layouts/Base.astro   <head>, noindex, nav, footer
 src/components/        Scorebug, MatchRow, MatchSummary, HoleScorecard, TeamLogo,
                       PhotoGallery (reusable grid + swipeable lightbox),
-                      PlayerCard + PlayerPortrait (the Players wall), …
+                      PlayerCard + PlayerPortrait (the Players wall),
+                      TripHub + TripCountdown (the upcoming-trip programme), …
 src/pages/            index, tournaments/[id] (tabbed), players/index (wall +
                       comparison), players/[slug] (card header + scouting
                       report), matches, records

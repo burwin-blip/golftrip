@@ -1,0 +1,125 @@
+---
+// Days until the next trip, in the clubhouse-green band the site already uses
+// for "what's next". Three states:
+//   soon  — the big number and "days to go"
+//   live  — the trip is on right now: the number gives way to "It's on"
+//   done  — the trip is over: the band removes itself entirely
+//
+// Rendered once at build time so it's right for anyone without JS, then kept
+// honest by a ticking script. The flip points are anchored to the VENUE's clock
+// (utcOffset), not the reader's — half this field is in Australia, and without
+// that anchor they'd see "It's on" most of a day early.
+import { weekday, dayMonth } from '../lib/format.js';
+
+const { startDate, endDate, location, utcOffset = '-07:00' } = Astro.props;
+
+const startMs = Date.parse(`${startDate}T00:00:00${utcOffset}`);
+const endMs = Date.parse(`${endDate}T23:59:59${utcOffset}`);
+const now = Date.now();
+
+const isDone = now > endMs;
+const isLive = !isDone && now >= startMs;
+const days = Math.max(0, Math.ceil((startMs - now) / 86_400_000));
+
+const year = new Date(endDate + 'T00:00:00').getFullYear();
+const dateLine = `${weekday(startDate)} ${dayMonth(startDate)} – ${weekday(endDate)} ${dayMonth(endDate)} ${year}`;
+---
+{!isDone && (
+  <aside class:list={["cdown", { "is-live": isLive }]} id="trip-countdown" data-start={startMs} data-end={endMs}>
+    <div class="cdown__lead">
+      <p class="eyebrow">The countdown</p>
+      {location && <p class="cdown__dest">{location}</p>}
+      <p class="cdown__dates">{dateLine}</p>
+    </div>
+
+    <div class="cdown__clock">
+      <span class="cdown__n tabnums" data-days>{days}</span>
+      <span class="cdown__k" data-days-label>{days === 1 ? 'day to go' : 'days to go'}</span>
+    </div>
+
+    <p class="cdown__live">It’s on</p>
+  </aside>
+)}
+
+<style>
+  .cdown {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: clamp(1rem, 4vw, 2.5rem);
+    padding: clamp(1.2rem, 3.5vw, 2rem) clamp(1.3rem, 4vw, 2.4rem);
+    border-radius: var(--r-lg);
+    background: var(--green-900);
+    color: var(--green-ink);
+    box-shadow: var(--shadow-lg);
+  }
+  .cdown .eyebrow { color: var(--gold-line); }
+  .cdown__dest {
+    font-family: var(--serif); font-weight: 600;
+    font-size: clamp(1.5rem, 1.1rem + 2vw, 2.4rem); line-height: 1.04;
+    letter-spacing: -.01em; margin-top: .35rem;
+  }
+  .cdown__dates {
+    font-weight: 700; margin-top: .35rem;
+    font-size: clamp(.85rem, .78rem + .35vw, 1rem);
+    color: color-mix(in srgb, var(--green-ink) 78%, transparent);
+  }
+
+  .cdown__clock { text-align: right; line-height: 1; }
+  .cdown__n {
+    display: block;
+    font-family: var(--serif); font-weight: 600;
+    font-size: clamp(3.6rem, 2rem + 9vw, 7rem);
+    line-height: .84; letter-spacing: -.03em;
+    color: var(--gold-line);
+  }
+  .cdown__k {
+    display: block; margin-top: .5rem;
+    font-size: .68rem; letter-spacing: .18em; text-transform: uppercase; font-weight: 700;
+    color: color-mix(in srgb, var(--green-ink) 68%, transparent);
+  }
+
+  /* The trip is happening. The number has nothing left to say. */
+  .cdown__live {
+    display: none;
+    font-family: var(--serif); font-weight: 600; font-style: italic;
+    font-size: clamp(2.6rem, 1.6rem + 6vw, 5rem);
+    line-height: .9; letter-spacing: -.02em;
+    color: var(--terra-bright); text-align: right;
+  }
+  .cdown.is-live .cdown__clock { display: none; }
+  .cdown.is-live .cdown__live { display: block; }
+
+  @media (max-width: 620px) {
+    .cdown { grid-template-columns: 1fr; gap: .9rem; }
+    .cdown__clock, .cdown__live { text-align: left; }
+    .cdown__n { font-size: clamp(3.4rem, 18vw, 5.5rem); }
+  }
+</style>
+
+<script is:inline>
+  (() => {
+    const el = document.getElementById('trip-countdown');
+    if (!el) return;
+    const start = Number(el.dataset.start);
+    const end = Number(el.dataset.end);
+    const nEl = el.querySelector('[data-days]');
+    const kEl = el.querySelector('[data-days-label]');
+
+    const tick = () => {
+      const now = Date.now();
+      if (now > end) { el.remove(); return false; }      // trip's done — band goes away
+      if (now >= start) { el.classList.add('is-live'); return true; }
+      el.classList.remove('is-live');
+      const days = Math.max(0, Math.ceil((start - now) / 86400000));
+      if (nEl) nEl.textContent = String(days);
+      if (kEl) kEl.textContent = days === 1 ? 'day to go' : 'days to go';
+      return true;
+    };
+
+    if (tick()) {
+      // A minute is plenty — nothing here changes faster than a day.
+      const id = setInterval(() => { if (!tick()) clearInterval(id); }, 60000);
+    }
+  })();
+</script>

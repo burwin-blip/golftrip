@@ -9,6 +9,7 @@ import awards from '../../data/awards.json';
 import holeScores from '../../data/hole_scores.json';
 import photos from '../../data/photos.json';
 import rawHandicapSnapshots from '../../data/handicap_snapshots.json';
+import rawTrip2027 from '../../data/trip-2027.json';
 
 // ---------------------------------------------------------------------------
 // GHIN handicap check-ins (data/handicap_snapshots.json) are HAND-EDITED, often
@@ -49,7 +50,126 @@ const handicapSnapshots = validateHandicapSnapshots(
   new Set(players.map((p) => p.id)),
 );
 
-export { players, tournaments, matches, drafts, moments, awards, holeScores, photos, handicapSnapshots };
+// ---------------------------------------------------------------------------
+// TRIP PLANNERS (data/trip-<year>.json) — the lead-up detail for an upcoming
+// event: itinerary, courses, travel, costs, key dates. Hand-edited the same way
+// as the handicap check-ins (often from a phone), so it gets the same defensive
+// treatment: validate at build time and FAIL LOUDLY naming the offending field
+// rather than shipping a broken Trip tab.
+//
+// Everything is optional. A missing section simply doesn't render; a null value
+// renders as "TBA". That's the point — the page is meant to look deliberate on
+// day one, with nothing booked.
+// ---------------------------------------------------------------------------
+const ITINERARY_KINDS = ['golf', 'draft', 'awards', 'travel', 'social'];
+
+function validateTrip(trip, file, validTournamentIds) {
+  const where = `data/${file}`;
+  const isDate = (s) => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s) && !Number.isNaN(Date.parse(s));
+  const bad = (msg) => { throw new Error(`${where}: ${msg}`); };
+  // Optional string: absent, null or text — anything else is a mistake worth naming.
+  const str = (v, at) => {
+    if (v === undefined || v === null) return null;
+    if (typeof v !== 'string') bad(`${at} must be text in quotes (or null for "not known yet"), got ${JSON.stringify(v)}.`);
+    return v;
+  };
+  const optDate = (v, at) => {
+    if (v === undefined || v === null) return null;
+    if (!isDate(v)) bad(`${at} must be a date like "2027-03-25" (or null for "not set yet"), got ${JSON.stringify(v)}.`);
+    return v;
+  };
+  const arr = (v, at) => {
+    if (v === undefined || v === null) return [];
+    if (!Array.isArray(v)) bad(`${at} must be a JSON array [ ... ], got ${typeof v}.`);
+    return v;
+  };
+
+  if (trip === null || typeof trip !== 'object' || Array.isArray(trip)) {
+    bad('the file must be a JSON object { ... }.');
+  }
+  if (!trip.tournamentId) bad('missing "tournamentId" (e.g. "duel-in-the-desert-2027").');
+  if (!validTournamentIds.has(trip.tournamentId)) {
+    bad(`unknown "tournamentId" — "${trip.tournamentId}" is not in data/tournaments.json.`);
+  }
+  if (trip.utcOffset !== undefined && trip.utcOffset !== null && !/^[+-]\d{2}:\d{2}$/.test(trip.utcOffset)) {
+    bad(`"utcOffset" must look like "-07:00" (the venue's offset — it decides when the countdown flips to IT'S ON), got ${JSON.stringify(trip.utcOffset)}.`);
+  }
+
+  arr(trip.courses, '"courses"').forEach((c, i) => {
+    const at = `courses[${i}]` + (c?.round ? ` ("${c.round}")` : '');
+    if (c === null || typeof c !== 'object' || Array.isArray(c)) bad(`${at} must be an object { "round": "Round 1", "name": null, ... }.`);
+    ['round', 'name', 'location', 'url', 'format', 'note'].forEach((k) => str(c[k], `${at} → "${k}"`));
+    optDate(c.date, `${at} → "date"`);
+    if (c.url && !/^https?:\/\//.test(c.url)) bad(`${at} → "url" must start with http:// or https://, got ${JSON.stringify(c.url)}.`);
+  });
+
+  arr(trip.itinerary, '"itinerary"').forEach((d, i) => {
+    const at = `itinerary[${i}]` + (d?.date ? ` ("${d.date}")` : '');
+    if (d === null || typeof d !== 'object' || Array.isArray(d)) bad(`${at} must be an object { "date": "2027-03-25", "items": [ ... ] }.`);
+    if (!d.date) bad(`${at} is missing "date" (a day needs one, e.g. "2027-03-25").`);
+    optDate(d.date, `${at} → "date"`);
+    str(d.title, `${at} → "title"`);
+    arr(d.items, `${at} → "items"`).forEach((it, j) => {
+      const iat = `${at} → items[${j}]` + (it?.title ? ` ("${it.title}")` : '');
+      if (it === null || typeof it !== 'object' || Array.isArray(it)) bad(`${iat} must be an object { "title": "Round 1", ... }.`);
+      if (!it.title) bad(`${iat} is missing "title".`);
+      ['time', 'title', 'detail'].forEach((k) => str(it[k], `${iat} → "${k}"`));
+      if (it.kind !== undefined && it.kind !== null && !ITINERARY_KINDS.includes(it.kind)) {
+        bad(`${iat} → "kind" must be one of ${ITINERARY_KINDS.map((k) => `"${k}"`).join(', ')}, got ${JSON.stringify(it.kind)}.`);
+      }
+      if (it.tba !== undefined && it.tba !== null && typeof it.tba !== 'boolean') {
+        bad(`${iat} → "tba" must be true or false (no quotes), got ${JSON.stringify(it.tba)}.`);
+      }
+    });
+  });
+
+  if (trip.costs !== undefined && trip.costs !== null) {
+    if (typeof trip.costs !== 'object' || Array.isArray(trip.costs)) bad('"costs" must be an object { "note": ..., "items": [ ... ] }.');
+    str(trip.costs.note, '"costs" → "note"');
+    arr(trip.costs.items, '"costs" → "items"').forEach((c, i) => {
+      const at = `costs.items[${i}]` + (c?.label ? ` ("${c.label}")` : '');
+      if (c === null || typeof c !== 'object' || Array.isArray(c)) bad(`${at} must be an object { "label": "Golf", "amount": null, ... }.`);
+      if (!c.label) bad(`${at} is missing "label".`);
+      // `amount` is deliberately TEXT ("US$450", "~$400 pp"), so the owner writes
+      // whatever's true without a currency or rounding argument. null = TBA.
+      ['label', 'amount', 'per', 'note'].forEach((k) => str(c[k], `${at} → "${k}"`));
+      optDate(c.due, `${at} → "due"`);   // the payment deadline for this line
+    });
+  }
+
+  arr(trip.keyDates, '"keyDates"').forEach((k, i) => {
+    const at = `keyDates[${i}]` + (k?.label ? ` ("${k.label}")` : '');
+    if (k === null || typeof k !== 'object' || Array.isArray(k)) bad(`${at} must be an object { "label": "Deposits due", "date": null, ... }.`);
+    if (!k.label) bad(`${at} is missing "label".`);
+    str(k.note, `${at} → "note"`);
+    optDate(k.date, `${at} → "date"`);
+  });
+
+  if (trip.travel !== undefined && trip.travel !== null) {
+    if (typeof trip.travel !== 'object' || Array.isArray(trip.travel)) bad('"travel" must be an object.');
+    ['landingWindow', 'note'].forEach((k) => str(trip.travel[k], `"travel" → "${k}"`));
+    arr(trip.travel.airports, '"travel" → "airports"').forEach((a, i) => {
+      const at = `travel.airports[${i}]` + (a?.code ? ` ("${a.code}")` : '');
+      if (a === null || typeof a !== 'object' || Array.isArray(a)) bad(`${at} must be an object { "code": "PSP", "name": ..., "drive": ... }.`);
+      if (!a.code) bad(`${at} is missing "code" (e.g. "PSP").`);
+      ['code', 'name', 'drive', 'note'].forEach((k) => str(a[k], `${at} → "${k}"`));
+    });
+    if (trip.travel.address !== undefined && trip.travel.address !== null) {
+      ['area', 'line', 'note'].forEach((k) => str(trip.travel.address[k], `"travel" → "address" → "${k}"`));
+    }
+  }
+  return trip;
+}
+
+const validTournamentIds = new Set(tournaments.map((t) => t.id));
+// One planner per upcoming trip. To add 2028: drop in data/trip-2028.json with
+// its own tournamentId, import it above and add it to this list — nothing else.
+const trips = [validateTrip(rawTrip2027, 'trip-2027.json', validTournamentIds)];
+
+/** The trip planner for a tournament, or null when there isn't one. */
+export const tripFor = (tid) => trips.find((t) => t.tournamentId === tid) ?? null;
+
+export { players, tournaments, matches, drafts, moments, awards, holeScores, photos, handicapSnapshots, trips };
 
 // Hole rows for one match (by match id), sorted by hole. Individual-score rows
 // only (excludes scramble team rows) unless includeTeam is set.

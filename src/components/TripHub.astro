@@ -1,0 +1,391 @@
+---
+// THE TRIP TAB — the official program for an upcoming event.
+//
+// Everything here renders from data/trip-<year>.json (see tripFor() in
+// src/lib/data.js) plus the tournament's own dates and accommodation. Nothing
+// is hardcoded, and every field is optional: a section with no data doesn't
+// render, and a null value renders as a deliberate TBA rather than a blank.
+// That's the point — the page has to look finished on day one, with nothing
+// booked, and fill in as the trip comes together.
+import { dateRange, weekday, dayMonth, longDate } from '../lib/format.js';
+
+const { t, trip, pool = [] } = Astro.props;
+const flyer = t.flyer || {};
+const acc = t.accommodation || null;
+
+const courses = trip?.courses ?? [];
+const itinerary = [...(trip?.itinerary ?? [])].sort((a, b) => a.date.localeCompare(b.date));
+const travel = trip?.travel ?? null;
+const airports = travel?.airports ?? [];
+const address = travel?.address ?? null;
+const costs = trip?.costs ?? null;
+const costItems = costs?.items ?? [];
+
+// KEY DATES — the trip itself is always the anchor (read off the tournament, so
+// it can never disagree with the rest of the site). Everything the owner has
+// actually dated sorts in around it; anything still undated falls to the tail as
+// an explicit "to be set" rather than being given an invented date.
+const anchored = [
+  ...(trip?.keyDates ?? []).map((k) => ({ ...k })),
+  { label: 'The trip', date: t.startDate, note: dateRange(t.startDate, t.endDate), isTrip: true },
+];
+const datedKeys = anchored.filter((k) => k.date).sort((a, b) => a.date.localeCompare(b.date));
+const undatedKeys = anchored.filter((k) => !k.date);
+
+const KIND_ICON = { golf: '⛳', draft: '🎯', awards: '🏆', travel: '✈', social: '🍻' };
+---
+<div class="wrap">
+
+  <!-- PROGRAM MASTHEAD — the poster leads, the way a program cover should -->
+  <div class="prog">
+    {flyer.display && (
+      <a class="prog__poster" href={flyer.full} data-full={flyer.full} aria-label={`View the ${t.name} poster full size`}>
+        <img src={flyer.display} width="480" height="680" alt={`${t.name} — ${t.location}, ${dateRange(t.startDate, t.endDate)}`} loading="eager" decoding="async" />
+        <span class="prog__cue">⤢ Enlarge</span>
+      </a>
+    )}
+    <div class="prog__body">
+      <p class="eyebrow gold">The programme</p>
+      <h2 class="prog__title">Everything you need for the desert</h2>
+      <p class="muted prog__lede">The courses, the running order, how to get there and what it costs — updated as each piece gets locked in. Anything still marked TBA is genuinely still open.</p>
+      <div class="prog__facts">
+        <div><span class="prog__k">When</span><b>{dateRange(t.startDate, t.endDate)}</b></div>
+        <div><span class="prog__k">Where</span><b>{t.location}</b></div>
+        {address?.area && <div><span class="prog__k">Basecamp</span><b>{address.area}</b></div>}
+        <div><span class="prog__k">The field</span><b>{pool.length} in the pool</b></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- COURSES -->
+  {courses.length > 0 && (
+    <section class="tsec">
+      <div class="section-head"><div><p class="eyebrow gold">The rota</p><h2>The courses</h2></div><span class="faint">{courses.filter((c) => c.name).length} of {courses.length} locked in</span></div>
+      <div class="grid course-grid">
+        {courses.map((c) => (
+          <div class:list={["card card--pad course", { "course--tba": !c.name }]}>
+            <div class="course__head">
+              {c.round && <span class="course__round">{c.round}</span>}
+              {c.date && <span class="course__day">{weekday(c.date, 'short')} {dayMonth(c.date)}</span>}
+            </div>
+            <h3 class="course__name">{c.name || 'Course TBA'}</h3>
+            <p class="course__loc">{c.name ? (c.location || 'Location to come') : 'Being scouted'}</p>
+            {c.format && <span class="pill course__fmt">{c.format}</span>}
+            {c.note && <p class="course__note">{c.note}</p>}
+            {c.url && <a class="course__link" href={c.url} target="_blank" rel="noopener">Course website <span aria-hidden="true">↗</span></a>}
+          </div>
+        ))}
+      </div>
+    </section>
+  )}
+
+  <!-- ITINERARY -->
+  {itinerary.length > 0 && (
+    <section class="tsec">
+      <div class="section-head"><div><p class="eyebrow gold">Running order</p><h2>The itinerary</h2></div><span class="faint">{itinerary.length} days</span></div>
+      <div class="itin">
+        {itinerary.map((day) => (
+          <div class="itin__day">
+            <div class="itin__when">
+              <span class="itin__dow">{weekday(day.date)}</span>
+              <span class="itin__date">{dayMonth(day.date)}</span>
+              {day.title && <span class="itin__label">{day.title}</span>}
+            </div>
+            <ul class="itin__items">
+              {(day.items ?? []).map((it) => (
+                <li class:list={["itin__item", `is-${it.kind || 'plain'}`]}>
+                  <span class="itin__ic" aria-hidden="true">{KIND_ICON[it.kind] || '·'}</span>
+                  <div class="itin__body">
+                    <div class="itin__line">
+                      <b class="itin__title">{it.title}</b>
+                      {it.time ? <span class="itin__time tabnums">{it.time}</span> : it.tba && <span class="itin__tba">TBA</span>}
+                    </div>
+                    {it.detail && <p class="itin__detail">{it.detail}</p>}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+    </section>
+  )}
+
+  <!-- GETTING THERE (+ basecamp) -->
+  {(travel || acc) && (
+    <section class="tsec">
+      <div class="section-head"><div><p class="eyebrow gold">Logistics</p><h2>Getting there</h2></div></div>
+
+      {travel?.landingWindow && (
+        <p class="landing"><span class="landing__k">Landing window</span>{travel.landingWindow}</p>
+      )}
+
+      {airports.length > 0 && (
+        <div class="grid air-grid">
+          {airports.map((a, i) => (
+            <div class:list={["card card--pad air", { "air--best": i === 0 }]}>
+              <div class="air__head">
+                <span class="air__code">{a.code}</span>
+                {a.drive && <span class="air__drive">{a.drive} <span class="faint">drive</span></span>}
+              </div>
+              {a.name && <p class="air__name">{a.name}</p>}
+              {a.note && <p class="air__note">{a.note}</p>}
+            </div>
+          ))}
+        </div>
+      )}
+      {travel?.note && <p class="muted travel-note">{travel.note}</p>}
+
+      {acc && (
+        <div class="basecamp-wrap">
+          <div class="section-head" style="margin-top:clamp(1.8rem,4vw,2.6rem)">
+            <div><p class="eyebrow">Basecamp</p><h3 class="bc-h">{acc.name}</h3></div>
+            {address?.area && <span class="faint">{address.area}</span>}
+          </div>
+          <div class:list={["card card--pad basecamp", { "basecamp--has-photos": acc.photos && acc.photos.length > 0 }]}>
+            {acc.photos && acc.photos.length > 0 && (
+              <div class="basecamp__photos">
+                <a class="bc-hero" href={acc.photos[0].full} data-full={acc.photos[0].full} aria-label={`View full size — ${acc.photos[0].alt}`}>
+                  <img src={acc.photos[0].full} alt={acc.photos[0].alt} loading="lazy" decoding="async" />
+                  <span class="bc-zoom" aria-hidden="true">⤢ View</span>
+                </a>
+                {acc.photos.length > 1 && (
+                  <div class="bc-strip">
+                    {acc.photos.slice(1).map((p) => (
+                      <a class="bc-thumb" href={p.full} data-full={p.full} aria-label={`View full size — ${p.alt}`}>
+                        <img src={p.thumb} alt={p.alt} loading="lazy" decoding="async" />
+                      </a>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+            <div class="basecamp__main">
+              <p class="basecamp__type">{acc.type}</p>
+              <div class="basecamp__stats">
+                <div><b>★&nbsp;{acc.rating}</b><span>rating</span></div>
+                <div><b>{acc.bedrooms}</b><span>bedrooms</span></div>
+                <div><b>{acc.beds}</b><span>beds</span></div>
+                <div><b>{acc.baths}</b><span>baths</span></div>
+              </div>
+              {address && (
+                <p class="bc-addr">
+                  <span class="bc-addr__k">Address</span>
+                  {address.line || <span class="itin__tba">TBA</span>}
+                  {address.note && <span class="bc-addr__note">{address.note}</span>}
+                </p>
+              )}
+              <a class="btn-airbnb" href={acc.url} target="_blank" rel="noopener">View on Airbnb <span aria-hidden="true">↗</span></a>
+            </div>
+          </div>
+        </div>
+      )}
+    </section>
+  )}
+
+  <!-- COSTS -->
+  {costItems.length > 0 && (
+    <section class="tsec">
+      <div class="section-head"><div><p class="eyebrow gold">Budget</p><h2>The damage</h2></div><span class="faint">a checklist, not an invoice</span></div>
+      <div class="card damage">
+        {costItems.map((c) => (
+          <div class="damage__row">
+            <div class="damage__what">
+              <b>{c.label}</b>
+              {c.note && <span class="damage__note">{c.note}</span>}
+            </div>
+            <div class="damage__due">
+              <span class="damage__k">Due</span>
+              {c.due ? <b class="tabnums">{longDate(c.due)}</b> : <span class="itin__tba">TBA</span>}
+            </div>
+            <div class="damage__amt">
+              {c.amount
+                ? <Fragment><b class="tabnums">{c.amount}</b>{c.per && <span class="damage__per">per {c.per}</span>}</Fragment>
+                : <span class="itin__tba">TBA</span>}
+            </div>
+          </div>
+        ))}
+      </div>
+      {costs?.note && <p class="muted travel-note">{costs.note}</p>}
+    </section>
+  )}
+
+  <!-- KEY DATES -->
+  {(datedKeys.length > 0 || undatedKeys.length > 0) && (
+    <section class="tsec">
+      <div class="section-head"><div><p class="eyebrow gold">Diary</p><h2>Key dates</h2></div></div>
+      <ol class="timeline">
+        {datedKeys.map((k) => (
+          <li class:list={["timeline__node", { "is-trip": k.isTrip }]}>
+            <span class="timeline__dot" aria-hidden="true"></span>
+            <span class="timeline__date tabnums">{longDate(k.date)}</span>
+            <span class="timeline__label">{k.label}</span>
+            {k.note && <span class="timeline__note">{k.note}</span>}
+          </li>
+        ))}
+        {undatedKeys.map((k) => (
+          <li class="timeline__node is-tba">
+            <span class="timeline__dot" aria-hidden="true"></span>
+            <span class="timeline__date"><span class="itin__tba">Not set</span></span>
+            <span class="timeline__label">{k.label}</span>
+            {k.note && <span class="timeline__note">{k.note}</span>}
+          </li>
+        ))}
+      </ol>
+    </section>
+  )}
+</div>
+
+<style>
+  .tsec { margin-top: clamp(2.4rem, 6vw, 4rem); }
+  .tsec .section-head { margin-bottom: 1.2rem; }
+
+  /* ---- programme masthead ---- */
+  .prog { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: clamp(1.2rem, 4vw, 2.6rem); align-items: center; }
+  .prog__poster { position: relative; display: block; border-radius: var(--r); overflow: hidden; border: 1px solid var(--line-strong); box-shadow: 0 18px 44px -18px rgba(22,34,27,.5); transition: transform .25s var(--ease), box-shadow .25s var(--ease); }
+  .prog__poster img { display: block; width: clamp(190px, 26vw, 290px); height: auto; }
+  .prog__poster:hover { transform: translateY(-3px) rotate(-.5deg); box-shadow: 0 26px 56px -18px rgba(22,34,27,.55); }
+  .prog__cue { position: absolute; top: .5rem; right: .5rem; padding: .3rem .55rem; font-size: .66rem; font-weight: 700; color: #fff; background: rgba(20,30,24,.62); border-radius: 999px; }
+  .prog__title { font-size: clamp(1.6rem, 1.2rem + 2vw, 2.5rem); margin-top: .3rem; }
+  .prog__lede { margin-top: .7rem; font-size: .95rem; max-width: 56ch; }
+  .prog__facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: .9rem 1.4rem; margin-top: 1.4rem; padding-top: 1.2rem; border-top: 1px solid var(--line); }
+  .prog__facts div { display: flex; flex-direction: column; gap: .2rem; min-width: 0; }
+  .prog__k { font-size: .62rem; letter-spacing: .14em; text-transform: uppercase; font-weight: 700; color: var(--faint); }
+  .prog__facts b { font-family: var(--serif); font-weight: 600; font-size: 1.02rem; line-height: 1.2; }
+
+  /* ---- courses ---- */
+  .course-grid { grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 1rem; }
+  .course { display: flex; flex-direction: column; gap: .45rem; border-top: 3px solid var(--wp); }
+  .course__head { display: flex; align-items: baseline; justify-content: space-between; gap: .6rem; }
+  .course__round { font-size: .64rem; letter-spacing: .14em; text-transform: uppercase; font-weight: 700; color: var(--terra-ink); }
+  .course__day { font-size: .72rem; font-weight: 600; color: var(--faint); }
+  .course__name { font-size: 1.2rem; line-height: 1.1; }
+  .course__loc { font-size: .86rem; color: var(--muted); }
+  .course__fmt { align-self: flex-start; margin-top: .2rem; }
+  .course__note { font-size: .82rem; color: var(--muted); }
+  .course__link { margin-top: auto; padding-top: .5rem; font-size: .78rem; font-weight: 700; color: var(--terra-ink); }
+  .course__link:hover { text-decoration: underline; }
+  /* A course we haven't booked is a designed state, not a hole in the page. */
+  .course--tba { border-top-color: transparent; box-shadow: inset 0 0 0 1px var(--line-strong); background: transparent; }
+  .course--tba .course__name { color: var(--faint); font-style: italic; }
+  .course--tba .course__loc { color: var(--faint); }
+
+  /* ---- itinerary ---- */
+  .itin { display: flex; flex-direction: column; gap: .8rem; }
+  .itin__day { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: clamp(.8rem, 2vw, 1.6rem); align-items: start; background: var(--panel); border-radius: var(--r); padding: clamp(1rem, 2.4vw, 1.3rem); box-shadow: var(--shadow); }
+  .itin__when { display: flex; flex-direction: column; gap: .1rem; }
+  .itin__dow { font-family: var(--serif); font-weight: 600; font-size: 1.25rem; line-height: 1.1; }
+  .itin__date { font-size: .85rem; color: var(--muted); font-weight: 600; }
+  .itin__label { margin-top: .35rem; font-size: .62rem; letter-spacing: .13em; text-transform: uppercase; font-weight: 700; color: var(--faint); }
+  .itin__items { list-style: none; padding: 0; display: flex; flex-direction: column; gap: .5rem; }
+  .itin__item { display: flex; gap: .7rem; align-items: flex-start; padding: .6rem .75rem; border-radius: var(--r-sm); background: var(--ink-2); }
+  .itin__ic { font-size: .95rem; line-height: 1.35; flex: none; }
+  .itin__body { min-width: 0; flex: 1; }
+  .itin__line { display: flex; align-items: baseline; gap: .6rem; flex-wrap: wrap; }
+  .itin__title { font-size: .95rem; }
+  .itin__time { margin-left: auto; font-size: .8rem; font-weight: 700; color: var(--muted); }
+  .itin__tba { font-size: .6rem; letter-spacing: .12em; text-transform: uppercase; font-weight: 700; color: var(--faint); background: var(--panel); padding: .1rem .42rem; border-radius: 999px; box-shadow: inset 0 0 0 1px var(--line-strong); }
+  .itin__detail { font-size: .84rem; color: var(--muted); margin-top: .15rem; }
+  /* The draft is the pre-trip main event — it gets the gold. */
+  .itin__item.is-draft { background: linear-gradient(180deg, var(--gold-soft), color-mix(in srgb, var(--gold-soft) 40%, var(--panel))); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--gold-bright) 42%, transparent); }
+  .itin__item.is-draft .itin__title { font-family: var(--serif); font-size: 1.1rem; color: var(--gold); }
+  .itin__item.is-awards { background: var(--gold-soft); }
+  .itin__item.is-golf { background: var(--wp-soft); }
+
+  /* ---- getting there ---- */
+  .landing { display: flex; flex-wrap: wrap; align-items: baseline; gap: .5rem .8rem; padding: .9rem 1.1rem; border-radius: var(--r-sm); background: var(--terra-soft); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--terra) 26%, transparent); font-size: .92rem; color: var(--text); margin-bottom: 1.2rem; }
+  .landing__k { font-size: .62rem; letter-spacing: .13em; text-transform: uppercase; font-weight: 700; color: var(--terra-ink); }
+  .air-grid { grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 1rem; }
+  .air { display: flex; flex-direction: column; gap: .3rem; }
+  .air--best { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--wp) 34%, transparent), var(--shadow); }
+  .air__head { display: flex; align-items: baseline; justify-content: space-between; gap: .5rem; }
+  .air__code { font-family: var(--serif); font-weight: 600; font-size: 1.7rem; line-height: 1; letter-spacing: .01em; }
+  .air__drive { font-size: .78rem; font-weight: 700; color: var(--muted); }
+  .air__name { font-size: .88rem; font-weight: 600; color: var(--text); }
+  .air__note { font-size: .82rem; color: var(--muted); }
+  .travel-note { margin-top: 1rem; font-size: .9rem; max-width: 68ch; }
+  .bc-h { font-size: clamp(1.4rem, 1.1rem + 1.4vw, 1.9rem); }
+  .bc-addr { display: flex; flex-wrap: wrap; align-items: baseline; gap: .4rem .7rem; margin-top: 1.1rem; font-size: .9rem; font-weight: 600; }
+  .bc-addr__k { font-size: .62rem; letter-spacing: .13em; text-transform: uppercase; font-weight: 700; color: var(--faint); }
+  .bc-addr__note { font-weight: 400; color: var(--muted); font-size: .85rem; }
+
+  /* ---- costs ---- */
+  .damage { overflow: hidden; }
+  .damage__row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: .6rem clamp(1rem, 3vw, 2.4rem); align-items: center; padding: clamp(.9rem, 2.2vw, 1.15rem) clamp(1rem, 3vw, 1.5rem); border-bottom: 1px solid var(--line); }
+  .damage__row:last-child { border-bottom: 0; }
+  .damage__what { display: flex; flex-direction: column; gap: .15rem; min-width: 0; }
+  .damage__what b { font-family: var(--serif); font-weight: 600; font-size: 1.1rem; }
+  .damage__note { font-size: .82rem; color: var(--muted); }
+  .damage__due { display: flex; flex-direction: column; gap: .2rem; align-items: flex-end; text-align: right; }
+  .damage__k { font-size: .58rem; letter-spacing: .13em; text-transform: uppercase; font-weight: 700; color: var(--faint); }
+  .damage__due b { font-size: .84rem; font-weight: 700; }
+  .damage__amt { text-align: right; display: flex; flex-direction: column; gap: .15rem; align-items: flex-end; min-width: 88px; }
+  .damage__amt b { font-family: var(--serif); font-weight: 600; font-size: 1.4rem; line-height: 1; }
+  .damage__per { font-size: .66rem; letter-spacing: .08em; text-transform: uppercase; font-weight: 700; color: var(--faint); }
+
+  /* ---- key dates ---- */
+  .timeline { list-style: none; padding: 0; margin: 0; position: relative; }
+  .timeline::before { content: ''; position: absolute; left: 5px; top: .6rem; bottom: .6rem; width: 2px; background: var(--line-strong); border-radius: 2px; }
+  .timeline__node { position: relative; display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: .2rem 1rem; padding: .75rem 0 .75rem 1.8rem; align-items: baseline; }
+  .timeline__dot { position: absolute; left: 0; top: 1.05rem; width: 12px; height: 12px; border-radius: 50%; background: var(--panel); box-shadow: inset 0 0 0 2px var(--line-strong); }
+  .timeline__date { font-size: .82rem; font-weight: 700; color: var(--muted); }
+  .timeline__label { font-family: var(--serif); font-weight: 600; font-size: 1.05rem; }
+  .timeline__note { grid-column: 2; font-size: .82rem; color: var(--muted); }
+  .timeline__node.is-trip .timeline__dot { background: var(--terra); box-shadow: 0 0 0 4px var(--terra-soft); }
+  .timeline__node.is-trip .timeline__label { color: var(--terra-ink); }
+  .timeline__node.is-tba .timeline__label { color: var(--muted); }
+  .timeline__node.is-tba .timeline__dot { box-shadow: inset 0 0 0 2px var(--line); }
+
+  /* ---- basecamp (moved here from Overview so travel + a bed live together) -- */
+  .basecamp { border-top: 3px solid var(--gold-bright); display: grid; gap: clamp(1.2rem, 3vw, 1.8rem); }
+  .basecamp__type { font-family: var(--serif); font-size: 1.25rem; color: var(--text); margin-bottom: 1.1rem; }
+  .basecamp__stats { display: flex; flex-wrap: wrap; gap: 1.2rem 2.2rem; }
+  .basecamp__stats div { display: flex; flex-direction: column; }
+  .basecamp__stats b { font-family: var(--serif); font-weight: 600; font-size: clamp(1.5rem,1.2rem+1vw,1.9rem); line-height: 1; color: var(--text); }
+  .basecamp__stats span { font-size: .7rem; letter-spacing: .1em; text-transform: uppercase; color: var(--faint); margin-top: .35rem; }
+  .btn-airbnb { align-self: flex-start; display: inline-flex; align-items: center; gap: .5rem; margin-top: 1.2rem; background: var(--wp); color: #fff; font-weight: 700; font-size: .92rem; padding: .72rem 1.4rem; border-radius: 999px; box-shadow: 0 8px 20px -10px rgba(46,107,67,.65); transition: transform .2s var(--ease), box-shadow .2s var(--ease); }
+  .btn-airbnb:hover { transform: translateY(-2px); box-shadow: 0 12px 26px -10px rgba(46,107,67,.75); }
+  .basecamp__photos { display: flex; flex-direction: column; gap: .55rem; min-width: 0; }
+  .bc-hero { position: relative; display: block; border-radius: var(--r); overflow: hidden; box-shadow: var(--shadow); aspect-ratio: 16 / 10; transition: transform .25s var(--ease), box-shadow .25s var(--ease); }
+  .bc-hero img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .4s var(--ease); }
+  .bc-hero:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+  .bc-hero:hover img { transform: scale(1.03); }
+  .bc-zoom { position: absolute; right: .6rem; bottom: .6rem; padding: .3rem .6rem; font-size: .7rem; font-weight: 700; color: #fff; background: rgba(12,24,18,.62); border-radius: 999px; backdrop-filter: blur(2px); opacity: .9; }
+  .bc-strip { display: flex; gap: .55rem; overflow-x: auto; -webkit-overflow-scrolling: touch; scroll-snap-type: x mandatory; scrollbar-width: none; }
+  .bc-strip::-webkit-scrollbar { display: none; }
+  .bc-thumb { flex: 0 0 46%; scroll-snap-align: start; display: block; border-radius: var(--r-sm); overflow: hidden; box-shadow: var(--shadow); aspect-ratio: 16 / 10; transition: transform .2s var(--ease); }
+  .bc-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .bc-thumb:hover { transform: translateY(-2px); }
+
+  @media (min-width: 760px) {
+    .basecamp--has-photos { grid-template-columns: minmax(0, 1.55fr) minmax(220px, 1fr); align-items: start; gap: clamp(1.4rem, 3vw, 2.4rem); }
+    .bc-strip { display: grid; grid-template-columns: repeat(2, 1fr); overflow: visible; }
+    .bc-thumb { flex: none; aspect-ratio: 16 / 11; }
+  }
+
+  /* ---- phones: everything stacks, nothing shrinks to unreadable ---- */
+  @media (max-width: 760px) {
+    .prog { grid-template-columns: 1fr; justify-items: center; text-align: left; }
+    .prog__poster img { width: min(72vw, 300px); }
+    .prog__body { width: 100%; }
+    .course-grid { grid-template-columns: 1fr 1fr; }
+    .course { gap: .35rem; }
+    /* Two-up, "Round 1" and the date can't share a line without breaking. */
+    .course__head { flex-direction: column; align-items: flex-start; gap: .1rem; }
+    .course__name { font-size: 1.05rem; }
+    .itin__day { grid-template-columns: 1fr; gap: .7rem; }
+    .itin__when { flex-direction: row; align-items: baseline; gap: .5rem; flex-wrap: wrap; }
+    .itin__label { margin-top: 0; margin-left: auto; }
+    /* Every cell placed explicitly — the DOM order is what / due / amount, so
+       auto-placement drops the amount on top of the label here. */
+    .damage__row { grid-template-columns: minmax(0, 1fr) auto; }
+    .damage__what { grid-column: 1; grid-row: 1; }
+    .damage__amt { grid-column: 2; grid-row: 1; align-self: start; }
+    .damage__due { grid-column: 1 / -1; grid-row: 2; flex-direction: row; align-items: baseline; gap: .45rem; text-align: left; }
+    .timeline__node { grid-template-columns: 1fr; gap: .1rem; }
+    .timeline__note { grid-column: 1; }
+  }
+  @media (max-width: 420px) {
+    .course-grid { grid-template-columns: 1fr; }
+  }
+</style>

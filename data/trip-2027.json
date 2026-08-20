@@ -1,0 +1,177 @@
+{
+ "tournamentId": "duel-in-the-desert-2027",
+ "utcOffset": "-07:00",
+ "travel": {
+  "landingWindow": "Be on the ground by Thursday afternoon. The draft is that night and you want to be in the room for it.",
+  "note": "PSP is the closest airport by a long way, but the fares are often worse than flying into LA or Orange County and driving out. Plenty of the field will do exactly that.",
+  "airports": [
+   {
+    "code": "PSP",
+    "name": "Palm Springs International",
+    "drive": "35 min",
+    "note": "Closest by far. Small, easy, and you are at the house before the kettle boils."
+   },
+   {
+    "code": "LAX",
+    "name": "Los Angeles International",
+    "drive": "2 hr 15",
+    "note": "The most flights and usually the cheapest way in from overseas. Hire a car."
+   },
+   {
+    "code": "SNA",
+    "name": "John Wayne · Orange County",
+    "drive": "1 hr 45",
+    "note": "Smaller and far less painful than LAX when the fare stacks up."
+   }
+  ],
+  "address": {
+   "area": "Indio, California",
+   "line": null,
+   "note": "The full address goes out closer to the trip."
+  }
+ },
+ "courses": [
+  {
+   "round": "Round 1",
+   "date": "2027-03-26",
+   "name": null,
+   "location": null,
+   "url": null,
+   "format": null,
+   "note": null
+  },
+  {
+   "round": "Round 2",
+   "date": "2027-03-27",
+   "name": null,
+   "location": null,
+   "url": null,
+   "format": null,
+   "note": null
+  },
+  {
+   "round": "Round 3",
+   "date": "2027-03-28",
+   "name": null,
+   "location": null,
+   "url": null,
+   "format": null,
+   "note": null
+  }
+ ],
+ "itinerary": [
+  {
+   "date": "2027-03-25",
+   "title": "Arrival",
+   "items": [
+    {
+     "time": null,
+     "title": "Check in at The Compound",
+     "detail": "Indio — the whole field under one roof.",
+     "kind": "travel"
+    },
+    {
+     "time": null,
+     "title": "The Draft",
+     "detail": "Captains named, picks made, and the first sledging of the trip.",
+     "kind": "draft",
+     "tba": true
+    }
+   ]
+  },
+  {
+   "date": "2027-03-26",
+   "title": "Round 1",
+   "items": [
+    {
+     "time": null,
+     "title": "Round 1",
+     "detail": null,
+     "kind": "golf",
+     "tba": true
+    }
+   ]
+  },
+  {
+   "date": "2027-03-27",
+   "title": "Round 2",
+   "items": [
+    {
+     "time": null,
+     "title": "Round 2",
+     "detail": null,
+     "kind": "golf",
+     "tba": true
+    }
+   ]
+  },
+  {
+   "date": "2027-03-28",
+   "title": "Final day",
+   "items": [
+    {
+     "time": null,
+     "title": "Round 3",
+     "detail": null,
+     "kind": "golf",
+     "tba": true
+    },
+    {
+     "time": null,
+     "title": "Awards night",
+     "detail": "Champion Golfer, the team title, and the joke awards nobody wants.",
+     "kind": "awards",
+     "tba": true
+    }
+   ]
+  }
+ ],
+ "costs": {
+  "note": "Nothing is due yet. Amounts fill in here as the house and the golf get booked.",
+  "items": [
+   {
+    "label": "House share",
+    "amount": null,
+    "per": "person",
+    "due": null,
+    "note": "The Compound, split across the field once the final number is locked."
+   },
+   {
+    "label": "Golf",
+    "amount": null,
+    "per": "person",
+    "due": null,
+    "note": "Green fees and carts for every round."
+   },
+   {
+    "label": "The kitty",
+    "amount": null,
+    "per": "person",
+    "due": null,
+    "note": "Food, drink and anything the group buys together."
+   }
+  ]
+ },
+ "keyDates": [
+  {
+   "label": "Deposits due",
+   "date": null,
+   "note": "Locks the house."
+  },
+  {
+   "label": "Flights booked by",
+   "date": null,
+   "note": "So everyone lands inside the window."
+  },
+  {
+   "label": "Final payment",
+   "date": null,
+   "note": null
+  },
+  {
+   "label": "Draft night",
+   "date": "2027-03-25",
+   "note": "Teams decided at The Compound."
+  }
+ ]
+}

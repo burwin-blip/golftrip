@@ -31,6 +31,22 @@ export const dateRange = (start, end) => {
 
 export const num = (n) => (Number.isInteger(n) ? String(n) : n.toFixed(1));
 
+// Weekday off a date string — always derived, never hand-typed, so an itinerary
+// can't drift out of step with its own dates. Parsed as LOCAL midnight (not UTC)
+// so the day named is the day written.
+// "2027-03-25" -> "Thursday" / "Thu"
+export const weekday = (iso, style = 'long') => {
+  if (!iso) return '';
+  return new Date(iso + 'T00:00:00').toLocaleDateString('en-US', { weekday: style });
+};
+
+// "2027-03-25" -> "25 March" (no year — for a day inside a known trip)
+export const dayMonth = (iso) => {
+  if (!iso) return '';
+  const d = new Date(iso + 'T00:00:00');
+  return `${d.getDate()} ${d.toLocaleDateString('en-US', { month: 'long' })}`;
+};
+
 // "2026-03-13" -> "March 13, 2026"
 export const longDate = (iso) => {
   if (!iso) return '';
