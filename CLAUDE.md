@@ -309,12 +309,50 @@ field** (`costs.items[1] ("Golf") → "amount" must be text in quotes…`).
 ```
 
 Field notes:
-- **`courses[].name: null`** → a styled **"Course TBA — being scouted"** card, so
-  the rota looks intentional before anything is booked. `url` must be a full
-  `https://…` and renders as a "Course website ↗" link.
+- **`courses[]`** is the rota. **`name: null`** → a styled **"Course TBA — being
+  scouted"** card, so the rota looks intentional before anything is booked.
+  A course with a **`slug`** gets a **profile page at `/courses/<slug>`**
+  (`src/pages/courses/[slug].astro`) and its rota card becomes a link to it.
+  - Profile fields, all optional, all rendered only when present: `designer`,
+    `opened`, `par`, `yardage` (back tees), `signature`, `description`, `url`
+    (the club's own site) and **`source`** — the URL the numbers came from, which
+    is printed at the foot of the profile. **Leave a field null rather than guess
+    it**; the page is built to look right with gaps.
+  - **`tee`** is the set *this group* plays — `{ name, yardage, rating, slope }`.
+    A rating and slope are meaningless without the tee they came off, so `name`
+    is required whenever `tee` exists. The 2027 rota uses each course's ~6,500-yard
+    set (Blue on most; Purple at Firecliff), which suits a field running from
+    scratch-ish to 21.
+  - `slug` must be lower-case-hyphenated: it's both the URL **and** the photo
+    folder name, and the build rejects anything else.
+
+### Course photos (`public/photos/<year>/courses/<slug>/`)
+Same idea as the player portraits — **the folder name is the wiring**. Drop
+images into the course's folder and they appear on the next build: the **first
+file is the hero** (on the profile *and* on its rota card), the rest become a
+lightbox gallery. Read by `src/lib/course-photos.js`; no JSON to edit.
+
+```
+public/photos/2027/courses/terra-lago-south/01-first-tee.jpg
+public/photos/2027/courses/classic-club/02-clubhouse.jpg
+```
+
+- Files sort by filename, so **number them** (`01-`, `02-`) to choose the hero
+  and the order. `.jpg` `.jpeg` `.png` `.webp` `.avif` all work.
+- Optional: a `name-thumb.jpg` beside `name.jpg` is used for the grid tile and is
+  never listed as a photo of its own. Without one the full file is used — fine
+  for a private site, but web-optimise big files (`sips -Z 1600`).
+- No folder yet → **`CoursePhoto.astro`** draws a placeholder in the site's own
+  palette (sunset sky, navy ranges, a strip of fairway and a flag, varied off the
+  slug). It's a designed state — don't swap it for a grey box.
+- `alt` text is generated from the course name. These are scenery; describing
+  what's in a frame nobody has looked at would be guessing.
 - **`itinerary[].items[].kind`** is one of `golf` · `draft` · `awards` ·
   `travel` · `social`, and drives the row's treatment. **`draft` gets the gold**
   — it's the pre-trip main event. `"tba": true` adds a small TBA pill.
+  An item may carry **`course`** (a course `slug` from the same file); the day
+  then names that course under the item and links to its profile. The build
+  rejects a slug that isn't in `courses`, so the two can't drift apart.
 - **Costs are priced per headcount.** Per-person cost swings on how many turn up,
   so `costs.scenarios` lists the headcounts (`id` + `label`) and each item's
   **`amounts`** gives a figure per scenario id. They render as **side-by-side
@@ -647,17 +685,20 @@ scripts/verify_holes.mjs    reconciles the hole layer (54 checks)
 src/lib/data.js       loads JSON, builds id lookups (+ holesForMatch)
 src/lib/stats.js      ALL derived statistics (build-time), incl. the hole-stat block
 src/lib/portraits.js  build-time scan of public/players/ (portrait or placeholder)
+src/lib/course-photos.js  build-time scan of public/photos/<year>/courses/<slug>/
 src/lib/format.js     display-only formatting helpers
 src/layouts/Base.astro   <head>, noindex, nav, footer
 src/components/        Scorebug, MatchRow, MatchSummary, HoleScorecard, TeamLogo,
                       PhotoGallery (reusable grid + swipeable lightbox),
                       PlayerCard + PlayerPortrait (the Players wall),
-                      TripHub + TripCountdown (the upcoming-trip programme), …
+                      TripHub + TripCountdown (the upcoming-trip programme),
+                      CoursePhoto (course hero or drawn placeholder), …
 src/pages/            index, tournaments/[id] (tabbed), players/index (wall +
                       comparison), players/[slug] (card header + scouting
-                      report), matches, records
+                      report), courses/[slug] (course profile), matches, records
 public/logos/         woodpeckers.png, silver-spoons.png (transparent)
 public/players/       <player-id>.jpg portraits — drop one in, it just appears
+public/photos/<year>/courses/<slug>/  course photos — first file is the hero
 public/scorecards/<year>/  original per-match card images (full PNG + thumb JPG)
 public/photos/<year>/<event>/  trip album images (full + -thumb.jpg per photo)
 public/               robots.txt, hero-banner.jpg (home hero), favicon.svg/png, apple-touch-icon.png

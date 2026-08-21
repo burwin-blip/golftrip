@@ -1,0 +1,58 @@
+---
+// A course's hero image — the photograph when there is one, and otherwise a
+// drawn desert-course placeholder in the site's own palette: sunset sky, navy
+// ranges, a strip of fairway and a flag. Same frame either way, so dropping
+// photos into public/photos/<year>/courses/<slug>/ swaps the picture without
+// anything around it moving. See src/lib/course-photos.js.
+const { course, photo = null, ratio = '16 / 10', loading = 'lazy', sizes = '100vw' } = Astro.props;
+
+const uid = `cp-${course.slug}`;
+// Deterministic off the slug, so each course's placeholder is its own skyline
+// rather than five identical stamps.
+let h = 0;
+for (const ch of String(course.slug)) h = (h * 31 + ch.charCodeAt(0)) % 100000;
+const peak = 34 + (h % 22);            // where the tallest ridge sits, 34–56%
+const sun = 22 + ((h >> 4) % 56);      // sun across the sky, 22–78%
+const dune = (h >> 7) % 2;             // which foreground ridge
+---
+{photo ? (
+  <img class="cphoto" src={photo.full} alt={photo.alt || course.name} loading={loading} decoding="async" sizes={sizes} style={`aspect-ratio:${ratio}`} />
+) : (
+  <svg class="cphoto cphoto--placeholder" viewBox="0 0 160 100" role="img"
+       aria-label={`${course.name} — no photos yet`} preserveAspectRatio="xMidYMid slice" style={`aspect-ratio:${ratio}`}>
+    <defs>
+      <linearGradient id={`${uid}-sky`} x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#DE9660" />
+        <stop offset="55%" stop-color="#F0C79C" />
+        <stop offset="100%" stop-color="#F9E4C6" />
+      </linearGradient>
+      <radialGradient id={`${uid}-sun`}>
+        <stop offset="0%" stop-color="#FFF6E4" stop-opacity="0.92" />
+        <stop offset="60%" stop-color="#FFEFD2" stop-opacity="0.38" />
+        <stop offset="100%" stop-color="#FFEFD2" stop-opacity="0" />
+      </radialGradient>
+    </defs>
+
+    <rect width="160" height="100" fill={`url(#${uid}-sky)`} />
+    <circle cx={sun * 1.6} cy="40" r="26" fill={`url(#${uid}-sun)`} />
+
+    {/* far range, then a nearer one — the valley wall behind every desert course */}
+    <path d={`M0,72 L${peak * 0.6},48 L${peak},60 L${peak + 26},40 L${peak + 52},62 L160,52 L160,100 L0,100 Z`}
+          fill="#17293F" fill-opacity="0.34" />
+    <path d={dune
+      ? `M0,78 L26,64 L48,76 L74,58 L104,78 L132,68 L160,80 L160,100 L0,100 Z`
+      : `M0,80 L30,62 L58,78 L86,66 L118,80 L142,70 L160,78 L160,100 L0,100 Z`}
+          fill="#17293F" />
+
+    {/* fairway + a flag: the tell that this is a golf course, not a landscape */}
+    <path d="M0,88 C34,82 58,92 92,86 C120,81 142,89 160,85 L160,100 L0,100 Z" fill="#2E6B43" />
+    <g transform="translate(122 62)">
+      <rect x="0" y="0" width="1.1" height="26" fill="#17293F" />
+      <path d="M1.1,0.5 L12,4.5 L1.1,8.5 Z" fill="#E06A2E" />
+    </g>
+  </svg>
+)}
+
+<style>
+  .cphoto { display: block; width: 100%; height: auto; object-fit: cover; background: var(--panel-2); }
+</style>

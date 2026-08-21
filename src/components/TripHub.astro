@@ -7,13 +7,26 @@
 // render, and a null value renders as a deliberate TBA rather than a blank.
 // That's the point — the page has to look finished on day one, with nothing
 // booked, and fill in as the trip comes together.
+import CoursePhoto from './CoursePhoto.astro';
+import { coursePhotos } from '../lib/course-photos.js';
 import { dateRange, weekday, dayMonth, longDate } from '../lib/format.js';
 
 const { t, trip, pool = [] } = Astro.props;
 const flyer = t.flyer || {};
 const acc = t.accommodation || null;
 
-const courses = trip?.courses ?? [];
+const courses = (trip?.courses ?? []).map((c) => ({
+  ...c,
+  hero: c.slug && c.name ? (coursePhotos(t.year, c.slug, c.name)[0] ?? null) : null,
+  href: c.slug && c.name ? `/courses/${c.slug}` : null,
+}));
+const courseBySlug = Object.fromEntries(courses.filter((c) => c.slug).map((c) => [c.slug, c]));
+// "par 72 · 7,044 yds · slope 133" — only the parts we actually know.
+const courseLine = (c) => [
+  c.par != null ? `Par ${c.par}` : null,
+  c.yardage != null ? `${c.yardage.toLocaleString('en-US')} yds` : null,
+  c.tee?.slope != null ? `Slope ${c.tee.slope}` : null,
+].filter(Boolean).join(' · ');
 const itinerary = [...(trip?.itinerary ?? [])].sort((a, b) => a.date.localeCompare(b.date));
 const travel = trip?.travel ?? null;
 const airports = travel?.airports ?? [];
@@ -84,19 +97,30 @@ const KIND_ICON = { golf: '⛳', draft: '🎯', awards: '🏆', travel: '✈', s
     <section class="tsec">
       <div class="section-head"><div><p class="eyebrow gold">The rota</p><h2>The courses</h2></div><span class="faint">{courses.filter((c) => c.name).length} of {courses.length} locked in</span></div>
       <div class="grid course-grid">
-        {courses.map((c) => (
-          <div class:list={["card card--pad course", { "course--tba": !c.name }]}>
-            <div class="course__head">
-              {c.round && <span class="course__round">{c.round}</span>}
-              {c.date && <span class="course__day">{weekday(c.date, 'short')} {dayMonth(c.date)}</span>}
-            </div>
-            <h3 class="course__name">{c.name || 'Course TBA'}</h3>
-            <p class="course__loc">{c.name ? (c.location || 'Location to come') : 'Being scouted'}</p>
-            {c.format && <span class="pill course__fmt">{c.format}</span>}
-            {c.note && <p class="course__note">{c.note}</p>}
-            {c.url && <a class="course__link" href={c.url} target="_blank" rel="noopener">Course website <span aria-hidden="true">↗</span></a>}
-          </div>
-        ))}
+        {courses.map((c) => {
+          const Tag = c.href ? 'a' : 'div';
+          return (
+            <Tag class:list={["course", { "course--tba": !c.name, "course--live": !!c.href }]} href={c.href}>
+              {c.name && (
+                <div class="course__shot">
+                  <CoursePhoto course={c} photo={c.hero} ratio="16 / 10" sizes="(max-width: 760px) 50vw, 260px" />
+                </div>
+              )}
+              <div class="course__body">
+                <div class="course__head">
+                  {c.round && <span class="course__round">{c.round}</span>}
+                  {c.date && <span class="course__day">{weekday(c.date, 'short')} {dayMonth(c.date)}</span>}
+                </div>
+                <h3 class="course__name">{c.name || 'Course TBA'}</h3>
+                <p class="course__loc">{c.name ? (c.location || 'Location to come') : 'Being scouted'}</p>
+                {c.name && courseLine(c) && <p class="course__spec tabnums">{courseLine(c)}</p>}
+                {c.format && <span class="pill course__fmt">{c.format}</span>}
+                {c.note && <p class="course__note">{c.note}</p>}
+                {c.href && <span class="course__link">Course profile <span aria-hidden="true">→</span></span>}
+              </div>
+            </Tag>
+          );
+        })}
       </div>
     </section>
   )}
@@ -114,18 +138,26 @@ const KIND_ICON = { golf: '⛳', draft: '🎯', awards: '🏆', travel: '✈', s
               {day.title && <span class="itin__label">{day.title}</span>}
             </div>
             <ul class="itin__items">
-              {(day.items ?? []).map((it) => (
-                <li class:list={["itin__item", `is-${it.kind || 'plain'}`]}>
-                  <span class="itin__ic" aria-hidden="true">{KIND_ICON[it.kind] || '·'}</span>
-                  <div class="itin__body">
-                    <div class="itin__line">
-                      <b class="itin__title">{it.title}</b>
-                      {it.time ? <span class="itin__time tabnums">{it.time}</span> : it.tba && <span class="itin__tba">TBA</span>}
+              {(day.items ?? []).map((it) => {
+                const course = it.course ? courseBySlug[it.course] : null;
+                return (
+                  <li class:list={["itin__item", `is-${it.kind || 'plain'}`]}>
+                    <span class="itin__ic" aria-hidden="true">{KIND_ICON[it.kind] || '·'}</span>
+                    <div class="itin__body">
+                      <div class="itin__line">
+                        <b class="itin__title">{it.title}</b>
+                        {it.time ? <span class="itin__time tabnums">{it.time}</span> : it.tba && <span class="itin__tba">TBA</span>}
+                      </div>
+                      {course && (
+                        course.href
+                          ? <a class="itin__course" href={course.href}>{course.name} <span aria-hidden="true">→</span></a>
+                          : <span class="itin__course">{course.name}</span>
+                      )}
+                      {it.detail && <p class="itin__detail">{it.detail}</p>}
                     </div>
-                    {it.detail && <p class="itin__detail">{it.detail}</p>}
-                  </div>
-                </li>
-              ))}
+                  </li>
+                );
+              })}
             </ul>
           </div>
         ))}
@@ -309,18 +341,29 @@ const KIND_ICON = { golf: '⛳', draft: '🎯', awards: '🏆', travel: '✈', s
   .prog__k { font-size: .62rem; letter-spacing: .14em; text-transform: uppercase; font-weight: 700; color: var(--faint); }
   .prog__facts b { font-family: var(--serif); font-weight: 600; font-size: 1.02rem; line-height: 1.2; }
 
-  /* ---- courses ---- */
+  /* ---- courses (the rota) ---- */
   .course-grid { grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 1rem; }
-  .course { display: flex; flex-direction: column; gap: .45rem; border-top: 3px solid var(--wp); }
+  .course {
+    display: flex; flex-direction: column; overflow: hidden;
+    background: var(--panel); border-radius: var(--r); box-shadow: var(--shadow);
+    border-top: 3px solid var(--wp);
+  }
+  .course--live { transition: transform .2s var(--ease), box-shadow .2s var(--ease); }
+  .course--live:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); }
+  .course__shot { overflow: hidden; background: var(--panel-2); }
+  .course__shot :global(.cphoto) { transition: transform .5s var(--ease); }
+  .course--live:hover .course__shot :global(.cphoto) { transform: scale(1.04); }
+  .course__body { display: flex; flex-direction: column; gap: .35rem; flex: 1; padding: clamp(.85rem, 2.4vw, 1.1rem); }
   .course__head { display: flex; align-items: baseline; justify-content: space-between; gap: .6rem; }
   .course__round { font-size: .64rem; letter-spacing: .14em; text-transform: uppercase; font-weight: 700; color: var(--terra-ink); }
   .course__day { font-size: .72rem; font-weight: 600; color: var(--faint); }
-  .course__name { font-size: 1.2rem; line-height: 1.1; }
-  .course__loc { font-size: .86rem; color: var(--muted); }
+  .course__name { font-size: 1.14rem; line-height: 1.12; }
+  .course__loc { font-size: .84rem; color: var(--muted); }
+  .course__spec { font-size: .76rem; font-weight: 700; color: var(--faint); letter-spacing: .01em; }
   .course__fmt { align-self: flex-start; margin-top: .2rem; }
   .course__note { font-size: .82rem; color: var(--muted); }
-  .course__link { margin-top: auto; padding-top: .5rem; font-size: .78rem; font-weight: 700; color: var(--terra-ink); }
-  .course__link:hover { text-decoration: underline; }
+  .course__link { margin-top: auto; padding-top: .6rem; font-size: .76rem; font-weight: 700; color: var(--terra-ink); }
+  .course--live:hover .course__link { text-decoration: underline; }
   /* A course we haven't booked is a designed state, not a hole in the page. */
   .course--tba { border-top-color: transparent; box-shadow: inset 0 0 0 1px var(--line-strong); background: transparent; }
   .course--tba .course__name { color: var(--faint); font-style: italic; }
@@ -342,6 +385,8 @@ const KIND_ICON = { golf: '⛳', draft: '🎯', awards: '🏆', travel: '✈', s
   .itin__time { margin-left: auto; font-size: .8rem; font-weight: 700; color: var(--muted); }
   .itin__tba { font-size: .6rem; letter-spacing: .12em; text-transform: uppercase; font-weight: 700; color: var(--faint); background: var(--panel); padding: .1rem .42rem; border-radius: 999px; box-shadow: inset 0 0 0 1px var(--line-strong); }
   .itin__detail { font-size: .84rem; color: var(--muted); margin-top: .15rem; }
+  .itin__course { display: inline-block; margin-top: .15rem; font-size: .84rem; font-weight: 700; color: var(--wp-ink); }
+  a.itin__course:hover { color: var(--terra-ink); text-decoration: underline; }
   /* The draft is the pre-trip main event — it gets the gold. */
   .itin__item.is-draft { background: linear-gradient(180deg, var(--gold-soft), color-mix(in srgb, var(--gold-soft) 40%, var(--panel))); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--gold-bright) 42%, transparent); }
   .itin__item.is-draft .itin__title { font-family: var(--serif); font-size: 1.1rem; color: var(--gold); }

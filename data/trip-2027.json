@@ -34,47 +34,117 @@
   {
    "round": "Round 1",
    "date": "2027-03-26",
-   "name": null,
-   "location": null,
-   "url": null,
+   "slug": "terra-lago-south",
+   "name": "Terra Lago — South Course",
+   "location": "Indio, California",
+   "url": "https://golfterralago.com/",
    "format": null,
-   "note": null
+   "note": null,
+   "designer": "Schmidt-Curley Design (Lee Schmidt & Brian Curley)",
+   "opened": 1999,
+   "par": 72,
+   "yardage": 7044,
+   "tee": {
+    "name": "Blue",
+    "yardage": null,
+    "rating": 71.6,
+    "slope": 133
+   },
+   "signature": "The 2nd — the “Box Car” par 4, played hard along a canal and crossed by a bridge built from an old railway wagon.",
+   "description": "Formerly Landmark Golf Club, and host of the PGA Tour's Skins Game from 1999 to 2002. Big contoured greens with water and bunkering throughout, and the club's trademark railway-wagon bridges.",
+   "source": "https://www.golfpass.com/travel-advisor/courses/15284-golf-club-at-terra-lago-south-course"
   },
   {
    "round": "Round 2",
    "date": "2027-03-26",
-   "name": null,
-   "location": null,
-   "url": null,
+   "slug": "terra-lago-north",
+   "name": "Terra Lago — North Course",
+   "location": "Indio, California",
+   "url": "https://golfterralago.com/",
    "format": null,
-   "note": null
+   "note": null,
+   "designer": "Schmidt-Curley Design (Lee Schmidt & Brian Curley)",
+   "opened": 1999,
+   "par": 72,
+   "yardage": 7060,
+   "tee": {
+    "name": "Blue",
+    "yardage": 6511,
+    "rating": 71.4,
+    "slope": 132
+   },
+   "signature": "The island-green par 3 — the hole the Skins Game was built around.",
+   "description": "The longer of Terra Lago's two. Dramatic elevation changes across the Coachella Valley, and from the seventh tee a view that runs from one end of the valley to the other.",
+   "source": "https://www.golfpass.com/travel-advisor/courses/15283-golf-club-at-terra-lago-north-course"
   },
   {
    "round": "Round 3",
    "date": "2027-03-27",
-   "name": null,
-   "location": null,
-   "url": null,
+   "slug": "desert-willow-mountain-view",
+   "name": "Desert Willow — Mountain View Course",
+   "location": "Palm Desert, California",
+   "url": "https://www.desertwillow.com/mountainviewcourse/",
    "format": null,
-   "note": null
+   "note": null,
+   "designer": "Hurdzan/Fry with John Cook",
+   "opened": 1998,
+   "par": 72,
+   "yardage": 6913,
+   "tee": {
+    "name": "Blue",
+    "yardage": 6507,
+    "rating": 71.2,
+    "slope": 128
+   },
+   "signature": null,
+   "description": "The gentler half of Desert Willow — wider fairways and a resort feel, with the Santa Rosa mountains behind almost every shot. Shorter than Firecliff, but water and desert are still very much in play.",
+   "source": "https://www.golfpass.com/travel-advisor/courses/15372-mountain-view-at-desert-willow-golf-resort"
   },
   {
    "round": "Round 4",
    "date": "2027-03-27",
-   "name": null,
-   "location": null,
-   "url": null,
+   "slug": "desert-willow-firecliff",
+   "name": "Desert Willow — Firecliff Course",
+   "location": "Palm Desert, California",
+   "url": "https://www.desertwillow.com/firecliffcourse/",
    "format": null,
-   "note": null
+   "note": null,
+   "designer": "Hurdzan/Fry with John Cook",
+   "opened": 1997,
+   "par": 72,
+   "yardage": 7056,
+   "tee": {
+    "name": "Purple",
+    "yardage": 6676,
+    "rating": 72.1,
+    "slope": 136
+   },
+   "signature": null,
+   "description": "The tougher half of Desert Willow and the resort's tournament course: over 100 bunkers, Mini Verde Bermuda greens and native desert planting framing every hole. Recently renovated.",
+   "source": "https://www.golfpass.com/travel-advisor/courses/15542-firecliff-at-desert-willow-golf-resort"
   },
   {
    "round": "Round 5",
    "date": "2027-03-28",
-   "name": null,
-   "location": null,
-   "url": null,
-   "format": null,
-   "note": null
+   "slug": "classic-club",
+   "name": "The Classic Club",
+   "location": "Palm Desert, California",
+   "url": "https://www.classicclubgolf.com/",
+   "format": "Singles + the Championship Match",
+   "note": null,
+   "designer": "Arnold Palmer",
+   "opened": 2006,
+   "par": 72,
+   "yardage": 7322,
+   "tee": {
+    "name": "Blue",
+    "yardage": 6711,
+    "rating": 72.9,
+    "slope": 135
+   },
+   "signature": null,
+   "description": "An Arnold Palmer design that hosted the PGA Tour's Bob Hope Classic from 2006 to 2008, and the odd one out in the desert — olive, pepper and pine rather than palms. Water is in play on 13 holes across a rolling, tree-lined layout.",
+   "source": "https://www.golfpass.com/travel-advisor/courses/16392-the-classic-club"
   }
  ],
  "itinerary": [
@@ -106,14 +176,14 @@
      "title": "Round 1",
      "detail": null,
      "kind": "golf",
-     "tba": true
+     "course": "terra-lago-south"
     },
     {
      "time": null,
      "title": "Round 2",
      "detail": null,
      "kind": "golf",
-     "tba": true
+     "course": "terra-lago-north"
     }
    ]
   },
@@ -126,14 +196,14 @@
      "title": "Round 3",
      "detail": null,
      "kind": "golf",
-     "tba": true
+     "course": "desert-willow-mountain-view"
     },
     {
      "time": null,
      "title": "Round 4",
      "detail": null,
      "kind": "golf",
-     "tba": true
+     "course": "desert-willow-firecliff"
     },
     {
      "time": "Evening",
@@ -152,14 +222,14 @@
      "title": "Round 5",
      "detail": null,
      "kind": "golf",
-     "tba": true
+     "course": "classic-club"
     },
     {
      "time": null,
      "title": "Championship Match",
      "detail": "The individual title decided.",
      "kind": "golf",
-     "tba": true
+     "course": "classic-club"
     }
    ]
   }

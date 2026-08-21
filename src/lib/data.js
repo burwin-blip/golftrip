@@ -95,12 +95,41 @@ function validateTrip(trip, file, validTournamentIds) {
     bad(`"utcOffset" must look like "-07:00" (the venue's offset — it decides when the countdown flips to IT'S ON), got ${JSON.stringify(trip.utcOffset)}.`);
   }
 
+  const courseSlugs = [];
+  const num = (v, at) => {
+    if (v === undefined || v === null) return null;
+    if (typeof v !== 'number' || Number.isNaN(v)) bad(`${at} must be a number with no quotes (7044, not "7,044 yds"), or null if it isn't known — got ${JSON.stringify(v)}.`);
+    return v;
+  };
   arr(trip.courses, '"courses"').forEach((c, i) => {
     const at = `courses[${i}]` + (c?.round ? ` ("${c.round}")` : '');
     if (c === null || typeof c !== 'object' || Array.isArray(c)) bad(`${at} must be an object { "round": "Round 1", "name": null, ... }.`);
-    ['round', 'name', 'location', 'url', 'format', 'note'].forEach((k) => str(c[k], `${at} → "${k}"`));
+    ['round', 'name', 'location', 'url', 'format', 'note', 'designer', 'signature', 'description', 'source']
+      .forEach((k) => str(c[k], `${at} → "${k}"`));
     optDate(c.date, `${at} → "date"`);
-    if (c.url && !/^https?:\/\//.test(c.url)) bad(`${at} → "url" must start with http:// or https://, got ${JSON.stringify(c.url)}.`);
+    ['opened', 'par', 'yardage'].forEach((k) => num(c[k], `${at} → "${k}"`));
+    for (const k of ['url', 'source']) {
+      if (c[k] && !/^https?:\/\//.test(c[k])) bad(`${at} → "${k}" must start with http:// or https://, got ${JSON.stringify(c[k])}.`);
+    }
+    // The slug is the profile's URL AND its photo folder
+    // (public/photos/<year>/courses/<slug>/), so it has to stay url-safe.
+    if (c.slug !== undefined && c.slug !== null) {
+      str(c.slug, `${at} → "slug"`);
+      if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(c.slug)) {
+        bad(`${at} → "slug" must be lower-case words joined by hyphens (e.g. "terra-lago-south") — it's the profile URL and the photo folder name. Got ${JSON.stringify(c.slug)}.`);
+      }
+      if (courseSlugs.includes(c.slug)) bad(`${at} → duplicate "slug" "${c.slug}". Each course needs its own.`);
+      courseSlugs.push(c.slug);
+      if (!c.name) bad(`${at} has a "slug" but no "name" — a course can't get a profile page without a name.`);
+    }
+    // The tees this group actually plays off, which is what the rating and slope
+    // should describe. Ratings vary by tee, so the set is always named.
+    if (c.tee !== undefined && c.tee !== null) {
+      if (typeof c.tee !== 'object' || Array.isArray(c.tee)) bad(`${at} → "tee" must be an object { "name": "Blue", "yardage": 6511, "rating": 71.4, "slope": 132 }.`);
+      if (!c.tee.name) bad(`${at} → "tee" is missing "name" — a rating and slope mean nothing without the tee they came off.`);
+      str(c.tee.name, `${at} → "tee" → "name"`);
+      ['yardage', 'rating', 'slope'].forEach((k) => num(c.tee[k], `${at} → "tee" → "${k}"`));
+    }
   });
 
   arr(trip.itinerary, '"itinerary"').forEach((d, i) => {
@@ -119,6 +148,14 @@ function validateTrip(trip, file, validTournamentIds) {
       }
       if (it.tba !== undefined && it.tba !== null && typeof it.tba !== 'boolean') {
         bad(`${iat} → "tba" must be true or false (no quotes), got ${JSON.stringify(it.tba)}.`);
+      }
+      // An item can name the course it's played at — the itinerary then links
+      // straight to that course's profile.
+      if (it.course !== undefined && it.course !== null) {
+        str(it.course, `${iat} → "course"`);
+        if (!courseSlugs.includes(it.course)) {
+          bad(`${iat} → "course" is "${it.course}", which isn't a course slug in this file. Known slugs: ${courseSlugs.map((s) => `"${s}"`).join(', ') || '(none)'}.`);
+        }
       }
     });
   });
