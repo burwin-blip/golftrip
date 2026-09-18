@@ -183,14 +183,22 @@ export async function submitRsvp(body, { env = process.env, now = new Date() } =
   await store.putProfile(player.id, profile, env);
   await store.putEvent(TID, player.id, event, env);
 
+  // ---- saved. Nothing below may turn a stored RSVP into an error for the user:
+  // the rebuild trigger and the live count are best-effort extras.
   const changedPublic = isNew || prevFp !== publicFingerprint(player.name, profile, event);
   const rebuild = changedPublic ? await triggerRebuild(env) : 'unchanged';
 
   if (isNew) known.set(player.id, player);
-  const { event: evAll } = await store.loadAll(TID, env);
+  let confirmedCount = null;
+  try {
+    const { event: evAll } = await store.loadAll(TID, env);
+    confirmedCount = countConfirmed(known, evAll);
+  } catch (e) {
+    console.error('RSVP: saved, but the confirmed count failed', e);
+  }
   return {
     ok: true, playerId: player.id, name: player.name, status, isNew, matchedExisting: Boolean(matchedExisting),
-    updated: Boolean(prev.event), confirmedCount: countConfirmed(known, evAll), rebuild,
+    updated: Boolean(prev.event), confirmedCount, rebuild,
   };
 }
 
@@ -229,9 +237,23 @@ function keyMatches(given, expected) {
   return diff === 0;
 }
 
-export async function readAdmin(key, { env = process.env } = {}) {
+export const isAdminKey = (key, env = process.env) => Boolean(env.RSVP_ADMIN_KEY) && keyMatches(key, env.RSVP_ADMIN_KEY);
+
+function requireAdmin(key, env) {
   if (!env.RSVP_ADMIN_KEY) throw new RsvpError('Admin key not set up yet (RSVP_ADMIN_KEY).', null, 503);
   if (!keyMatches(key, env.RSVP_ADMIN_KEY)) throw new RsvpError('Wrong or missing admin key.', null, 401);
+}
+
+// DELETE /api/rsvp-admin?player=<id> — clear one player's RSVP entirely.
+export async function deleteRsvp(key, playerId, { env = process.env } = {}) {
+  requireAdmin(key, env);
+  if (!playerId) throw new RsvpError('Say which player (?player=<id>).', 'player');
+  await store.removePlayer(TID, String(playerId), env);
+  return { ok: true, removed: String(playerId), rebuild: await triggerRebuild(env) };
+}
+
+export async function readAdmin(key, { env = process.env } = {}) {
+  requireAdmin(key, env);
   const known = await allKnownPlayers(env);
   const { event, profiles, backend } = await store.loadAll(TID, env);
   const nameOf = (id) => known.get(id)?.name ?? id;

@@ -667,11 +667,32 @@ Also: under the adapter, prerendering runs from a bundled chunk, so
 the `import.meta.url`-relative path doesn't exist. Don't remove that fallback —
 every portrait silently becomes a placeholder without it.
 
-### Testing
+### Testing — run BOTH stores
 ```
+# 1. file store (includes the old-format migration checks)            → 51 checks
 RSVP_LOCAL_STORE=/tmp/rsvp-test.json RSVP_ADMIN_KEY=test-key npx astro dev --port 4400
-STORE=/tmp/rsvp-test.json BASE=http://localhost:4400 ADMIN_KEY=test-key npm run test:rsvp   # 47 checks
+STORE=/tmp/rsvp-test.json BASE=http://localhost:4400 ADMIN_KEY=test-key npm run test:rsvp
+
+# 2. the REAL Redis code path, via a fake Upstash server (fresh = empty) → 45 checks
+node scripts/fake-upstash.mjs &
+KV_REST_API_URL=http://localhost:4600 KV_REST_API_TOKEN=x RSVP_ADMIN_KEY=test-key npx astro dev --port 4400
+BASE=http://localhost:4400 ADMIN_KEY=test-key npm run test:rsvp
 ```
+The file store alone is NOT enough: it can't see how the `@upstash/redis` client
+shapes replies. **September 2026 outage:** with `automaticDeserialization: false`
+the client returns HGETALL as a flat `[field, value, …]` array; the code treated
+it as an object, so every read failed as soon as the first RSVP was saved (the
+saves themselves went through). `parseHash()` in `rsvp-store.js` now accepts both
+shapes, and step 2 above exercises exactly that path.
+
+**Diagnosing production:** send the admin key as an `x-admin-key` header to any
+`/api/rsvp*` call and a 500 includes the real error (`detail`); players only ever
+see the generic message. Errors are also in Vercel → the project → **Logs**.
+**Clearing a test entry:** `DELETE /api/rsvp-admin?player=<id>` with the
+`x-admin-key` header removes that player's response, profile answers and (if the
+RSVP created them) the player record, then triggers a rebuild.
+**After a save succeeds nothing may fail the request** — the deploy hook and the
+live count are best-effort (logged, never surfaced as an error).
 Existing/new-player RSVP, changing an RSVP, duplicate prevention, one-or-two
 captains by id with a team name each, multi-select strengths/weaknesses, handicap
 history, old-format migration (needs `STORE`), privacy of the public API,
@@ -859,7 +880,8 @@ scripts/gen_portraits.py    cuts the two album-sourced player portraits to 4:5
 scripts/verify_holes.mjs    reconciles the hole layer (54 checks)
 scripts/pull-rsvp.mjs       build step: RSVP store → data/rsvp.generated.json (public slice)
 scripts/set-function-runtime.mjs  post-build: pins the API function to nodejs22.x
-scripts/test-rsvp.mjs       RSVP API checks (47)
+scripts/test-rsvp.mjs       RSVP API checks (51 on the file store / 45 on fake Redis)
+scripts/fake-upstash.mjs    in-memory Upstash REST stand-in, for testing the Redis path
 scripts/check-styles.mjs    does a deployed/served site render styled? (core principle 6)
 src/lib/rsvp-*.js     RSVP: shared answer lists, the store, the API logic
 src/pages/api/        rsvp.js + rsvp-admin.js — the ONLY server routes

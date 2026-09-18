@@ -148,5 +148,13 @@ ok((await post({ ...base, playerId: 'ben-urwin', handicap: 'ten' })).status === 
 ok((await post({ ...base, newName: 'Cher' })).status === 400, 'single-word name rejected');
 ok((await post({ ...base, playerId: 'ben-urwin', dob: '2030-01-01' })).status === 400, 'future date of birth rejected');
 
+console.log('\n11. Admin delete (clearing a test entry)');
+const del = async (id, key = ADMIN_KEY) => (await fetch(`${BASE}/api/rsvp-admin?player=${id}`, { method: 'DELETE', headers: { 'x-admin-key': key } })).status;
+ok(await del('jack-mctest', 'wrong') === 401, 'delete refuses a wrong key');
+ok(await del('jack-mctest') === 200, 'delete with the key succeeds');
+a = await admin();
+ok(!a.body.rows.some((x) => x.id === 'jack-mctest'), 'the created player and their answers are gone');
+ok(!(await get()).createdPlayers.some((p) => p.id === 'jack-mctest'), 'no longer pickable on /rsvp');
+
 console.log(`\n${pass} passed, ${fail} failed\n`);
 process.exit(fail ? 1 : 0);

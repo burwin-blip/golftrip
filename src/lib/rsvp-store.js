@@ -41,16 +41,29 @@ function redisEnv(env = process.env) {
 export class RsvpNotConfigured extends Error {}
 
 // ---- backends ---------------------------------------------------------------
+// HGETALL → { field: parsedValue }. With automaticDeserialization OFF the Upstash
+// client returns the raw Redis reply: a FLAT array [field1, value1, field2, …],
+// not an object. (Treating that array as an object parsed the field names as
+// JSON and broke every read once the first RSVP was saved — September 2026.)
+// Accept both shapes so a client upgrade can't break it again.
+export function parseHash(h) {
+  if (!h) return {};
+  const pairs = [];
+  if (Array.isArray(h)) for (let i = 0; i + 1 < h.length; i += 2) pairs.push([h[i], h[i + 1]]);
+  else pairs.push(...Object.entries(h));
+  return Object.fromEntries(pairs.map(([k, v]) => [k, typeof v === 'string' ? JSON.parse(v) : v]));
+}
+
 async function redisBackend({ url, token }) {
   const { Redis } = await import('@upstash/redis');
   // We store JSON strings ourselves, so turn off the client's own (de)serialising.
   const r = new Redis({ url, token, automaticDeserialization: false });
-  const parseAll = (h) => Object.fromEntries(Object.entries(h || {}).map(([k, v]) => [k, JSON.parse(v)]));
   return {
     kind: 'redis',
-    async all(key) { return parseAll(await r.hgetall(key)); },
-    async get(key, id) { const v = await r.hget(key, id); return v == null ? null : JSON.parse(v); },
+    async all(key) { return parseHash(await r.hgetall(key)); },
+    async get(key, id) { const v = await r.hget(key, id); return v == null ? null : typeof v === 'string' ? JSON.parse(v) : v; },
     async put(key, id, value) { await r.hset(key, { [id]: JSON.stringify(value) }); },
+    async del(key, id) { await r.hdel(key, id); },
   };
 }
 
@@ -62,6 +75,7 @@ function fileBackend(file) {
     async all(key) { return read()[key] || {}; },
     async get(key, id) { return read()[key]?.[id] ?? null; },
     async put(key, id, value) { const db = read(); (db[key] ||= {})[id] = value; write(db); },
+    async del(key, id) { const db = read(); if (db[key]) delete db[key][id]; write(db); },
   };
 }
 
@@ -102,3 +116,11 @@ export async function listNewPlayers(env) {
 export async function putPlayer(player, env) { return (await backend(env)).put(KEYS.players, player.id, player); }
 export async function putProfile(id, profile, env) { return (await backend(env)).put(KEYS.profiles, id, profile); }
 export async function putEvent(tid, id, record, env) { return (await backend(env)).put(KEYS.event(tid), id, record); }
+
+// Remove everything the RSVP holds for one player (their 2027 response, their
+// profile answers and, if "I'm not listed" created them, the player record).
+// Admin-only — used to clear test entries.
+export async function removePlayer(tid, id, env) {
+  const b = await backend(env);
+  await Promise.all([b.del(KEYS.event(tid), id), b.del(KEYS.profiles, id), b.del(KEYS.players, id)]);
+}
