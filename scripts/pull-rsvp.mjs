@@ -18,7 +18,7 @@
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { loadAll, isConfigured } from '../src/lib/rsvp-store.js';
-import { RSVP_TOURNAMENT_ID as TID } from '../src/lib/rsvp-shared.js';
+import { RSVP_TOURNAMENT_ID as TID, normalizeProfile } from '../src/lib/rsvp-shared.js';
 
 const OUT = fileURLToPath(new URL('../data/rsvp.generated.json', import.meta.url));
 
@@ -36,8 +36,9 @@ async function main() {
     .map((p) => ({ id: p.id, name: p.name }))
     .sort((a, b) => a.name.localeCompare(b.name));
   for (const [id, e] of Object.entries(event)) out.statuses[id] = e.status;
-  for (const [id, pr] of Object.entries(profiles)) {
-    out.profiles[id] = { strength: pr.strength ?? null, weakness: pr.weakness ?? null, sentence: pr.sentence ?? null };
+  for (const [id, raw] of Object.entries(profiles)) {
+    const pr = normalizeProfile(raw);   // old single-select answers read as one-item lists
+    out.profiles[id] = { strengths: pr.strengths, weaknesses: pr.weaknesses, sentence: pr.sentence ?? null };
     // One snapshot per day (the last number submitted that day) — the snapshot
     // file is day-grained; the full timestamped history stays in the store.
     const byDay = new Map();

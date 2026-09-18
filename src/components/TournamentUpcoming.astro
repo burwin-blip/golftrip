@@ -52,6 +52,11 @@ const TABS = [['overview', 'Overview'], ...(trip ? [['trip', 'Trip']] : []), ['p
         </div>
       )}
 
+      <a class="up-rsvp" href="/rsvp">
+        <span><span class="up-rsvp__k">Are you in?</span><span class="up-rsvp__v">RSVP for {t.year}</span></span>
+        <span class="up-rsvp__go" aria-hidden="true">→</span>
+      </a>
+
       <div class="up-grid">
         <div class="up-main">
           <!-- where the scoreboard will go -->
@@ -207,6 +212,14 @@ const TABS = [['overview', 'Overview'], ...(trip ? [['trip', 'Trip']] : []), ['p
   .pool-card--waiting .pool-card__name { color: var(--muted); }
   .pool-rsvp { align-self: flex-start; font-size: .66rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--faint); padding: .25rem .6rem; border-radius: 999px; box-shadow: inset 0 0 0 1px var(--line-strong); }
   .pool-rsvp--maybe { color: var(--terra-ink); background: var(--terra-soft); box-shadow: none; }
+
+  /* RSVP call-to-action (Overview) */
+  .up-rsvp { display: flex; align-items: center; gap: 1rem; margin-bottom: clamp(1.4rem, 4vw, 2rem); padding: .9rem clamp(1.1rem, 3vw, 1.5rem); border-radius: var(--r); color: #fff; background: linear-gradient(100deg, var(--terra-ink), var(--terra) 55%, var(--sky)); box-shadow: 0 14px 30px -16px color-mix(in srgb, var(--terra) 90%, transparent); transition: transform .2s var(--ease); }
+  .up-rsvp:hover { transform: translateY(-2px); }
+  .up-rsvp > span:first-child { display: flex; flex-direction: column; }
+  .up-rsvp__k { font-size: .66rem; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; opacity: .9; }
+  .up-rsvp__v { font-family: var(--serif); font-weight: 600; font-size: clamp(1.3rem, 1.1rem + 1vw, 1.7rem); line-height: 1.1; }
+  .up-rsvp__go { margin-left: auto; display: grid; place-items: center; width: 2.4rem; height: 2.4rem; border-radius: 50%; background: rgba(255,255,255,.18); font-weight: 800; }
 
   /* countdown sits above the scoreboard; basecamp moved to the Trip tab */
   .cdown-wrap { margin-bottom: clamp(1.6rem, 4vw, 2.4rem); }

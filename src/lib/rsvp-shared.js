@@ -26,7 +26,30 @@ export const GREEN_FEE_ANSWERS = { yes: 'Yes', no: 'No', dontcare: "Don't care a
 // Q9 — longest drive / closest to the pin for team points.
 export const SIDE_GAME_ANSWERS = { yes: 'Yes', no: 'No' };
 
-export const LIMITS = { name: 60, sentence: 280, teamName: 60, hcpMin: -10, hcpMax: 54 };
+export const LIMITS = { name: 60, sentence: 280, teamName: 60, hcpMin: -10, hcpMax: 54, maxCaptains: 2 };
+
+// ---- format migration -------------------------------------------------------
+// The first version of the form stored ONE strongest / weakest part and ONE
+// captain (+ one team name). The current form stores lists. These read either
+// shape and always return the current one, so responses sent under the old
+// form are never lost — they read as single-item lists / a single captain.
+const list = (many, one) => (Array.isArray(many) ? many : one ? [one] : []);
+
+export function normalizeProfile(pr) {
+  if (!pr) return null;
+  const { strength, weakness, ...rest } = pr;
+  return { ...rest, strengths: list(pr.strengths, strength), weaknesses: list(pr.weaknesses, weakness) };
+}
+
+export function normalizeEvent(e) {
+  if (!e) return null;
+  const { captainVoteId, teamName, ...rest } = e;
+  const captainVoteIds = list(e.captainVoteIds, captainVoteId);
+  const teamNames = e.teamNames && typeof e.teamNames === 'object'
+    ? e.teamNames
+    : (captainVoteId && teamName ? { [captainVoteId]: teamName } : {});
+  return { ...rest, captainVoteIds, teamNames };
+}
 
 // Same rule as every other id on the site: kebab-case off the name.
 export const slugify = (s) =>

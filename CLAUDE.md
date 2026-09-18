@@ -527,9 +527,11 @@ behind it. (`src/pages/rsvp/index.astro`.)
 ### The flow
 Opening screen (the Duel in the Desert flyer art, dates from `tournaments.json`)
 → **Who are you?** (the wall of faces, or "I'm not listed" → full name) → **RSVP**
-(yes / maybe / no) → **Your game** (Q1 DOB, Q2 handicap, Q3 strongest, Q4 weakest,
-Q5 one sentence) → **2027 questions** (Q6 captain nominee, Q7 their team name, Q8
-$250 green fee, Q9 longest drive / closest to pin — **skipped for a NO**) →
+(yes / maybe / no) → **Your game** (Q1 DOB, Q2 handicap, Q3 strongest parts and
+Q4 weakest parts — **multi-select**, at least one each, a part can't be in both —
+Q5 one sentence) → **2027 questions** (Q6 **one or two** captain nominees, Q7 an
+optional team name **per nominated captain**, Q8 $250 green fee, Q9 longest drive /
+closest to the pin — **skipped for a NO**) →
 **Review** → confirmation (YOU'RE IN. with the live confirmed count for YES;
 "Pencilled in." for MAYBE; "Next time, then." for NO — **never repeats answers**).
 Mobile-first; a sticky Back/Continue bar; the phone's back button steps back.
@@ -537,18 +539,38 @@ Mobile-first; a sticky Back/Continue bar; the phone's back button steps back.
 The question list is fixed by the owner — **no additions**. Answer options live in
 ONE place, `src/lib/rsvp-shared.js`.
 
+### Getting people to /rsvp (entry points)
+- **Masthead**: an "RSVP" filled terracotta pill (`.nav-rsvp` in `Nav.astro`) —
+  outside the collapsible menu, so it's visible next to "Menu" on phones.
+- **Home**: a sunset-gradient banner (`.rsvp-cta`) above the hero banner, above
+  the fold on a phone; plus an "RSVP for 2027" button in the Next Trip band.
+  After this device RSVPs YES, `/rsvp` stores `annual-rsvp:last` in localStorage
+  and the banner becomes "You're in — see who else is coming →" (the Draft Pool).
+  Best-effort: with no storage it simply stays "RSVP now".
+- **2027 page**: an RSVP band on the Overview (under the countdown), a button in
+  the Trip tab's masthead, and a link in the Draft Pool intro.
+
 ### Where the data lives
 **Upstash Redis** (free tier, connected via Vercel → Storage; env vars
 `KV_REST_API_URL` / `KV_REST_API_TOKEN`). `src/lib/rsvp-store.js`. Three hashes,
 one field per player id, so a re-submission can only overwrite — never duplicate:
 - `rsvp:players` — players created via "I'm not listed" (`{id, name, createdAt}`).
-- `rsvp:profiles` — PERMANENT player data: `strength`, `weakness`, `sentence`
-  (public), `dob` (**private**), `handicapHistory: [{at, index, source}]`
+- `rsvp:profiles` — PERMANENT player data: `strengths[]`, `weaknesses[]`,
+  `sentence` (public), `dob` (**private**), `handicapHistory: [{at, index, source}]`
   (append-only — a new entry whenever the number changes).
 - `rsvp:event:duel-in-the-desert-2027` — 2027 EVENT data: `status`,
-  `handicapEntering`, `captainVoteId` (**a player id, never free text**),
-  `teamName`, `greenFee`, `longestDrive`, `submittedAt`, `firstSubmittedAt`,
-  `submissions`, `statusHistory` (**all private except `status`**).
+  `handicapEntering`, `captainVoteIds[]` (1–2 **player ids, never free text**),
+  `teamNames` (`{ <captainId>: "name" }` — each suggestion is filed against the
+  respondent's record AND that specific captain), `greenFee`, `longestDrive`,
+  `submittedAt`, `firstSubmittedAt`, `submissions`, `statusHistory`
+  (**all private except `status`**).
+- **Old format (the first version of the form)** stored single values —
+  `strength`, `weakness`, `captainVoteId`, `teamName`. Never lost:
+  `normalizeProfile()` / `normalizeEvent()` in `rsvp-shared.js` read either shape
+  as the current one (one-item lists / one captain with its team name) everywhere
+  the data is read (API, admin, build), and the next re-submission rewrites that
+  record in the new shape. The form's per-device private pre-fill migrates the
+  same way. Always read records through those two helpers.
 No Redis locally → a JSON file at `.rsvp-local/store.json` (gitignored), or
 `RSVP_LOCAL_STORE=<path>`. On Vercel with no Redis the API answers 503 and the
 build treats it as "no RSVPs yet".
@@ -595,8 +617,11 @@ of creating a second one. New ids are kebab-case like every other id.
 acceptable for this private group. The page is an empty shell; the data loads only
 when the key after `#` matches the `RSVP_ADMIN_KEY` env var (set in Vercel; never in
 the repo; the `#` part is never sent to servers or logs). Shows everyone incl.
-no-reply, timestamps + change history, handicaps (with history), DOB, captain vote
-tallies, team names grouped by nominated captain, Q8/Q9 totals, and a CSV download.
+no-reply, timestamps + change history, handicaps (with history), DOB, strengths /
+weaknesses (one per line), each person's captain picks with their team names,
+captain vote tallies (**each nomination = one vote**, so one person can back two
+captains), team names grouped by captain, Q8/Q9 totals, and a CSV download (lists
+joined with "; "; captain1/team1/captain2/team2 columns).
 To change the URL, change `RSVP_ADMIN_KEY` in Vercel.
 
 ### Environment variables (Vercel → Settings → Environment Variables)
@@ -618,10 +643,12 @@ every portrait silently becomes a placeholder without it.
 ### Testing
 ```
 RSVP_LOCAL_STORE=/tmp/rsvp-test.json RSVP_ADMIN_KEY=test-key npx astro dev --port 4400
-BASE=http://localhost:4400 ADMIN_KEY=test-key npm run test:rsvp   # 34 checks
+STORE=/tmp/rsvp-test.json BASE=http://localhost:4400 ADMIN_KEY=test-key npm run test:rsvp   # 47 checks
 ```
-Existing/new-player RSVP, changing an RSVP, duplicate prevention, captain vote by
-id, handicap history, privacy of the public API, validation. Never point it at
+Existing/new-player RSVP, changing an RSVP, duplicate prevention, one-or-two
+captains by id with a team name each, multi-select strengths/weaknesses, handicap
+history, old-format migration (needs `STORE`), privacy of the public API,
+validation. Never point it at
 production (it writes test players).
 
 ## Design language
@@ -805,7 +832,7 @@ scripts/gen_portraits.py    cuts the two album-sourced player portraits to 4:5
 scripts/verify_holes.mjs    reconciles the hole layer (54 checks)
 scripts/pull-rsvp.mjs       build step: RSVP store → data/rsvp.generated.json (public slice)
 scripts/set-function-runtime.mjs  post-build: pins the API function to nodejs22.x
-scripts/test-rsvp.mjs       RSVP API checks (34)
+scripts/test-rsvp.mjs       RSVP API checks (47)
 src/lib/rsvp-*.js     RSVP: shared answer lists, the store, the API logic
 src/pages/api/        rsvp.js + rsvp-admin.js — the ONLY server routes
 src/pages/rsvp/       index.astro (the permanent /rsvp) + admin.astro

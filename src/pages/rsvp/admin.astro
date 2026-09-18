@@ -44,7 +44,7 @@ import BrandMark from '../../components/BrandMark.astro';
       <div class="ad-two">
         <section class="ad-sec">
           <h2>Captain votes</h2>
-          <p class="muted ad-note">From YES and MAYBE replies. Team names are listed under the captain they were suggested for.</p>
+          <p class="muted ad-note">From YES and MAYBE replies. Everyone can nominate one or two captains; each nomination is one vote. Team names are listed under the captain they were suggested for.</p>
           <div id="ad-captains"></div>
         </section>
         <section class="ad-sec">
@@ -85,6 +85,8 @@ import BrandMark from '../../components/BrandMark.astro';
   .ad-two { display: grid; grid-template-columns: 1fr 1fr; gap: 2.5rem; }
   .ad-table td { vertical-align: top; }
   .ad-table .wrapcell { white-space: normal; min-width: 14rem; }
+  .ad-table .listcell { line-height: 1.45; }
+  .ad-gap { height: .45rem; }
   .ad-st { display: inline-block; padding: .2rem .55rem; border-radius: 99px; font-size: .68rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
   .ad-st--yes { background: var(--terra); color: #fff; }
   .ad-st--maybe { background: var(--gold-soft); color: var(--gold); }
@@ -143,7 +145,7 @@ import BrandMark from '../../components/BrandMark.astro';
 
     const rows = data.rows.slice().sort((a, b) =>
       (ORDER[a.effectiveStatus] ?? 3) - (ORDER[b.effectiveStatus] ?? 3) || a.name.localeCompare(b.name));
-    $('#ad-table').innerHTML = `<thead><tr><th>Player</th><th>RSVP</th><th>Replied</th><th class="num">Handicap</th><th>Date of birth</th><th>Strongest / weakest</th><th>In a sentence</th><th>Captain pick</th><th>Team name</th><th>$250</th><th>LD / CTP</th></tr></thead><tbody>${rows.map((r) => {
+    $('#ad-table').innerHTML = `<thead><tr><th>Player</th><th>RSVP</th><th>Replied</th><th class="num">Handicap</th><th>Date of birth</th><th>Strongest</th><th>Weakest</th><th>In a sentence</th><th>Captain picks · team names</th><th>$250</th><th>LD / CTP</th></tr></thead><tbody>${rows.map((r) => {
       const st = r.status
         ? `<span class="ad-st ad-st--${r.status}">${LABEL[r.status]}</span>`
         : r.handConfirmed ? `<span class="ad-st ad-st--none">Confirmed by hand</span>` : `<span class="ad-st ad-st--none">No reply</span>`;
@@ -155,10 +157,10 @@ import BrandMark from '../../components/BrandMark.astro';
         <td>${esc(when(r.submittedAt))}${r.submissions > 1 ? `<span class="ad-sub">${r.submissions} submissions · first ${esc(when(r.firstSubmittedAt))}</span>` : ''}</td>
         <td class="num">${esc(hcp(r.handicapEntering))}${r.handicapHistory.length > 1 ? `<span class="ad-sub">${esc(hist)}</span>` : ''}</td>
         <td>${esc(r.dob || '')}</td>
-        <td>${r.strength ? `${esc(r.strength)}<span class="ad-sub">${esc(r.weakness)}</span>` : ''}</td>
+        <td class="listcell">${r.strengths.map(esc).join('<br>')}</td>
+        <td class="listcell">${r.weaknesses.map(esc).join('<br>')}</td>
         <td class="wrapcell">${esc(r.sentence || '')}</td>
-        <td>${esc(r.captainVoteName || '')}</td>
-        <td>${esc(r.teamName || '')}</td>
+        <td class="listcell">${r.captainVotes.map((v) => `${esc(v.name)}${v.teamName ? `<span class="ad-sub">“${esc(v.teamName)}”</span>` : ''}`).join('<div class="ad-gap"></div>')}</td>
         <td>${esc(data.greenFee.find((g) => g.key === r.greenFee)?.label || '')}</td>
         <td>${esc(data.longestDrive.find((g) => g.key === r.longestDrive)?.label || '')}</td>
       </tr>`;
@@ -177,9 +179,16 @@ import BrandMark from '../../components/BrandMark.astro';
   // CSV of the full table, for a spreadsheet.
   $('#ad-csv').addEventListener('click', () => {
     if (!data) return;
-    const cols = ['name', 'id', 'status', 'effectiveStatus', 'submittedAt', 'firstSubmittedAt', 'submissions', 'handicapEntering', 'dob', 'strength', 'weakness', 'sentence', 'captainVoteName', 'teamName', 'greenFee', 'longestDrive'];
+    // lists are joined with "; " so each answer stays in one spreadsheet cell
+    const flat = (r) => ({
+      ...r,
+      strengths: r.strengths.join('; '), weaknesses: r.weaknesses.join('; '),
+      captain1: r.captainVotes[0]?.name, team1: r.captainVotes[0]?.teamName,
+      captain2: r.captainVotes[1]?.name, team2: r.captainVotes[1]?.teamName,
+    });
+    const cols = ['name', 'id', 'status', 'effectiveStatus', 'submittedAt', 'firstSubmittedAt', 'submissions', 'handicapEntering', 'dob', 'strengths', 'weaknesses', 'sentence', 'captain1', 'team1', 'captain2', 'team2', 'greenFee', 'longestDrive'];
     const cell = (v) => { const s = v == null ? '' : String(v); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
-    const csv = [cols.join(','), ...data.rows.map((r) => cols.map((k) => cell(r[k])).join(','))].join('\n');
+    const csv = [cols.join(','), ...data.rows.map(flat).map((r) => cols.map((k) => cell(r[k])).join(','))].join('\n');
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
     a.download = `rsvp-2027-${new Date().toISOString().slice(0, 10)}.csv`;

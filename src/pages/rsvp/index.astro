@@ -111,7 +111,7 @@ const STEPS = [
       <!-- 3 · YOUR GAME (permanent player profile) -->
       <section class="rv-screen" data-screen="game" aria-labelledby="rv-game-h">
         <h2 class="rv-h" id="rv-game-h" tabindex="-1">Your game</h2>
-        <p class="rv-sub">Your strengths, weakness and one-liner go on your player profile. Your date of birth stays private.</p>
+        <p class="rv-sub">Your strengths, weaknesses and one-liner go on your player profile. Your date of birth stays private.</p>
 
         <div class="rv-field">
           <label for="rv-dob" class="rv-label">Date of birth <span class="rv-private">Private</span></label>
@@ -130,19 +130,19 @@ const STEPS = [
         </div>
 
         <fieldset class="rv-field">
-          <legend class="rv-label">Strongest part of your game</legend>
+          <legend class="rv-label">Strongest parts of your game <span class="rv-label__aside">Pick as many as apply</span></legend>
           <div class="rv-chips">
-            {GAME_PARTS.map((g) => <label class="rv-chip"><input type="radio" name="strength" value={g} /><span>{g}</span></label>)}
+            {GAME_PARTS.map((g) => <label class="rv-chip"><input type="checkbox" name="strengths" value={g} /><span>{g}</span></label>)}
           </div>
-          <p class="rv-err" data-err="strength" role="alert"></p>
+          <p class="rv-err" data-err="strengths" role="alert"></p>
         </fieldset>
 
         <fieldset class="rv-field">
-          <legend class="rv-label">Weakest part of your game</legend>
+          <legend class="rv-label">Weakest parts of your game <span class="rv-label__aside">Pick as many as apply</span></legend>
           <div class="rv-chips">
-            {GAME_PARTS.map((g) => <label class="rv-chip rv-chip--down"><input type="radio" name="weakness" value={g} /><span>{g}</span></label>)}
+            {GAME_PARTS.map((g) => <label class="rv-chip rv-chip--down"><input type="checkbox" name="weaknesses" value={g} /><span>{g}</span></label>)}
           </div>
-          <p class="rv-err" data-err="weakness" role="alert"></p>
+          <p class="rv-err" data-err="weaknesses" role="alert"></p>
         </fieldset>
 
         <div class="rv-field">
@@ -158,18 +158,16 @@ const STEPS = [
         <p class="rv-sub">These stay private. Only the organiser sees them, and only as totals.</p>
 
         <fieldset class="rv-field">
-          <legend class="rv-label">Who would you nominate to be a captain?</legend>
+          <legend class="rv-label">Who would you nominate as captains? <span class="rv-label__aside">Pick one or two</span></legend>
           <div class="rv-chips rv-chips--names" id="rv-nominees">
-            {nominees.map((n) => <label class="rv-chip"><input type="radio" name="captainVoteId" value={n.id} /><span>{n.name}</span></label>)}
+            {nominees.map((n) => <label class="rv-chip"><input type="checkbox" name="captainVoteIds" value={n.id} /><span>{n.name}</span></label>)}
           </div>
-          <p class="rv-err" data-err="captainVoteId" role="alert"></p>
+          <p class="rv-err" data-err="captainVoteIds" role="alert"></p>
         </fieldset>
 
-        <div class="rv-field">
-          <label for="rv-team" class="rv-label">What would their team name be?</label>
-          <input id="rv-team" name="teamName" type="text" class="rv-input" maxlength={LIMITS.teamName} placeholder="Optional" />
-          <p class="rv-err" data-err="teamName" role="alert"></p>
-        </div>
+        <!-- one optional team-name field per captain picked above (drawn by the script) -->
+        <div class="rv-teams" id="rv-teams"></div>
+        <p class="rv-err" data-err="teamNames" role="alert"></p>
 
         <fieldset class="rv-field">
           <legend class="rv-label">For one or two rounds, are you okay with a green fee of $250?</legend>
@@ -287,6 +285,7 @@ const STEPS = [
   .rv-face__frame--init { background: linear-gradient(180deg, #EFC095, #F9E4C6); box-shadow: none; }
   .rv-face__frame--init span { font-family: var(--serif); font-weight: 600; font-size: 1.6rem; color: var(--navy-ink); }
   .rv-newname { margin-top: 1.3rem; }
+  .rv-teams:empty { display: none; }
 
   /* ---- fields ---- */
   .rv-field { border: 0; padding: 0; margin: 0 0 1.7rem; min-width: 0; }
@@ -379,7 +378,8 @@ const STEPS = [
   const ORDER = ['open', 'who', 'rsvp', 'game', 'event', 'review', 'done'];
   const FORM_STEPS = ['who', 'rsvp', 'game', 'event', 'review'];
   const LABELS = { who: 'You', rsvp: 'RSVP', game: 'Your game', event: '2027', review: 'Review' };
-  const PRIVATE = ['dob', 'captainVoteId', 'teamName', 'greenFee', 'longestDrive'];
+  const PRIVATE = ['dob', 'captainVoteIds', 'teamNames', 'greenFee', 'longestDrive'];
+  const MAX_CAPTAINS = DATA.limits.maxCaptains;
   const store = {   // this device only — may be unavailable (private mode), so never required
     get(id) { try { return JSON.parse(localStorage.getItem('annual-rsvp:' + id) || 'null'); } catch { return null; } },
     set(id, v) { try { localStorage.setItem('annual-rsvp:' + id, JSON.stringify(v)); } catch {} },
@@ -395,6 +395,11 @@ const STEPS = [
     if (els instanceof RadioNodeList) return els.value;
     return els.value.trim();
   };
+  // multi-select groups (checkboxes): the ticked values, in page order
+  const group = (name) => [...form.querySelectorAll(`input[name="${name}"]`)];
+  const vals = (name) => group(name).filter((i) => i.checked).map((i) => i.value);
+  const setVals = (name, list) => { const want = new Set(list || []); group(name).forEach((i) => (i.checked = want.has(i.value))); };
+  const teamDraft = {};   // typed team names, kept while captains are ticked / unticked
   const setVal = (name, v) => {
     const els = form.elements[name];
     if (!els || v == null) return;
@@ -421,7 +426,7 @@ const STEPS = [
     if (input && !(input instanceof RadioNodeList)) { input.setAttribute('aria-invalid', 'true'); }
     box.scrollIntoView({ block: 'center', behavior: 'smooth' });
   };
-  const stepOfField = (f) => ({ playerId: 'who', newName: 'who', status: 'rsvp', dob: 'game', handicap: 'game', strength: 'game', weakness: 'game', sentence: 'game', captainVoteId: 'event', teamName: 'event', greenFee: 'event', longestDrive: 'event' }[f] || 'review');
+  const stepOfField = (f) => ({ playerId: 'who', newName: 'who', status: 'rsvp', dob: 'game', handicap: 'game', strengths: 'game', weaknesses: 'game', sentence: 'game', captainVoteIds: 'event', teamNames: 'event', greenFee: 'event', longestDrive: 'event' }[f] || 'review');
 
   // ---- per-step validation (the server re-checks everything) ----
   function validate(s) {
@@ -444,12 +449,13 @@ const STEPS = [
       if (!/^\d{1,2}(\.\d+)?$/.test(h)) return e('handicap', 'Use a number like 12.4.');
       const n = parseFloat(h);
       if (n > DATA.limits.hcpMax || (isPlus() && n > -DATA.limits.hcpMin)) return e('handicap', 'That handicap looks out of range.');
-      if (!val('strength')) return e('strength', 'Pick your strongest part.');
-      if (!val('weakness')) return e('weakness', 'Pick your weakest part.');
-      if (val('strength') === val('weakness')) return e('weakness', 'Your weakest can’t be the same as your strongest.');
+      if (!vals('strengths').length) return e('strengths', 'Pick at least one strongest part.');
+      if (!vals('weaknesses').length) return e('weaknesses', 'Pick at least one weakest part.');
     }
     if (s === 'event') {
-      if (!val('captainVoteId')) return e('captainVoteId', 'Pick who you’d nominate.');
+      const caps = vals('captainVoteIds').length;
+      if (!caps) return e('captainVoteIds', 'Pick one or two captains.');
+      if (caps > MAX_CAPTAINS) return e('captainVoteIds', `Pick no more than ${MAX_CAPTAINS}.`);
       if (!val('greenFee')) return e('greenFee', 'Answer the green-fee question.');
       if (!val('longestDrive')) return e('longestDrive', 'Answer the longest-drive question.');
     }
@@ -511,11 +517,33 @@ const STEPS = [
       clearErrors();
     }
     // a part of your game can't be both strongest and weakest
-    if (e.target.name === 'strength' || e.target.name === 'weakness') {
-      const other = e.target.name === 'strength' ? 'weakness' : 'strength';
-      for (const r of form.elements[other]) r.disabled = r.value === e.target.value;
-    }
+    if (e.target.name === 'strengths' || e.target.name === 'weaknesses') syncParts();
+    if (e.target.name === 'captainVoteIds') { syncCaptains(); clearErrors(); }
   });
+  form.addEventListener('input', (e) => { if (e.target.dataset.captain) teamDraft[e.target.dataset.captain] = e.target.value; });
+
+  // a part of your game can't be both a strength and a weakness: whatever is
+  // ticked on one side is greyed out on the other
+  function syncParts() {
+    const s = new Set(vals('strengths')), w = new Set(vals('weaknesses'));
+    group('strengths').forEach((i) => (i.disabled = w.has(i.value)));
+    group('weaknesses').forEach((i) => (i.disabled = s.has(i.value)));
+  }
+  // one or two captains: once two are ticked the rest grey out; each ticked
+  // captain gets their own optional team-name field
+  function syncCaptains() {
+    const picked = vals('captainVoteIds');
+    group('captainVoteIds').forEach((i) => (i.disabled = !i.checked && picked.length >= MAX_CAPTAINS));
+    const box = $('#rv-teams');
+    box.innerHTML = picked.map((id) => {
+      const n = DATA.nominees.find((x) => x.id === id)?.name || id;
+      return `<div class="rv-field"><label class="rv-label" for="rv-team-${esc(id)}">What would ${esc(n.split(' ')[0])}’s team name be? <span class="rv-label__aside">Optional</span></label>
+        <input id="rv-team-${esc(id)}" data-captain="${esc(id)}" type="text" class="rv-input" maxlength="${DATA.limits.teamName}" value="${esc(teamDraft[id] || '')}" /></div>`;
+    }).join('');
+  }
+  const teamNamesOut = () => Object.fromEntries(vals('captainVoteIds').map((id) => [id, (teamDraft[id] || '').trim()]).filter(([, v]) => v));
+
+
 
   // ---- pre-fill: public answers from the server, private ones from this device ----
   async function prefill() {
@@ -523,11 +551,12 @@ const STEPS = [
     if (id === '__new' || id === prefilledFor) return;
     prefilledFor = id;
     const p = players.find((x) => x.id === id);
-    ['status', 'dob', 'handicap', 'strength', 'weakness', 'sentence', ...PRIVATE].forEach((k) => {
-      const els = form.elements[k];
-      if (els instanceof RadioNodeList) for (const r of els) { r.checked = false; r.disabled = false; }
-      else if (els) els.value = '';
+    ['status', 'dob', 'handicap', 'strengths', 'weaknesses', 'sentence', 'captainVoteIds', 'greenFee', 'longestDrive'].forEach((k) => {
+      const inputs = group(k);
+      if (inputs.length && (inputs[0].type === 'radio' || inputs[0].type === 'checkbox')) inputs.forEach((r) => { r.checked = false; r.disabled = false; });
+      else if (form.elements[k]) form.elements[k].value = '';
     });
+    for (const k in teamDraft) delete teamDraft[k];
     form.elements.hcpPlus.checked = false;
     if (p?.hcp != null) setHcp(p.hcp);
     nextBtn.disabled = true;
@@ -538,16 +567,23 @@ const STEPS = [
         if (player) {
           setVal('status', player.status);
           if (player.handicap != null) setHcp(player.handicap);
-          setVal('strength', player.strength);
-          setVal('weakness', player.weakness);
+          setVals('strengths', player.strengths);
+          setVals('weaknesses', player.weaknesses);
           setVal('sentence', player.sentence);
         }
       }
     } catch {}
     finally { nextBtn.disabled = false; }
     const mine = store.get(id);
-    if (mine) PRIVATE.forEach((k) => setVal(k, mine[k]));
-    ['strength', 'weakness'].forEach((k) => { const v = val(k); if (v) form.elements[k === 'strength' ? 'weakness' : 'strength'].forEach((r) => (r.disabled = r.value === v)); });
+    if (mine) {
+      setVal('dob', mine.dob); setVal('greenFee', mine.greenFee); setVal('longestDrive', mine.longestDrive);
+      // saved by the first version of the form: one captain + one team name
+      const caps = mine.captainVoteIds || (mine.captainVoteId ? [mine.captainVoteId] : []);
+      const names = mine.teamNames || (mine.captainVoteId && mine.teamName ? { [mine.captainVoteId]: mine.teamName } : {});
+      setVals('captainVoteIds', caps.filter((c) => DATA.nominees.some((n) => n.id === c)).slice(0, MAX_CAPTAINS));
+      Object.assign(teamDraft, names);
+    }
+    syncParts(); syncCaptains();
   }
 
   // ---- review ----
@@ -556,7 +592,8 @@ const STEPS = [
   const fmtDob = (d) => d ? new Date(d + 'T00:00:00').toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' }) : '—';
   function renderReview() {
     const f = who();
-    const nominee = DATA.nominees.find((n) => n.id === val('captainVoteId'));
+    const nameOf = (id) => DATA.nominees.find((n) => n.id === id)?.name || id;
+    const caps = vals('captainVoteIds'), teams = teamNamesOut();
     const block = (title, target, rows) => `
       <section class="rv-rev"><div class="rv-rev__head"><h3>${title}</h3><button type="button" class="rv-rev__edit" data-edit="${target}">Edit</button></div>
       <dl>${rows.map(([k, v]) => `<dt>${k}</dt><dd>${esc(v) || '—'}</dd>`).join('')}</dl></section>`;
@@ -564,12 +601,12 @@ const STEPS = [
     html += block('RSVP', 'rsvp', [['2027', STATUS[val('status')]]]);
     html += block('Your game', 'game', [
       ['Date of birth', fmtDob(val('dob'))], ['Handicap', hcpOut()],
-      ['Strongest', val('strength')], ['Weakest', val('weakness')], ['In a sentence', val('sentence')],
+      ['Strongest', vals('strengths').join(', ')], ['Weakest', vals('weaknesses').join(', ')], ['In a sentence', val('sentence')],
     ]);
     html += skipsEvent()
       ? `<section class="rv-rev"><div class="rv-rev__head"><h3>2027 questions</h3></div><p class="rv-rev__skip">Skipped, because you can’t make it.</p></section>`
       : block('2027 questions', 'event', [
-          ['Captain pick', nominee?.name], ['Their team name', val('teamName')],
+          ...caps.map((id, i) => [caps.length > 1 ? `Captain pick ${i + 1}` : 'Captain pick', nameOf(id) + (teams[id] ? ` — “${teams[id]}”` : '')]),
           ['$250 green fee', DATA.greenFee[val('greenFee')]], ['Longest drive / closest to pin', DATA.sideGame[val('longestDrive')]],
         ]);
     $('#rv-review').innerHTML = html;
@@ -586,10 +623,10 @@ const STEPS = [
     }
     const body = {
       status: val('status'), dob: val('dob'), handicap: hcpOut(),
-      strength: val('strength'), weakness: val('weakness'), sentence: val('sentence'),
+      strengths: vals('strengths'), weaknesses: vals('weaknesses'), sentence: val('sentence'),
     };
     if (val('playerId') === '__new') body.newName = val('newName'); else body.playerId = val('playerId');
-    if (!skipsEvent()) Object.assign(body, { captainVoteId: val('captainVoteId'), teamName: val('teamName'), greenFee: val('greenFee'), longestDrive: val('longestDrive') });
+    if (!skipsEvent()) Object.assign(body, { captainVoteIds: vals('captainVoteIds'), teamNames: teamNamesOut(), greenFee: val('greenFee'), longestDrive: val('longestDrive') });
 
     nextBtn.disabled = true; nextBtn.textContent = 'Sending…';
     let res, data;
@@ -609,6 +646,8 @@ const STEPS = [
     const priv = {};
     PRIVATE.forEach((k) => (priv[k] = body[k] ?? null));
     store.set(data.playerId, priv);
+    // remembered on this device so the homepage can say "You're in"
+    try { localStorage.setItem('annual-rsvp:last', JSON.stringify({ status: data.status, at: Date.now() })); } catch {}
     renderDone(data);
     show('done', { push: false });
     history.replaceState({ rv: 'done' }, '', location.pathname + '#done');

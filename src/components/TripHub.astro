@@ -89,6 +89,7 @@ const KIND_ICON = { golf: '⛳', draft: '🎯', awards: '🏆', travel: '✈', s
         {address?.area && <div><span class="prog__k">Basecamp</span><b>{address.area}</b></div>}
         <div><span class="prog__k">The field</span><b>{pool.filter((p) => p.group === 'confirmed').length} confirmed</b></div>
       </div>
+      <a class="btn btn--terra prog__rsvp" href="/rsvp">RSVP for {t.year} <span aria-hidden="true">→</span></a>
     </div>
   </div>
 
@@ -325,6 +326,7 @@ const KIND_ICON = { golf: '⛳', draft: '🎯', awards: '🏆', travel: '✈', s
 </div>
 
 <style>
+  .prog__rsvp { margin-top: 1.2rem; min-height: 46px; padding-inline: 1.4rem; }
   .tsec { margin-top: clamp(2.4rem, 6vw, 4rem); }
   .tsec .section-head { margin-bottom: 1.2rem; }
 

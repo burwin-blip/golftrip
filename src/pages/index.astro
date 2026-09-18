@@ -44,6 +44,18 @@ const next = {
   <!-- 1 · HERO — the banner poster (title + tagline are in the art) + scoreboard -->
   <section class="hero">
     <div class="wrap">
+      <!-- RSVP call-to-action: first thing on the page, above the fold on a phone.
+           Once this device has RSVP'd YES it becomes "You're in" → the Draft Pool. -->
+      {nextEvent && (
+        <a class="rsvp-cta reveal" id="rsvp-cta" href="/rsvp" data-pool={`/tournaments/${nextEvent.id}#pool`}>
+          <span class="rsvp-cta__sun" aria-hidden="true"></span>
+          <span class="rsvp-cta__text">
+            <span class="rsvp-cta__k">{nextEvent.shortName} · {dateRange(nextEvent.startDate, nextEvent.endDate).replace(/,\s*\d{4}$/, '').replace(/([A-Z][a-z]{2})[a-z]+/g, '$1')}</span>
+            <span class="rsvp-cta__v" data-cta-label>RSVP now</span>
+          </span>
+          <span class="rsvp-cta__go" aria-hidden="true">→</span>
+        </a>
+      )}
       <div class="hero__banner reveal" data-d="0">
         <h1 class="hero__mark">
           <img class="hero__img" src="/hero-banner.jpg" width="1586" height="858"
@@ -123,7 +135,8 @@ const next = {
           <p class="next-dates mono-nums">{next.dates}</p>
           <p class="muted" style="margin-top:.9rem">The second edition heads for the desert — four days of golf under the San Jacinto mountains, a fresh draft, and a new trophy on the line.</p>
           <div class="chips" style="margin-top:1.1rem">
-            {next.href && <a class="btn btn--terra" href={next.href}>View the 2027 event <span aria-hidden="true">→</span></a>}
+            <a class="btn btn--terra" href="/rsvp">RSVP for 2027 <span aria-hidden="true">→</span></a>
+            {next.href && <a class="btn btn--ghost" href={next.href}>View the 2027 event</a>}
             <span class="pill">To be contested</span>
           </div>
         </div>
@@ -181,6 +194,19 @@ const next = {
   .home-morelink a { box-shadow: inset 0 -1px 0 var(--line-strong); }
   .home-morelink a:hover { color: var(--terra-ink); box-shadow: inset 0 -1px 0 var(--terra); }
 
+  /* ---- RSVP call-to-action — a strip of the sunset above the banner ---- */
+  .rsvp-cta { display: flex; align-items: center; gap: .9rem; margin-bottom: clamp(.8rem, 2vw, 1.1rem); padding: .85rem clamp(1rem, 3vw, 1.4rem); border-radius: var(--r); color: #fff; background: linear-gradient(100deg, var(--terra-ink) 0%, var(--terra) 45%, var(--sky) 100%); box-shadow: 0 14px 30px -16px color-mix(in srgb, var(--terra) 90%, transparent); position: relative; overflow: hidden; transition: transform .2s var(--ease), box-shadow .2s var(--ease); }
+  .rsvp-cta:hover { transform: translateY(-2px); box-shadow: 0 18px 36px -16px color-mix(in srgb, var(--terra) 95%, transparent); }
+  .rsvp-cta__sun { flex: none; width: 2.1rem; height: 2.1rem; border-radius: 50%; background: radial-gradient(circle at 50% 45%, var(--sun) 0 55%, color-mix(in srgb, var(--sun) 40%, transparent) 56% 70%, transparent 71%); }
+  .rsvp-cta__text { display: flex; flex-direction: column; min-width: 0; }
+  .rsvp-cta__k { font-size: .68rem; font-weight: 800; letter-spacing: .11em; text-transform: uppercase; opacity: .92; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .rsvp-cta__v { font-family: var(--serif); font-weight: 600; font-size: clamp(1.25rem, 1.05rem + 1vw, 1.6rem); line-height: 1.1; }
+  .rsvp-cta__go { margin-left: auto; flex: none; display: grid; place-items: center; width: 2.4rem; height: 2.4rem; border-radius: 50%; background: rgba(255,255,255,.18); font-weight: 800; font-size: 1.15rem; transition: transform .2s var(--ease); }
+  .rsvp-cta:hover .rsvp-cta__go { transform: translateX(3px); }
+  .rsvp-cta.is-in { background: linear-gradient(100deg, var(--navy-deep), var(--navy-ink) 60%, color-mix(in srgb, var(--terra) 55%, var(--navy-ink))); box-shadow: 0 14px 30px -18px rgba(12,27,44,.7); }
+  .band .btn--ghost { color: var(--green-ink); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--green-ink) 45%, transparent); }
+  .band .btn--ghost:hover { box-shadow: inset 0 0 0 1.5px var(--green-ink); }
+
   /* ---- next-trip band — clubhouse green finale ---- */
   .band { background: var(--green-900); color: var(--green-ink); border-radius: var(--r-lg); margin: 0 var(--gutter) clamp(1rem,3vw,2rem); position: relative; overflow: hidden; }
   .band .wrap { padding-inline: clamp(1.4rem, 4vw, 3rem); }
@@ -211,6 +237,21 @@ const next = {
     .flyer img { width: min(78vw, 320px); }
   }
 </style>
+
+<script is:inline>
+  // "You're in": /rsvp remembers this device's last answer (localStorage,
+  // best-effort — private mode just keeps the default "RSVP now").
+  (() => {
+    const cta = document.getElementById('rsvp-cta');
+    if (!cta) return;
+    let last = null;
+    try { last = JSON.parse(localStorage.getItem('annual-rsvp:last') || 'null'); } catch {}
+    if (last?.status !== 'yes') return;
+    cta.classList.add('is-in');
+    cta.href = cta.dataset.pool;
+    cta.querySelector('[data-cta-label]').textContent = 'You’re in — see who else is coming';
+  })();
+</script>
 
 <script is:inline>
   (() => {

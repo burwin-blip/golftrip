@@ -25,6 +25,8 @@ const links = [
       <BrandMark size={32} />
       <span class="brand__name">The <span class="gold">Annual</span></span>
     </a>
+    <!-- RSVP sits outside the collapsible menu so it's one tap away on phones too -->
+    <a class="nav-rsvp" href="/rsvp">RSVP</a>
     <button class="nav-toggle" aria-label="Toggle menu" aria-expanded="false">Menu</button>
     <nav class="nav" aria-label="Primary">
       {links.map((l) => (

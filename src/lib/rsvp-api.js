@@ -12,7 +12,7 @@ import staticPlayers from '../../data/players.json';
 import * as store from './rsvp-store.js';
 import {
   RSVP_TOURNAMENT_ID as TID, RSVP_STATUSES, GAME_PARTS, GREEN_FEE_ANSWERS,
-  SIDE_GAME_ANSWERS, LIMITS, slugify, tidyName,
+  SIDE_GAME_ANSWERS, LIMITS, slugify, tidyName, normalizeProfile, normalizeEvent,
 } from './rsvp-shared.js';
 
 export class RsvpError extends Error {
@@ -71,6 +71,14 @@ const oneOf = (raw, allowed, field, msg) => {
   return raw;
 };
 
+// Multi-select: at least one, every value from the list, no repeats. Kept in
+// the list's own order so profiles read consistently.
+const someOf = (raw, allowed, field, msg) => {
+  const picked = Array.isArray(raw) ? raw : raw ? [raw] : [];
+  if (!picked.length || picked.some((v) => !allowed.includes(v))) throw new RsvpError(msg, field);
+  return allowed.filter((v) => picked.includes(v));
+};
+
 // ---- identity ---------------------------------------------------------------
 // Resolve who's answering. Duplicate prevention lives here: a picked id must
 // exist, and a typed name that matches anyone already known (same slug, i.e.
@@ -97,7 +105,7 @@ async function resolvePlayer(body, known, now) {
 // The public-facing slice of a player's RSVP — used to decide whether the
 // static site needs a rebuild after a submission.
 const publicFingerprint = (name, profile, event) => JSON.stringify([
-  name, event?.status, event?.handicapEntering, profile?.strength, profile?.weakness, profile?.sentence,
+  name, event?.status, event?.handicapEntering, profile?.strengths, profile?.weaknesses, profile?.sentence,
   (profile?.handicapHistory || []).length,
 ]);
 
@@ -122,24 +130,37 @@ export async function submitRsvp(body, { env = process.env, now = new Date() } =
   const status = oneOf(body.status, RSVP_STATUSES, 'status', 'Choose Yes, No or Maybe.');
   const dob = parseDob(body.dob, now);
   const handicap = parseHandicap(body.handicap);
-  const strength = oneOf(body.strength, GAME_PARTS, 'strength', 'Pick the strongest part of your game.');
-  const weakness = oneOf(body.weakness, GAME_PARTS, 'weakness', 'Pick the weakest part of your game.');
-  if (strength === weakness) throw new RsvpError('Your strongest and weakest can’t be the same thing.', 'weakness');
+  const strengths = someOf(body.strengths ?? body.strength, GAME_PARTS, 'strengths', 'Pick at least one strongest part of your game.');
+  const weaknesses = someOf(body.weaknesses ?? body.weakness, GAME_PARTS, 'weaknesses', 'Pick at least one weakest part of your game.');
+  if (strengths.some((g) => weaknesses.includes(g))) throw new RsvpError('The same part can’t be both a strength and a weakness.', 'weaknesses');
   const sentence = optText(body.sentence, LIMITS.sentence, 'sentence', 'Your one-sentence description');
 
   // Q6–Q9 are only asked of people who might come; a NO skips them.
-  let captainVoteId = null, teamName = null, greenFee = null, longestDrive = null;
+  // Captains: one or two, stored by player id; an optional team name for each.
+  let captainVoteIds = [], teamNames = {}, greenFee = null, longestDrive = null;
   if (status !== 'no') {
     const { event: evNow } = await store.loadAll(TID, env);
-    const nominee = known.get(String(body.captainVoteId || ''));
-    if (!nominee || effectiveStatus(nominee, evNow) === 'no') throw new RsvpError('Pick who you’d nominate as a captain.', 'captainVoteId');
-    captainVoteId = nominee.id;
-    teamName = optText(body.teamName, LIMITS.teamName, 'teamName', 'Team name');
+    const rawIds = Array.isArray(body.captainVoteIds) ? body.captainVoteIds : body.captainVoteId ? [body.captainVoteId] : [];
+    const ids = [...new Set(rawIds.map(String))];
+    if (!ids.length) throw new RsvpError('Pick one or two captains.', 'captainVoteIds');
+    if (ids.length > LIMITS.maxCaptains) throw new RsvpError(`Pick no more than ${LIMITS.maxCaptains} captains.`, 'captainVoteIds');
+    for (const id of ids) {
+      const nominee = known.get(id);
+      if (!nominee || effectiveStatus(nominee, evNow) === 'no') throw new RsvpError('Pick your captains from the list.', 'captainVoteIds');
+    }
+    captainVoteIds = ids;
+    const rawNames = body.teamNames && typeof body.teamNames === 'object' ? body.teamNames
+      : (body.teamName && ids.length === 1 ? { [ids[0]]: body.teamName } : {});
+    for (const id of ids) {
+      const t = optText(rawNames[id], LIMITS.teamName, 'teamNames', 'Each team name');
+      if (t) teamNames[id] = t;
+    }
     greenFee = oneOf(body.greenFee, Object.keys(GREEN_FEE_ANSWERS), 'greenFee', 'Answer the green-fee question.');
     longestDrive = oneOf(body.longestDrive, Object.keys(SIDE_GAME_ANSWERS), 'longestDrive', 'Answer the longest-drive question.');
   }
 
-  const prev = await store.loadOne(TID, player.id, env);
+  const loaded = await store.loadOne(TID, player.id, env);
+  const prev = { profile: normalizeProfile(loaded.profile), event: normalizeEvent(loaded.event) };
   const prevFp = publicFingerprint(player.name, prev.profile, prev.event);
   const at = now.toISOString();
 
@@ -147,13 +168,13 @@ export async function submitRsvp(body, { env = process.env, now = new Date() } =
   // time the submitted number differs from the last one, so nothing is lost.
   const history = [...(prev.profile?.handicapHistory || [])];
   if (!history.length || history[history.length - 1].index !== handicap) history.push({ at, index: handicap, source: 'rsvp' });
-  const profile = { ...(prev.profile || {}), dob, strength, weakness, sentence, handicapHistory: history, updatedAt: at };
+  const profile = { ...(prev.profile || {}), dob, strengths, weaknesses, sentence, handicapHistory: history, updatedAt: at };
 
   // 2027 EVENT data — one record per player, overwritten on re-submission.
   const statusHistory = [...(prev.event?.statusHistory || [])];
   if (!statusHistory.length || statusHistory[statusHistory.length - 1].status !== status) statusHistory.push({ at, status });
   const event = {
-    status, handicapEntering: handicap, captainVoteId, teamName, greenFee, longestDrive,
+    status, handicapEntering: handicap, captainVoteIds, teamNames, greenFee, longestDrive,
     submittedAt: at, firstSubmittedAt: prev.event?.firstSubmittedAt ?? at,
     submissions: (prev.event?.submissions || 0) + 1, statusHistory,
   };
@@ -188,13 +209,13 @@ export async function readRsvp(playerId, { env = process.env } = {}) {
   if (playerId) {
     const p = known.get(String(playerId));
     if (!p) throw new RsvpError('Unknown player.', 'playerId', 404);
-    const pr = profiles[p.id] || {};
+    const pr = normalizeProfile(profiles[p.id]) || {};
     const hist = pr.handicapHistory || [];
     out.player = {
       id: p.id, name: p.name,
       status: event[p.id]?.status ?? null,
       handicap: hist.length ? hist[hist.length - 1].index : null,
-      strength: pr.strength ?? null, weakness: pr.weakness ?? null, sentence: pr.sentence ?? null,
+      strengths: pr.strengths ?? [], weaknesses: pr.weaknesses ?? [], sentence: pr.sentence ?? null,
     };
   }
   return out;
@@ -216,8 +237,8 @@ export async function readAdmin(key, { env = process.env } = {}) {
   const nameOf = (id) => known.get(id)?.name ?? id;
 
   const rows = [...known.values()].map((p) => {
-    const e = event[p.id] || null;
-    const pr = profiles[p.id] || null;
+    const e = normalizeEvent(event[p.id]);
+    const pr = normalizeProfile(profiles[p.id]);
     return {
       id: p.id, name: p.name, created: p.created, createdAt: p.createdAt ?? null,
       handConfirmed: p.confirmedFor.includes(TID),
@@ -225,20 +246,23 @@ export async function readAdmin(key, { env = process.env } = {}) {
       submittedAt: e?.submittedAt ?? null, firstSubmittedAt: e?.firstSubmittedAt ?? null,
       submissions: e?.submissions ?? 0, statusHistory: e?.statusHistory ?? [],
       handicapEntering: e?.handicapEntering ?? null, handicapHistory: pr?.handicapHistory ?? [],
-      dob: pr?.dob ?? null, strength: pr?.strength ?? null, weakness: pr?.weakness ?? null, sentence: pr?.sentence ?? null,
-      captainVoteId: e?.captainVoteId ?? null, captainVoteName: e?.captainVoteId ? nameOf(e.captainVoteId) : null,
-      teamName: e?.teamName ?? null, greenFee: e?.greenFee ?? null, longestDrive: e?.longestDrive ?? null,
+      dob: pr?.dob ?? null, strengths: pr?.strengths ?? [], weaknesses: pr?.weaknesses ?? [], sentence: pr?.sentence ?? null,
+      captainVotes: (e?.captainVoteIds ?? []).map((id) => ({ id, name: nameOf(id), teamName: e.teamNames?.[id] ?? null })),
+      greenFee: e?.greenFee ?? null, longestDrive: e?.longestDrive ?? null,
     };
   });
 
-  // Captain tallies, each with the team names suggested for that captain.
+  // Captain tallies — each nomination is one vote for that captain (so one
+  // person can back two captains), with the team names suggested for each.
   const captains = new Map();
   for (const r of rows) {
-    if (!r.captainVoteId || r.status === 'no') continue;
-    const c = captains.get(r.captainVoteId) || { id: r.captainVoteId, name: r.captainVoteName, votes: 0, voters: [], teamNames: [] };
-    c.votes++; c.voters.push(r.name);
-    if (r.teamName) c.teamNames.push({ name: r.teamName, by: r.name });
-    captains.set(r.captainVoteId, c);
+    if (r.status === 'no') continue;
+    for (const v of r.captainVotes) {
+      const c = captains.get(v.id) || { id: v.id, name: v.name, votes: 0, voters: [], teamNames: [] };
+      c.votes++; c.voters.push(r.name);
+      if (v.teamName) c.teamNames.push({ name: v.teamName, by: r.name });
+      captains.set(v.id, c);
+    }
   }
   const tally = (field, answers) => {
     const counts = Object.fromEntries(Object.keys(answers).map((k) => [k, 0]));

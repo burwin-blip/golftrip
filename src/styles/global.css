@@ -179,6 +179,16 @@ h1, h2, h3, h4 { font-family: var(--serif); font-weight: 600; line-height: 1.05;
 .nav a:hover { color: var(--text); background: color-mix(in srgb, var(--navy-ink) 8%, transparent); }
 .nav a[aria-current="page"] { color: var(--navy-text); background: var(--navy-ink); box-shadow: 0 2px 8px -3px rgba(12,27,44,.55); }
 .nav-toggle { display: none; }
+/* RSVP — the one filled pill in the masthead (terracotta, the CTA accent) */
+.nav-rsvp {
+  order: 3; margin-left: 0.45rem; flex: none;
+  font-size: 0.8rem; font-weight: 800; letter-spacing: 0.04em;
+  color: #fff; background: var(--terra); padding: 0.5rem 0.95rem; border-radius: 999px;
+  box-shadow: 0 6px 16px -8px color-mix(in srgb, var(--terra) 85%, transparent);
+  transition: transform 0.15s var(--ease), filter 0.15s var(--ease);
+}
+.nav-rsvp:hover { transform: translateY(-1px); filter: brightness(1.05); }
+.nav { order: 2; }
 
 /* footer echoes the banner's navy dune — the page ends where the poster does */
 .footer { border-top: 0; margin-top: 3rem; color: color-mix(in srgb, var(--navy-text) 66%, transparent); font-size: 0.82rem; background: var(--navy-deep); }
@@ -346,5 +356,7 @@ table.data a:hover { box-shadow: inset 0 -1px 0 var(--terra); }
   .nav a:last-child { border-bottom: 0; }
   .nav a[aria-current="page"] { background: var(--navy-ink); }
   .nav.open { transform: translateY(0); }
-  .nav-toggle { display: inline-flex; margin-left: auto; align-items: center; gap: 0.45rem; background: var(--paper); border-radius: 999px; box-shadow: inset 0 0 0 1px var(--line-strong); padding: 0.44rem 0.85rem; font-size: 0.8rem; font-weight: 700; color: var(--muted); }
+  .nav-rsvp { order: 1; margin-left: auto; }
+  .nav-toggle { order: 2; margin-left: 0.45rem;
+  display: inline-flex; align-items: center; gap: 0.45rem; background: var(--paper); border-radius: 999px; box-shadow: inset 0 0 0 1px var(--line-strong); padding: 0.44rem 0.85rem; font-size: 0.8rem; font-weight: 700; color: var(--muted); }
 }

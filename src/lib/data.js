@@ -10,6 +10,7 @@ import holeScores from '../../data/hole_scores.json';
 import photos from '../../data/photos.json';
 import rawHandicapSnapshots from '../../data/handicap_snapshots.json';
 import rawTrip2027 from '../../data/trip-2027.json';
+import { normalizeProfile } from './rsvp-shared.js';
 
 // ---------------------------------------------------------------------------
 // RSVP (data/rsvp.generated.json) — the PUBLIC slice of the /rsvp submissions,
@@ -45,10 +46,10 @@ const players = (() => {
 export const rsvpStatusFor = (playerId, tid) =>
   (rsvp.tournamentId === tid ? rsvp.statuses?.[playerId] : null) ?? null;
 
-/** Their own scouting notes from the RSVP (strongest, weakest, one sentence), or null. */
+/** Their own scouting notes from the RSVP — { strengths[], weaknesses[], sentence } — or null. */
 export const gameProfileFor = (playerId) => {
-  const g = rsvp.profiles?.[playerId];
-  return g && (g.strength || g.weakness || g.sentence) ? g : null;
+  const g = normalizeProfile(rsvp.profiles?.[playerId]);
+  return g && (g.strengths.length || g.weaknesses.length || g.sentence) ? g : null;
 };
 
 // ---------------------------------------------------------------------------

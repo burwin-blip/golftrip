@@ -1,6 +1,6 @@
 ---
 // "In their own words" — the permanent game profile each player gives on the
-// RSVP (strongest part, weakest part, one sentence), shown in the scouting
+// RSVP (strongest parts, weakest parts, one sentence), shown in the scouting
 // report. Renders nothing until they've answered. Private RSVP answers (date
 // of birth, captain vote, etc.) never reach this component — see data.js.
 import { gameProfileFor } from '../lib/data.js';
@@ -22,12 +22,12 @@ const first = player.name.split(' ')[0];
         )}
         <div class="gprof__split">
           <div class="gprof__cell gprof__cell--up">
-            <span class="gprof__k">Strongest part</span>
-            <span class="gprof__v">{g.strength ?? '—'}</span>
+            <span class="gprof__k">Strongest {g.strengths.length === 1 ? 'part' : 'parts'}</span>
+            {g.strengths.length ? <ul class="gprof__list">{g.strengths.map((x) => <li>{x}</li>)}</ul> : <span class="gprof__v">—</span>}
           </div>
           <div class="gprof__cell gprof__cell--down">
-            <span class="gprof__k">Weakest part</span>
-            <span class="gprof__v">{g.weakness ?? '—'}</span>
+            <span class="gprof__k">Weakest {g.weaknesses.length === 1 ? 'part' : 'parts'}</span>
+            {g.weaknesses.length ? <ul class="gprof__list">{g.weaknesses.map((x) => <li>{x}</li>)}</ul> : <span class="gprof__v">—</span>}
           </div>
         </div>
       </div>
@@ -46,6 +46,7 @@ const first = player.name.split(' ')[0];
   .gprof__cell--up { border-top-color: var(--terra); }
   .gprof__cell--down { border-top-color: var(--navy-line); }
   .gprof__k { font-size: .66rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--faint); }
-  .gprof__v { font-family: var(--serif); font-weight: 600; font-size: clamp(1.1rem, 1rem + .6vw, 1.4rem); line-height: 1.1; }
-  .gprof__cell--up .gprof__v { color: var(--terra-ink); }
+  .gprof__list { list-style: none; padding: 0; margin: .1rem 0 0; display: flex; flex-direction: column; gap: .3rem; }
+  .gprof__list li, .gprof__v { font-family: var(--serif); font-weight: 600; font-size: clamp(1.05rem, .98rem + .5vw, 1.3rem); line-height: 1.15; }
+  .gprof__cell--up .gprof__list li, .gprof__cell--up .gprof__v { color: var(--terra-ink); }
 </style>
