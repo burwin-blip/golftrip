@@ -5,7 +5,9 @@ import '../styles/global.css';
 import Nav from '../components/Nav.astro';
 import Footer from '../components/Footer.astro';
 
-const { title, description, active } = Astro.props;
+// `bare` drops the site nav + footer for full-screen flows (the /rsvp form) —
+// the <head>, and with it the noindex privacy tags, stays identical.
+const { title, description, active, bare = false } = Astro.props;
 const siteName = 'The Annual';
 const fullTitle = title ? `${title} — ${siteName}` : siteName;
 const desc = description || 'The official historical record of The Annual.';
@@ -33,10 +35,10 @@ const desc = description || 'The official historical record of The Annual.';
   </head>
   <body>
     <a class="skip-link" href="#main" style="position:absolute;left:-9999px;top:0;background:var(--gold);color:#000;padding:.5rem 1rem;border-radius:0 0 6px 0;z-index:100;font-weight:700" onfocus="this.style.left='0'" onblur="this.style.left='-9999px'">Skip to content</a>
-    <Nav active={active} />
+    {!bare && <Nav active={active} />}
     <main id="main">
       <slot />
     </main>
-    <Footer />
+    {!bare && <Footer />}
   </body>
 </html>

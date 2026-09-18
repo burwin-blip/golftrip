@@ -15,3 +15,9 @@ dist/
 npm-debug.log*
 .vscode/
 .idea/
+
+# RSVP — build output of scripts/pull-rsvp.mjs and the local dev store.
+# Never commit these: the repo is public.
+data/rsvp.generated.json
+.rsvp-local/
+.vercel/

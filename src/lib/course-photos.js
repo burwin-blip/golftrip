@@ -17,7 +17,11 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const PHOTOS_ROOT = fileURLToPath(new URL('../../public/photos/', import.meta.url));
+// Resolved off this module's URL when running from source (astro dev). Under the
+// Vercel adapter the prerender runs from a bundled chunk, where that relative
+// path points nowhere — so fall back to the project root (the build's cwd).
+const fromModule = fileURLToPath(new URL('../../public/photos/', import.meta.url));
+const PHOTOS_ROOT = fs.existsSync(fromModule) ? fromModule : path.join(process.cwd(), 'public', 'photos');
 const IMAGE_EXT = new Set(['.jpg', '.jpeg', '.png', '.webp', '.avif']);
 
 // Thumbs generated alongside a full (`name-thumb.jpg`) are used for the grid but

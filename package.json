@@ -3,16 +3,22 @@
   "type": "module",
   "version": "1.0.0",
   "private": true,
-  "description": "The Annual — the official historical record of The Annual golf tournament.",
+  "description": "The Annual \u2014 the official historical record of The Annual golf tournament.",
   "scripts": {
-    "dev": "astro dev",
-    "start": "astro dev",
-    "build": "astro build",
-    "preview": "astro preview"
+    "dev": "node scripts/pull-rsvp.mjs && astro dev",
+    "start": "npm run dev",
+    "build": "node scripts/pull-rsvp.mjs && astro build && node scripts/set-function-runtime.mjs",
+    "preview": "astro preview",
+    "test:rsvp": "node scripts/test-rsvp.mjs"
   },
   "dependencies": {
-    "astro": "^4.16.18",
+    "@astrojs/vercel": "^7.8.2",
+    "@fontsource-variable/archivo": "^5.1.0",
     "@fontsource-variable/fraunces": "^5.1.0",
-    "@fontsource-variable/archivo": "^5.1.0"
+    "@upstash/redis": "^1.38.4",
+    "astro": "^4.16.18"
+  },
+  "engines": {
+    "node": "22.x"
   }
 }

@@ -1,6 +1,6 @@
 // Central data loader. Every page and every stat reads from here — the JSON in
 // /data is the single source of truth. Nothing downstream should hardcode a fact.
-import players from '../../data/players.json';
+import rawPlayers from '../../data/players.json';
 import tournaments from '../../data/tournaments.json';
 import matches from '../../data/matches.json';
 import drafts from '../../data/drafts.json';
@@ -10,6 +10,46 @@ import holeScores from '../../data/hole_scores.json';
 import photos from '../../data/photos.json';
 import rawHandicapSnapshots from '../../data/handicap_snapshots.json';
 import rawTrip2027 from '../../data/trip-2027.json';
+
+// ---------------------------------------------------------------------------
+// RSVP (data/rsvp.generated.json) — the PUBLIC slice of the /rsvp submissions,
+// written by scripts/pull-rsvp.mjs before every build (never committed; the
+// repo is public). Optional: a missing file means "nobody has RSVP'd", so a
+// bare `astro build` still works. Merged here so every page sees one roster:
+//   - players created via "I'm not listed" join the players list
+//   - an RSVP overrides `confirmedFor` for that edition: YES adds it (so a
+//     debutant becomes a rookie automatically), NO / MAYBE remove it
+//   - each self-reported handicap becomes a snapshot with `source: "rsvp"`
+//   - strongest / weakest / one-sentence answers → gameProfileFor()
+// ---------------------------------------------------------------------------
+const rsvpFiles = import.meta.glob('../../data/rsvp.generated.json', { eager: true, import: 'default' });
+const rsvp = Object.values(rsvpFiles)[0] ?? { tournamentId: null, players: [], statuses: {}, profiles: {}, snapshots: [] };
+
+const players = (() => {
+  const known = new Set(rawPlayers.map((p) => p.id));
+  const created = (rsvp.players || [])
+    .filter((p) => !known.has(p.id))
+    .map((p) => ({
+      id: p.id, name: p.name, slug: p.id, active: true, country: null, nickname: null,
+      notes: null, ghin: null, system: 'ghin', confirmedFor: [], viaRsvp: true,
+    }));
+  return [...rawPlayers, ...created].map((p) => {
+    const status = rsvp.tournamentId ? rsvp.statuses?.[p.id] : null;
+    if (!status) return p;
+    const others = (p.confirmedFor || []).filter((t) => t !== rsvp.tournamentId);
+    return { ...p, confirmedFor: status === 'yes' ? [...others, rsvp.tournamentId] : others };
+  });
+})();
+
+/** A player's RSVP for an edition: 'yes' | 'no' | 'maybe', or null if they haven't answered. */
+export const rsvpStatusFor = (playerId, tid) =>
+  (rsvp.tournamentId === tid ? rsvp.statuses?.[playerId] : null) ?? null;
+
+/** Their own scouting notes from the RSVP (strongest, weakest, one sentence), or null. */
+export const gameProfileFor = (playerId) => {
+  const g = rsvp.profiles?.[playerId];
+  return g && (g.strength || g.weakness || g.sentence) ? g : null;
+};
 
 // ---------------------------------------------------------------------------
 // GHIN handicap check-ins (data/handicap_snapshots.json) are HAND-EDITED, often
@@ -41,12 +81,15 @@ function validateHandicapSnapshots(rows, validPlayerIds) {
     if (r.system !== undefined && r.system !== null && r.system !== 'ghin' && r.system !== 'ga') throw new Error(`${where}: ${at} — optional "system" must be "ghin" or "ga", got ${JSON.stringify(r.system)}.`);
     if (r.homeClub !== undefined && r.homeClub !== null && typeof r.homeClub !== 'string') throw new Error(`${where}: ${at} — optional "homeClub" must be text in quotes, got ${JSON.stringify(r.homeClub)}.`);
     if (r.note !== undefined && r.note !== null && typeof r.note !== 'string') throw new Error(`${where}: ${at} — optional "note" must be text in quotes, got ${JSON.stringify(r.note)}.`);
+    if (r.source !== undefined && r.source !== null && r.source !== 'rsvp') throw new Error(`${where}: ${at} — optional "source" may only be "rsvp" (set automatically for RSVP entries); leave it out for a normal check-in. Got ${JSON.stringify(r.source)}.`);
   });
   return rows;
 }
 
+// The hand-entered check-ins plus the RSVP's self-reported handicaps (additive —
+// nothing in the file is ever replaced; see scripts/pull-rsvp.mjs).
 const handicapSnapshots = validateHandicapSnapshots(
-  rawHandicapSnapshots,
+  [...rawHandicapSnapshots, ...(rsvp.snapshots || [])],
   new Set(players.map((p) => p.id)),
 );
 

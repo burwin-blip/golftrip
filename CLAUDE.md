@@ -1,8 +1,9 @@
 # The Annual — project guide
 
 The official historical website for **The Annual**, an annual Ryder Cup–style golf
-trip. A private site for ~20 participants. Built with **Astro** (static output),
-generated entirely from JSON data in `/data`.
+trip. A private site for ~20 participants. Built with **Astro**: every PAGE is
+static, generated from JSON data in `/data`, plus one minimal RSVP API (core
+principle 5 below, and **RSVP** further down).
 
 > Naming: the event/site is **The Annual**. It was previously called "The Duel" /
 > "The Duel Archive" — that name must not appear anywhere in the site. (The only
@@ -26,6 +27,15 @@ generated entirely from JSON data in `/data`.
 4. **Match scoring convention:** win = 1, loss = 0, halved = 0.5 each. This drives
    the W-L-H record and win %. Kept separate from a match's *point value* (1 or 2)
    which feeds the team standings and a player's points earned / available.
+
+5. **Architecture: static pages + a minimal RSVP API, nothing more.** (Amended by
+   the owner for the 2027 RSVP — this replaces the old "static, no backend" rule.)
+   Every page is prerendered at build time (`output: 'hybrid'` with
+   `@astrojs/vercel`; pages never opt out of prerendering). The ONLY server code is
+   the two RSVP routes in `src/pages/api/` (`rsvp.js`, `rsvp-admin.js`), backed by
+   one free Upstash Redis database. Don't add other API routes, server-rendered
+   pages, a CMS, auth, or any other backend without the owner amending this rule
+   again.
 
 ### Two point concepts — keep them straight
 - **Team standings** (the official 16.5–13.5): each match is worth its
@@ -504,8 +514,115 @@ get, automatically: a **"Rookie — debuts <year>"** profile treatment (badge, b
 handicap/GHIN, live power-ranking once snapshots exist, and a "no tournament record
 yet" panel **instead of blank stat tables**); their own **"Confirmed for <year>"**
 group under the veterans on the Players page; and a **"Rookie" tag** in the upcoming
-Draft Pool. To add one: add a player row to `players.json` with `confirmedFor` set
-(and a `ghin` when known) — nothing else required.
+Draft Pool. To add one: they RSVP YES on `/rsvp` via "I'm not listed" — or add a
+player row to `players.json` with `confirmedFor` set (and a `ghin` when known).
+Nothing else required.
+
+## RSVP (`/rsvp`) — the 2027 invitation replies
+
+Replaced the Google Form. **`/rsvp` is PERMANENT** — it is printed as a QR code on
+the invitations, so the path must never change, whatever happens to the code
+behind it. (`src/pages/rsvp/index.astro`.)
+
+### The flow
+Opening screen (the Duel in the Desert flyer art, dates from `tournaments.json`)
+→ **Who are you?** (the wall of faces, or "I'm not listed" → full name) → **RSVP**
+(yes / maybe / no) → **Your game** (Q1 DOB, Q2 handicap, Q3 strongest, Q4 weakest,
+Q5 one sentence) → **2027 questions** (Q6 captain nominee, Q7 their team name, Q8
+$250 green fee, Q9 longest drive / closest to pin — **skipped for a NO**) →
+**Review** → confirmation (YOU'RE IN. with the live confirmed count for YES;
+"Pencilled in." for MAYBE; "Next time, then." for NO — **never repeats answers**).
+Mobile-first; a sticky Back/Continue bar; the phone's back button steps back.
+`Base.astro` takes `bare` to drop the nav/footer for this flow (head/noindex same).
+The question list is fixed by the owner — **no additions**. Answer options live in
+ONE place, `src/lib/rsvp-shared.js`.
+
+### Where the data lives
+**Upstash Redis** (free tier, connected via Vercel → Storage; env vars
+`KV_REST_API_URL` / `KV_REST_API_TOKEN`). `src/lib/rsvp-store.js`. Three hashes,
+one field per player id, so a re-submission can only overwrite — never duplicate:
+- `rsvp:players` — players created via "I'm not listed" (`{id, name, createdAt}`).
+- `rsvp:profiles` — PERMANENT player data: `strength`, `weakness`, `sentence`
+  (public), `dob` (**private**), `handicapHistory: [{at, index, source}]`
+  (append-only — a new entry whenever the number changes).
+- `rsvp:event:duel-in-the-desert-2027` — 2027 EVENT data: `status`,
+  `handicapEntering`, `captainVoteId` (**a player id, never free text**),
+  `teamName`, `greenFee`, `longestDrive`, `submittedAt`, `firstSubmittedAt`,
+  `submissions`, `statusHistory` (**all private except `status`**).
+No Redis locally → a JSON file at `.rsvp-local/store.json` (gitignored), or
+`RSVP_LOCAL_STORE=<path>`. On Vercel with no Redis the API answers 503 and the
+build treats it as "no RSVPs yet".
+
+### Identity & duplicates (`src/lib/rsvp-api.js` → `resolvePlayer`)
+A picked id must exist. A typed name is slugified; if that id already exists
+(`players.json` or an earlier RSVP) the response attaches to that player instead
+of creating a second one. New ids are kebab-case like every other id.
+
+### How RSVPs reach the site (the auto-sync)
+1. `POST /api/rsvp` saves, then — if anything PUBLIC changed — calls the Vercel
+   **deploy hook** (`RSVP_DEPLOY_HOOK_URL`). The site rebuilds in ~1–2 minutes.
+2. `npm run build` runs `scripts/pull-rsvp.mjs` first, which writes the **public
+   slice only** to `data/rsvp.generated.json` (gitignored — **the repo is public**).
+   If Redis is connected but unreachable the build FAILS (the last good deploy
+   stays up) rather than publishing a site with everyone's RSVPs missing.
+3. `src/lib/data.js` merges it (optional file — a bare `astro build` still works):
+   new players join `players`; an RSVP **overrides `confirmedFor`** for 2027 (YES
+   adds it → debutants become rookies automatically; NO / MAYBE remove it); each
+   day's RSVP handicap becomes a snapshot with **`source: "rsvp"`** appended to
+   `handicapSnapshots` (the JSON file is never modified); Q3–Q5 are read with
+   `gameProfileFor(id)`; the status with `rsvpStatusFor(id, tid)`.
+- **Draft Pool** (`draftPoolFor`) groups: **confirmed** (YES, or `confirmedFor` set
+  by hand with no RSVP) · **maybe** · **waiting** (played before, no reply yet).
+  A NO is out of the pool. The pool tab renders Confirmed, then "Waiting on"
+  (MAYBE gets a "Maybe — not sure yet" tag). Captain nominees on `/rsvp` = the pool.
+- **Power Rankings** with RSVP snapshots: they move a player's index + trend, but
+  form / rounds / differential / note keep coming from the latest real GHIN
+  check-in, and RSVP dates never count as a check-in date for movement arrows.
+- **Player profiles**: `GameProfile.astro` — "In their own words" (sentence,
+  strongest, weakest) in the scouting report; renders nothing until they answer.
+
+### Privacy (required)
+- **PUBLIC**: name, RSVP status, handicap, strongest / weakest, the sentence.
+- **PRIVATE — never on the public site, never in the repo**: date of birth, captain
+  votes, team-name suggestions, Q8, Q9. They're stored only in Redis and returned
+  only by the key-protected admin API. `GET /api/rsvp?player=<id>` returns public
+  fields only. Anyone can tap anyone's name (no login), so the form pre-fills
+  private answers **only from that phone's localStorage**, never from the server.
+  `scripts/test-rsvp.mjs` checks no private field leaks.
+
+### Admin view — `/rsvp/admin#<key>`
+**Unlinked but public by design** — there's no auth on this site, which is
+acceptable for this private group. The page is an empty shell; the data loads only
+when the key after `#` matches the `RSVP_ADMIN_KEY` env var (set in Vercel; never in
+the repo; the `#` part is never sent to servers or logs). Shows everyone incl.
+no-reply, timestamps + change history, handicaps (with history), DOB, captain vote
+tallies, team names grouped by nominated captain, Q8/Q9 totals, and a CSV download.
+To change the URL, change `RSVP_ADMIN_KEY` in Vercel.
+
+### Environment variables (Vercel → Settings → Environment Variables)
+- `KV_REST_API_URL`, `KV_REST_API_TOKEN` — added automatically when the Upstash
+  database is connected to the project.
+- `RSVP_DEPLOY_HOOK_URL` — the project's deploy hook (Settings → Git → Deploy Hooks).
+- `RSVP_ADMIN_KEY` — the admin page's key.
+
+### Vercel runtime quirk
+`@astrojs/vercel` v7 (the last for Astro 4) only knows Node 18/20 and falls back
+to the retired `nodejs18.x` on anything newer. `package.json` pins `engines.node`
+to 22.x and `scripts/set-function-runtime.mjs` (runs after `astro build`) rewrites
+the function config to `nodejs22.x`. Remove both on a move to Astro 5.
+Also: under the adapter, prerendering runs from a bundled chunk, so
+`portraits.js` / `course-photos.js` fall back to `process.cwd()/public/...` when
+the `import.meta.url`-relative path doesn't exist. Don't remove that fallback —
+every portrait silently becomes a placeholder without it.
+
+### Testing
+```
+RSVP_LOCAL_STORE=/tmp/rsvp-test.json RSVP_ADMIN_KEY=test-key npx astro dev --port 4400
+BASE=http://localhost:4400 ADMIN_KEY=test-key npm run test:rsvp   # 34 checks
+```
+Existing/new-player RSVP, changing an RSVP, duplicate prevention, captain vote by
+id, handicap history, privacy of the public API, validation. Never point it at
+production (it writes test players).
 
 ## Design language
 
@@ -553,7 +670,10 @@ views it).
 - `public/robots.txt` disallows all crawlers.
 - Every page ships `<meta name="robots" content="noindex, nofollow, …">` via
   `src/layouts/Base.astro`. Any new page must go through `Base.astro`.
-- No external network calls (fonts and logos are self-hosted). Keep it that way.
+- No external network calls from pages (fonts and logos are self-hosted). Keep it
+  that way. The only outbound calls are server-side, from the RSVP API to its
+  Redis database and the Vercel deploy hook.
+- RSVP private answers follow the rules in **RSVP → Privacy** above.
 
 ## Data integrity rules
 
@@ -648,8 +768,9 @@ careers, records, leaderboards, or the home page's "results". `allTournaments()`
    `status: "upcoming"`, dates/location, a `flyer: {display, full}` (images in
    `public/`), and empty `teams/rounds/roster/scores`. It shows in the nav and gets
    its Overview / Draft Pool / Draft Guide page automatically.
-2. **Draft pool** = everyone who has played a completed event, plus anyone with the
-   tournament's id in their `players.json` `confirmedFor` array. To add a **new
+2. **Draft pool** = driven by the RSVPs (see **RSVP**): confirmed (YES / hand-set
+   `confirmedFor`), maybe, and veterans still to reply; a NO is out. (A future
+   edition's RSVP needs `RSVP_TOURNAMENT_ID` in `src/lib/rsvp-shared.js` changed.) To add a **new
    bloke**: add a player row (with `confirmedFor: ["<tournament-id>"]`) — they appear
    in the pool and get a **prospect profile** (guarded in `players/[slug].astro` for
    zero-appearance players) until they play.
@@ -666,9 +787,9 @@ careers, records, leaderboards, or the home page's "results". `allTournaments()`
 ## Commands
 
 ```
-npm run dev      # local preview at http://localhost:4321
-npm run build    # static build to /dist
-npm run preview  # serve the built /dist
+npm run dev        # pulls RSVPs (local file store), then preview at http://localhost:4321
+npm run build      # pulls RSVPs, builds (.vercel/output/), pins the function runtime
+npm run test:rsvp  # RSVP API checks — see RSVP → Testing
 ```
 
 ## Structure
@@ -682,6 +803,12 @@ scripts/gen_data.py         regenerates the 6 core files from the source workboo
 scripts/gen_hole_scores.py  regenerates hole_scores.json (holds the raw hole reads)
 scripts/gen_portraits.py    cuts the two album-sourced player portraits to 4:5
 scripts/verify_holes.mjs    reconciles the hole layer (54 checks)
+scripts/pull-rsvp.mjs       build step: RSVP store → data/rsvp.generated.json (public slice)
+scripts/set-function-runtime.mjs  post-build: pins the API function to nodejs22.x
+scripts/test-rsvp.mjs       RSVP API checks (34)
+src/lib/rsvp-*.js     RSVP: shared answer lists, the store, the API logic
+src/pages/api/        rsvp.js + rsvp-admin.js — the ONLY server routes
+src/pages/rsvp/       index.astro (the permanent /rsvp) + admin.astro
 src/lib/data.js       loads JSON, builds id lookups (+ holesForMatch)
 src/lib/stats.js      ALL derived statistics (build-time), incl. the hole-stat block
 src/lib/portraits.js  build-time scan of public/players/ (portrait or placeholder)

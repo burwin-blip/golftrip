@@ -87,7 +87,7 @@ const KIND_ICON = { golf: '⛳', draft: '🎯', awards: '🏆', travel: '✈', s
         <div><span class="prog__k">When</span><b>{dateRange(t.startDate, t.endDate)}</b></div>
         <div><span class="prog__k">Where</span><b>{t.location}</b></div>
         {address?.area && <div><span class="prog__k">Basecamp</span><b>{address.area}</b></div>}
-        <div><span class="prog__k">The field</span><b>{pool.length} in the pool</b></div>
+        <div><span class="prog__k">The field</span><b>{pool.filter((p) => p.group === 'confirmed').length} confirmed</b></div>
       </div>
     </div>
   </div>

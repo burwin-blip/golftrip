@@ -1,0 +1,193 @@
+---
+// /rsvp/admin#<key> — the organiser's view of every RSVP. UNLINKED BUT PUBLIC BY
+// DESIGN: there is no login anywhere on this site. The page itself is an empty
+// shell; the data only loads when the key after the # matches RSVP_ADMIN_KEY
+// (a Vercel environment variable — never in this public repo). The part after
+// the # is never sent to the server or written to logs.
+import Base from '../../layouts/Base.astro';
+import BrandMark from '../../components/BrandMark.astro';
+---
+<Base title="RSVP responses" bare>
+  <div class="ad wrap">
+    <header class="ad-top">
+      <a class="ad-brand" href="/"><BrandMark size={26} /><span>The <b>Annual</b></span></a>
+      <span class="ad-tag">RSVP admin · 2027</span>
+    </header>
+
+    <div id="ad-locked" class="ad-locked" hidden>
+      <h1>RSVP responses</h1>
+      <p class="muted">Paste your admin key to load the responses.</p>
+      <form id="ad-keyform" class="ad-keyform">
+        <input id="ad-key" type="password" autocomplete="off" placeholder="Admin key" aria-label="Admin key" />
+        <button class="btn btn--terra" type="submit">Load</button>
+      </form>
+      <p class="ad-err" id="ad-err" role="alert"></p>
+    </div>
+
+    <div id="ad-app" hidden>
+      <div class="ad-head">
+        <div><p class="eyebrow gold">Duel in the Desert 2027</p><h1>RSVP responses</h1></div>
+        <div class="ad-actions">
+          <span class="faint" id="ad-asof"></span>
+          <button class="btn btn--navy" id="ad-refresh" type="button">Refresh</button>
+          <button class="btn btn--navy" id="ad-csv" type="button">Download CSV</button>
+        </div>
+      </div>
+      <div class="ad-tiles" id="ad-tiles"></div>
+
+      <section class="ad-sec">
+        <h2>Everyone</h2>
+        <p class="muted ad-note">Includes everyone who hasn’t replied. “Confirmed by hand” = set in players.json before any RSVP.</p>
+        <div class="table-scroll"><table class="data ad-table" id="ad-table"></table></div>
+      </section>
+
+      <div class="ad-two">
+        <section class="ad-sec">
+          <h2>Captain votes</h2>
+          <p class="muted ad-note">From YES and MAYBE replies. Team names are listed under the captain they were suggested for.</p>
+          <div id="ad-captains"></div>
+        </section>
+        <section class="ad-sec">
+          <h2>$250 green fee</h2>
+          <p class="muted ad-note">“For one or two rounds, are you okay with a green fee of $250?”</p>
+          <div id="ad-q8"></div>
+          <h2 style="margin-top:2rem">Longest drive / closest to pin</h2>
+          <p class="muted ad-note">“Should we add them for team points? (one course per day)”</p>
+          <div id="ad-q9"></div>
+        </section>
+      </div>
+    </div>
+  </div>
+</Base>
+
+<style is:global>
+  .ad { padding-block: 1rem 4rem; }
+  .ad-top { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding-block: .6rem 1.6rem; }
+  .ad-brand { display: inline-flex; align-items: center; gap: .5rem; font-family: var(--serif); font-weight: 600; }
+  .ad-brand b { font-weight: 600; color: var(--terra-ink); }
+  .ad-tag { font-size: .7rem; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: var(--faint); }
+  .ad-locked { max-width: 420px; margin: 12vh auto 0; text-align: center; }
+  .ad-locked h1 { font-size: 2rem; margin-bottom: .5rem; }
+  .ad-keyform { display: flex; gap: .5rem; margin-top: 1.2rem; }
+  .ad-keyform input { flex: 1; min-width: 0; font: inherit; font-size: 16px; padding: .6rem .9rem; border: 0; border-radius: 999px; background: var(--paper); box-shadow: inset 0 0 0 1.5px var(--line-strong); }
+  .ad-err { color: var(--terra-ink); font-weight: 600; margin-top: .8rem; min-height: 1.5em; }
+  .ad-head { display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.4rem; }
+  .ad-head h1 { font-size: clamp(1.8rem, 1.4rem + 2vw, 2.6rem); margin-top: .3rem; }
+  .ad-actions { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; }
+  .ad-actions .btn { border: 0; }
+  .ad-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: .8rem; }
+  .ad-tile { background: var(--panel); border-radius: var(--r); padding: 1rem 1.1rem; box-shadow: var(--shadow); border-top: 3px solid var(--c, var(--line-strong)); }
+  .ad-tile b { display: block; font-family: var(--serif); font-size: 2.2rem; line-height: 1; font-variant-numeric: tabular-nums; }
+  .ad-tile span { font-size: .7rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+  .ad-sec { margin-top: 2.6rem; }
+  .ad-sec h2 { font-size: 1.4rem; }
+  .ad-note { font-size: .85rem; margin: .3rem 0 1rem; }
+  .ad-two { display: grid; grid-template-columns: 1fr 1fr; gap: 2.5rem; }
+  .ad-table td { vertical-align: top; }
+  .ad-table .wrapcell { white-space: normal; min-width: 14rem; }
+  .ad-st { display: inline-block; padding: .2rem .55rem; border-radius: 99px; font-size: .68rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+  .ad-st--yes { background: var(--terra); color: #fff; }
+  .ad-st--maybe { background: var(--gold-soft); color: var(--gold); }
+  .ad-st--no { background: var(--navy-ink); color: var(--navy-text); }
+  .ad-st--none { box-shadow: inset 0 0 0 1px var(--line-strong); color: var(--faint); }
+  .ad-sub { display: block; font-size: .72rem; color: var(--faint); }
+  .ad-bar { display: grid; grid-template-columns: minmax(8rem, 40%) 1fr auto; align-items: center; gap: .7rem; padding: .55rem 0; border-bottom: 1px solid var(--line); }
+  .ad-bar__track { height: 10px; border-radius: 99px; background: var(--panel-2); overflow: hidden; }
+  .ad-bar__track, .ad-bar__fill { display: block; }
+  .ad-bar__fill { height: 100%; background: var(--terra); border-radius: 99px; }
+  .ad-bar b { font-variant-numeric: tabular-nums; }
+  .ad-cap { background: var(--panel); border-radius: var(--r); box-shadow: var(--shadow); padding: 1rem 1.1rem; margin-bottom: .8rem; }
+  .ad-cap__head { display: flex; justify-content: space-between; gap: 1rem; align-items: baseline; }
+  .ad-cap__head h3 { font-size: 1.15rem; }
+  .ad-cap__votes { font-weight: 800; color: var(--terra-ink); white-space: nowrap; }
+  .ad-cap ul { list-style: none; padding: 0; margin-top: .6rem; display: grid; gap: .35rem; font-size: .9rem; }
+  .ad-cap li b { font-family: var(--serif); font-weight: 600; }
+  @media (max-width: 760px) { .ad-two { grid-template-columns: 1fr; gap: 0; } }
+</style>
+
+<script is:inline>
+(() => {
+  const $ = (s) => document.querySelector(s);
+  const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const key = () => decodeURIComponent(location.hash.replace(/^#/, ''));
+  const when = (iso) => iso ? new Date(iso).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }) : '';
+  const hcp = (n) => n == null ? '' : n < 0 ? '+' + Math.abs(n).toFixed(1) : n.toFixed(1);
+  const LABEL = { yes: 'Yes', maybe: 'Maybe', no: 'No' };
+  const ORDER = { yes: 0, maybe: 1, no: 2 };
+  let data = null;
+
+  async function load() {
+    $('#ad-err').textContent = '';
+    if (!key()) { $('#ad-locked').hidden = false; $('#ad-app').hidden = true; return; }
+    let res, body;
+    try { res = await fetch('/api/rsvp-admin', { headers: { 'x-admin-key': key() }, cache: 'no-store' }); body = await res.json(); }
+    catch { body = { ok: false, error: 'Couldn’t reach the server.' }; }
+    if (!body.ok) { $('#ad-locked').hidden = false; $('#ad-app').hidden = true; $('#ad-err').textContent = body.error; return; }
+    data = body;
+    $('#ad-locked').hidden = true; $('#ad-app').hidden = false;
+    render();
+  }
+
+  const bars = (items) => {
+    const max = Math.max(1, ...items.map((i) => i.count));
+    return items.map((i) => `<div class="ad-bar"><span>${esc(i.label)}</span><span class="ad-bar__track"><span class="ad-bar__fill" style="width:${(i.count / max) * 100}%"></span></span><b>${i.count}</b></div>`).join('');
+  };
+
+  function render() {
+    const c = data.counts;
+    $('#ad-asof').textContent = 'Updated ' + when(data.generatedAt);
+    $('#ad-tiles').innerHTML = [
+      ['Yes', c.yes, 'var(--terra)'], ['Maybe', c.maybe, 'var(--gold-bright)'], ['No', c.no, 'var(--navy-ink)'],
+      ['No reply yet', c.waiting, 'var(--line-strong)'], ['On the list', c.total, 'var(--line-strong)'],
+    ].map(([k, v, col]) => `<div class="ad-tile" style="--c:${col}"><b>${v}</b><span>${k}</span></div>`).join('');
+
+    const rows = data.rows.slice().sort((a, b) =>
+      (ORDER[a.effectiveStatus] ?? 3) - (ORDER[b.effectiveStatus] ?? 3) || a.name.localeCompare(b.name));
+    $('#ad-table').innerHTML = `<thead><tr><th>Player</th><th>RSVP</th><th>Replied</th><th class="num">Handicap</th><th>Date of birth</th><th>Strongest / weakest</th><th>In a sentence</th><th>Captain pick</th><th>Team name</th><th>$250</th><th>LD / CTP</th></tr></thead><tbody>${rows.map((r) => {
+      const st = r.status
+        ? `<span class="ad-st ad-st--${r.status}">${LABEL[r.status]}</span>`
+        : r.handConfirmed ? `<span class="ad-st ad-st--none">Confirmed by hand</span>` : `<span class="ad-st ad-st--none">No reply</span>`;
+      const hist = r.handicapHistory.map((h) => hcp(h.index)).join(' → ');
+      const changes = r.statusHistory.length > 1 ? `<span class="ad-sub">${r.statusHistory.map((s) => LABEL[s.status]).join(' → ')}</span>` : '';
+      return `<tr>
+        <td class="name">${esc(r.name)}${r.created ? '<span class="ad-sub">New via RSVP</span>' : ''}</td>
+        <td>${st}${changes}</td>
+        <td>${esc(when(r.submittedAt))}${r.submissions > 1 ? `<span class="ad-sub">${r.submissions} submissions · first ${esc(when(r.firstSubmittedAt))}</span>` : ''}</td>
+        <td class="num">${esc(hcp(r.handicapEntering))}${r.handicapHistory.length > 1 ? `<span class="ad-sub">${esc(hist)}</span>` : ''}</td>
+        <td>${esc(r.dob || '')}</td>
+        <td>${r.strength ? `${esc(r.strength)}<span class="ad-sub">${esc(r.weakness)}</span>` : ''}</td>
+        <td class="wrapcell">${esc(r.sentence || '')}</td>
+        <td>${esc(r.captainVoteName || '')}</td>
+        <td>${esc(r.teamName || '')}</td>
+        <td>${esc(data.greenFee.find((g) => g.key === r.greenFee)?.label || '')}</td>
+        <td>${esc(data.longestDrive.find((g) => g.key === r.longestDrive)?.label || '')}</td>
+      </tr>`;
+    }).join('')}</tbody>`;
+
+    $('#ad-captains').innerHTML = data.captains.length ? data.captains.map((cap) => `
+      <div class="ad-cap">
+        <div class="ad-cap__head"><h3>${esc(cap.name)}</h3><span class="ad-cap__votes">${cap.votes} vote${cap.votes === 1 ? '' : 's'}</span></div>
+        <p class="ad-sub">From ${cap.voters.map(esc).join(', ')}</p>
+        ${cap.teamNames.length ? `<ul>${cap.teamNames.map((t) => `<li><b>${esc(t.name)}</b> <span class="faint">— ${esc(t.by)}</span></li>`).join('')}</ul>` : '<p class="ad-sub" style="margin-top:.5rem">No team names suggested yet.</p>'}
+      </div>`).join('') : '<p class="muted">No votes yet.</p>';
+    $('#ad-q8').innerHTML = bars(data.greenFee);
+    $('#ad-q9').innerHTML = bars(data.longestDrive);
+  }
+
+  // CSV of the full table, for a spreadsheet.
+  $('#ad-csv').addEventListener('click', () => {
+    if (!data) return;
+    const cols = ['name', 'id', 'status', 'effectiveStatus', 'submittedAt', 'firstSubmittedAt', 'submissions', 'handicapEntering', 'dob', 'strength', 'weakness', 'sentence', 'captainVoteName', 'teamName', 'greenFee', 'longestDrive'];
+    const cell = (v) => { const s = v == null ? '' : String(v); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
+    const csv = [cols.join(','), ...data.rows.map((r) => cols.map((k) => cell(r[k])).join(','))].join('\n');
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+    a.download = `rsvp-2027-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+  });
+  $('#ad-refresh').addEventListener('click', load);
+  $('#ad-keyform').addEventListener('submit', (e) => { e.preventDefault(); location.hash = encodeURIComponent($('#ad-key').value.trim()); });
+  window.addEventListener('hashchange', load);
+  load();
+})();
+</script>

@@ -3,6 +3,7 @@ import Base from '../../layouts/Base.astro';
 import TeamLogo from '../../components/TeamLogo.astro';
 import PhotoGallery from '../../components/PhotoGallery.astro';
 import PlayerPortrait from '../../components/PlayerPortrait.astro';
+import GameProfile from '../../components/GameProfile.astro';
 import { players, teamById, playerById, roundById, getCourse, tournamentById, moments } from '../../lib/data.js';
 import {
   careerStats, formatRecords, opponentRecords,
@@ -114,6 +115,8 @@ const FMT_SHORT = { 'Scramble': 'Scramble', 'Best Ball Match Play (NET)': 'Best 
       </div>
     </section>
 
+    <GameProfile player={p} />
+
     {prRow?.hasData && (
       <section class="section" style="padding-top:0">
         <div class="wrap">
@@ -219,6 +222,9 @@ const FMT_SHORT = { 'Scramble': 'Scramble', 'Best Ball Match Play (NET)': 'Best 
       </div>
     </div>
   </section>
+
+  <!-- SCOUTING: in their own words (from the RSVP) -->
+  <GameProfile player={p} />
 
   <!-- SCOUTING: format record + handicap/draft -->
   <section class="section" style="padding-top:0">

@@ -16,11 +16,15 @@
 // two portraits cut from the 2026 album.
 // ---------------------------------------------------------------------------
 import fs from 'node:fs';
+import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { players } from './data.js';
 
-// Resolved off this module's own URL so it holds wherever the build is run from.
-const PORTRAIT_DIR = fileURLToPath(new URL('../../public/players/', import.meta.url));
+// Resolved off this module's own URL when running from source (astro dev). Under
+// the Vercel adapter the prerender runs from a bundled chunk, where that relative
+// path points nowhere — so fall back to the project root (the build's cwd).
+const fromModule = fileURLToPath(new URL('../../public/players/', import.meta.url));
+const PORTRAIT_DIR = fs.existsSync(fromModule) ? fromModule : path.join(process.cwd(), 'public', 'players');
 
 // Preference order — the first extension present wins, so a hand-dropped .jpg
 // quietly takes over from anything else without needing the old file removed.

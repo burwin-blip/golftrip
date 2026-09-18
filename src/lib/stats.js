@@ -17,7 +17,7 @@ import {
   players, tournaments, matches, drafts, awards, moments, holeScores, photos,
   handicapSnapshots,
   playerById, teamById, matchById, roundById, tournamentById,
-  matchesForTournament, rosterForTournament,
+  matchesForTournament, rosterForTournament, rsvpStatusFor,
 } from './data.js';
 
 const round1 = (n) => Math.round(n * 10) / 10;
@@ -450,19 +450,25 @@ export function stablefordLeaderboard(tid) {
   return { round, rows };
 }
 
-// Eligible-player pool for an UPCOMING tournament: everyone who has played a
-// completed event, plus anyone explicitly confirmed for this one. New blokes
-// (no record yet) appear once `confirmedFor` includes this tournament's id.
-// Sorted by career points so captains see the most productive players first.
+// Player pool for an UPCOMING tournament, driven by the /rsvp answers:
+//   confirmed — RSVP'd YES (or confirmed by hand in players.json)
+//   maybe     — RSVP'd MAYBE
+//   waiting   — has played before but hasn't RSVP'd yet
+// An RSVP of NO takes a player out of the pool entirely. New blokes appear once
+// they RSVP (YES → confirmed rookie, MAYBE → waiting on). Within each group,
+// sorted by career points so captains see the most productive players first.
+export const POOL_GROUPS = ['confirmed', 'maybe', 'waiting'];
 export function draftPoolFor(tid) {
   return players
     .map((p) => {
       const c = careerStats(p.id);
       const last = c.appearances[c.appearances.length - 1] || null;
       const confirmed = (p.confirmedFor || []).includes(tid);
+      const rsvp = rsvpStatusFor(p.id, tid);
+      const group = confirmed ? 'confirmed' : rsvp === 'maybe' ? 'maybe' : (c.played > 0 && rsvp == null) ? 'waiting' : null;
       return {
-        player: p, confirmed,
-        eligible: c.played > 0 || confirmed,
+        player: p, confirmed, rsvp, group,
+        eligible: group != null,
         played: c.played, w: c.w, h: c.h, l: c.l,
         pointsEarned: c.pointsEarned, pointPct: c.pointPct,
         teamId: last ? last.teamId : null,
@@ -472,7 +478,8 @@ export function draftPoolFor(tid) {
       };
     })
     .filter((x) => x.eligible)
-    .sort((a, b) => b.pointsEarned - a.pointsEarned || a.player.name.localeCompare(b.player.name));
+    .sort((a, b) => POOL_GROUPS.indexOf(a.group) - POOL_GROUPS.indexOf(b.group) ||
+      b.pointsEarned - a.pointsEarned || a.player.name.localeCompare(b.player.name));
 }
 
 // ===========================================================================
@@ -1051,8 +1058,12 @@ function powerMetrics(pid, asOf) {
   }
   const latest = snaps[snaps.length - 1];
   const index = latest.index;
+  // RSVP entries (`source: "rsvp"`) are a self-reported index only — they move
+  // the index and its trend, but carry no rounds or differentials, so the
+  // form / activity / note fields keep coming from the latest real GHIN check-in.
+  const ghin = [...snaps].reverse().find((s) => s.source !== 'rsvp') ?? latest;
   // form: index − recent avg differential (positive ⇒ scoring better than their number)
-  const form = latest.avgDifferential != null ? round1(index - latest.avgDifferential) : null;
+  const form = ghin.avgDifferential != null ? round1(ghin.index - ghin.avgDifferential) : null;
   // trend: how far the index moved to reach today (positive ⇒ index fell ⇒ improving).
   // Prefer the earliest snapshot inside the 90-day window; but if the only prior
   // check-in predates the window (common on the FIRST real check-in after a long
@@ -1063,7 +1074,7 @@ function powerMetrics(pid, asOf) {
   const base = inWindow.length > 1 ? inWindow[0] : (snaps.length > 1 ? snaps[snaps.length - 2] : null);
   const trend = base && base !== latest ? round1(base.index - index) : null;
   // activity: rounds on the latest check-in, else summed across the window
-  let activity = latest.rounds != null ? latest.rounds : null;
+  let activity = ghin.rounds != null ? ghin.rounds : null;
   if (activity == null && inWindow.some((s) => s.rounds != null)) {
     activity = inWindow.reduce((n, s) => n + (s.rounds || 0), 0);
   }
@@ -1076,12 +1087,12 @@ function powerMetrics(pid, asOf) {
     lastTournamentPct = available ? round1(pct(earned, available)) : null;
   }
   return { hasData: true, snaps, index, form, trend, activity, lastTournamentPct,
-    avgDifferential: latest.avgDifferential ?? null,
+    avgDifferential: ghin.avgDifferential ?? null,
     seedIndex: snaps[0].index,                                   // first snapshot = the tournament seed
     prevIndex: snaps.length > 1 ? snaps[snaps.length - 2].index : null,
-    system: latest.system ?? null,        // handicap system on the latest check-in ("ghin" | "ga")
-    homeClub: latest.homeClub ?? null,
-    lastCheckIn: latest.date, note: latest.note ?? null };
+    system: ghin.system ?? null,          // handicap system on the latest check-in ("ghin" | "ga")
+    homeClub: ghin.homeClub ?? null,
+    lastCheckIn: latest.date, note: ghin.note ?? latest.note ?? null };
 }
 
 // Normalise a set of {id, v} to 0..1 (higher raw ⇒ higher norm) using a mid-rank
@@ -1240,9 +1251,17 @@ export function powerRankings() {
     return { weights: POWER_RANKING_WEIGHTS, trendDays: POWER_RANKING_TREND_DAYS,
       dataAsOf: null, hasRealData: false, checkInDates: [], rows: [] };
   }
-  const dates = [...new Set(handicapSnapshots.map((s) => s.date))].sort();
-  const dataAsOf = dates[dates.length - 1];
-  const prevDate = dates.length > 1 ? dates[dates.length - 2] : null;
+  // Check-in dates are the owner's GHIN rounds. RSVP entries land on whatever
+  // day someone replied, so they extend `dataAsOf` (so they're included) but
+  // never become a "previous check-in" for the movement arrows.
+  const allDates = [...new Set(handicapSnapshots.map((s) => s.date))].sort();
+  const dates = [...new Set(handicapSnapshots.filter((s) => s.source !== 'rsvp').map((s) => s.date))].sort();
+  const dataAsOf = allDates[allDates.length - 1];
+  // Movement compares against the last GHIN check-in — or, when RSVP entries
+  // have arrived since it, against that check-in itself.
+  const lastCheckInDate = dates[dates.length - 1] ?? null;
+  const prevDate = lastCheckInDate && dataAsOf > lastCheckInDate ? lastCheckInDate
+    : dates.length > 1 ? dates[dates.length - 2] : null;
   // "Real" data = anything beyond the single seed check-in (a later date, or any
   // posted rounds / differentials).
   const hasRealData = dates.length > 1 ||

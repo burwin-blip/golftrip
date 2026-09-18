@@ -1,0 +1,51 @@
+---
+// "In their own words" — the permanent game profile each player gives on the
+// RSVP (strongest part, weakest part, one sentence), shown in the scouting
+// report. Renders nothing until they've answered. Private RSVP answers (date
+// of birth, captain vote, etc.) never reach this component — see data.js.
+import { gameProfileFor } from '../lib/data.js';
+
+const { player } = Astro.props;
+const g = gameProfileFor(player.id);
+const first = player.name.split(' ')[0];
+---
+{g && (
+  <section class="section" style="padding-top:0">
+    <div class="wrap">
+      <div class="section-head"><div><p class="eyebrow gold">Scouting report</p><h2>In their own words</h2></div><span class="faint">From {first}’s RSVP</span></div>
+      <div class="gprof card">
+        {g.sentence && (
+          <blockquote class="gprof__quote">
+            <p>“{g.sentence}”</p>
+            <cite>— {player.name}</cite>
+          </blockquote>
+        )}
+        <div class="gprof__split">
+          <div class="gprof__cell gprof__cell--up">
+            <span class="gprof__k">Strongest part</span>
+            <span class="gprof__v">{g.strength ?? '—'}</span>
+          </div>
+          <div class="gprof__cell gprof__cell--down">
+            <span class="gprof__k">Weakest part</span>
+            <span class="gprof__v">{g.weakness ?? '—'}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+)}
+
+<style>
+  .gprof { overflow: hidden; }
+  .gprof__quote { padding: clamp(1.2rem, 3vw, 1.7rem) clamp(1.2rem, 3vw, 1.7rem) 1rem; border-bottom: 1px solid var(--line); }
+  .gprof__quote p { font-family: var(--serif); font-style: italic; font-weight: 500; font-size: clamp(1.15rem, 1rem + .8vw, 1.5rem); line-height: 1.3; color: var(--text); max-width: 46ch; }
+  .gprof__quote cite { display: block; margin-top: .55rem; font-style: normal; font-size: .78rem; font-weight: 600; color: var(--faint); }
+  .gprof__split { display: grid; grid-template-columns: 1fr 1fr; }
+  .gprof__cell { display: flex; flex-direction: column; gap: .3rem; padding: 1rem clamp(1.2rem, 3vw, 1.7rem) 1.15rem; border-top: 3px solid transparent; }
+  .gprof__cell + .gprof__cell { border-left: 1px solid var(--line); }
+  .gprof__cell--up { border-top-color: var(--terra); }
+  .gprof__cell--down { border-top-color: var(--navy-line); }
+  .gprof__k { font-size: .66rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--faint); }
+  .gprof__v { font-family: var(--serif); font-weight: 600; font-size: clamp(1.1rem, 1rem + .6vw, 1.4rem); line-height: 1.1; }
+  .gprof__cell--up .gprof__v { color: var(--terra-ink); }
+</style>
