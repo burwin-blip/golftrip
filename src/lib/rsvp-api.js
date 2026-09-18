@@ -109,14 +109,27 @@ const publicFingerprint = (name, profile, event) => JSON.stringify([
   (profile?.handicapHistory || []).length,
 ]);
 
+// Fire the Vercel deploy hook so the static pages rebuild with the new RSVP.
+// Best-effort: never throws. `lastHookDiagnosis` explains a failure WITHOUT
+// revealing the hook URL (it's a secret) — surfaced only on admin-key calls.
+let lastHookDiagnosis = null;
 async function triggerRebuild(env) {
-  const hook = env.RSVP_DEPLOY_HOOK_URL;
-  if (!hook) return 'no-hook';
+  const raw = env.RSVP_DEPLOY_HOOK_URL;
+  if (!raw) { lastHookDiagnosis = { problem: 'RSVP_DEPLOY_HOOK_URL is not set' }; return 'no-hook'; }
+  const hook = raw.trim().replace(/^["']|["']$/g, '');   // forgive stray spaces / quotes from pasting
+  const shape = {
+    length: raw.length, hadWhitespace: raw !== raw.trim(), hadQuotes: /^["']|["']$/.test(raw.trim()),
+    startsWithHttps: hook.startsWith('https://'),
+  };
+  let host = null;
+  try { host = new URL(hook).host; } catch { lastHookDiagnosis = { ...shape, problem: 'not a valid URL' }; return 'hook-failed'; }
   try {
-    const res = await fetch(hook, { method: 'POST', signal: AbortSignal.timeout(4000) });
+    const res = await fetch(hook, { method: 'POST', signal: AbortSignal.timeout(8000) });
+    lastHookDiagnosis = { ...shape, host, httpStatus: res.status, body: (await res.text()).slice(0, 200) };
     return res.ok ? 'triggered' : `hook-http-${res.status}`;
   } catch (e) {
-    console.error('RSVP: deploy hook failed', e);
+    lastHookDiagnosis = { ...shape, host, problem: `${e?.name}: ${e?.message}`, cause: String(e?.cause?.code || e?.cause?.message || '') };
+    console.error('RSVP: deploy hook failed', lastHookDiagnosis);
     return 'hook-failed';
   }
 }
@@ -249,7 +262,8 @@ export async function deleteRsvp(key, playerId, { env = process.env } = {}) {
   requireAdmin(key, env);
   if (!playerId) throw new RsvpError('Say which player (?player=<id>).', 'player');
   await store.removePlayer(TID, String(playerId), env);
-  return { ok: true, removed: String(playerId), rebuild: await triggerRebuild(env) };
+  const rebuild = await triggerRebuild(env);
+  return { ok: true, removed: String(playerId), rebuild, rebuildDiagnosis: lastHookDiagnosis };
 }
 
 export async function readAdmin(key, { env = process.env } = {}) {
