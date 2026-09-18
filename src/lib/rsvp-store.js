@@ -4,7 +4,8 @@
 //
 // Production: Upstash Redis (free tier, added via Vercel → Storage). Vercel
 // injects KV_REST_API_URL / KV_REST_API_TOKEN when the database is connected
-// (older integrations used UPSTASH_REDIS_REST_URL / _TOKEN — both work).
+// (optionally with a prefix, e.g. STORAGE_KV_REST_API_URL; older integrations
+// used UPSTASH_REDIS_REST_URL / _TOKEN — all work).
 // Local dev: no Redis configured → a JSON file at .rsvp-local/store.json
 // (gitignored), so the whole flow can be run and tested on a laptop.
 //
@@ -23,10 +24,18 @@ const KEYS = {
   event: (tid) => `rsvp:event:${tid}`,
 };
 
+// Vercel's "connect database" screen lets you choose a prefix for these names
+// (e.g. STORAGE_KV_REST_API_URL), so accept any prefix: find a *_REST_API_URL /
+// *_REDIS_REST_URL and the token that shares its prefix.
 function redisEnv(env = process.env) {
-  const url = env.KV_REST_API_URL || env.UPSTASH_REDIS_REST_URL;
-  const token = env.KV_REST_API_TOKEN || env.UPSTASH_REDIS_REST_TOKEN;
-  return url && token ? { url, token } : null;
+  for (const [urlSuffix, tokenSuffix] of [['KV_REST_API_URL', 'KV_REST_API_TOKEN'], ['UPSTASH_REDIS_REST_URL', 'UPSTASH_REDIS_REST_TOKEN']]) {
+    for (const k of Object.keys(env)) {
+      if (!k.endsWith(urlSuffix) || !env[k]) continue;
+      const token = env[k.slice(0, -urlSuffix.length) + tokenSuffix];
+      if (token) return { url: env[k], token };
+    }
+  }
+  return null;
 }
 
 export class RsvpNotConfigured extends Error {}
