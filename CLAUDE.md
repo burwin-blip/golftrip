@@ -37,6 +37,23 @@ principle 5 below, and **RSVP** further down).
    pages, a CMS, auth, or any other backend without the owner amending this rule
    again.
 
+6. **After ANY build-config change, verify the DEPLOYED site renders styled before
+   calling the job done.** (Owner's rule.) "Build-config" = `astro.config.mjs`, the
+   adapter / output mode, `package.json` scripts or engines, Vite/CSS settings,
+   `Base.astro`'s imports, `vercel.json`, or anything in `scripts/` that runs during
+   `npm run build`. A green build is not proof: CSS can build fine and still not
+   reach the browser. Once Vercel reports the deploy, run
+   `node scripts/check-styles.mjs https://golftrip-kappa.vercel.app` (every key
+   page links stylesheets, each returns 200 as text/css, and the design system —
+   the `:root` tokens and `.masthead` — is really in them) AND look at the live
+   home page in a real browser (phone width). Test the **production domain**: the
+   per-deploy URLs (`golftrip-<hash>-benurwin.vercel.app`) are behind Vercel's
+   login, so fetched from outside every page and asset redirects there.
+   Also worth knowing: CSS filenames are content-hashed and each deploy serves only
+   its own, so a page left open from an earlier deploy (a restored phone tab) asks
+   for stylesheets that now 404 and shows raw HTML until it's refreshed. Every
+   RSVP triggers a rebuild, so this happens more than it used to.
+
 ### Two point concepts — keep them straight
 - **Team standings** (the official 16.5–13.5): each match is worth its
   `pointsAvailable`; the winner takes it all, a halved match splits it. Computed
@@ -833,6 +850,7 @@ scripts/verify_holes.mjs    reconciles the hole layer (54 checks)
 scripts/pull-rsvp.mjs       build step: RSVP store → data/rsvp.generated.json (public slice)
 scripts/set-function-runtime.mjs  post-build: pins the API function to nodejs22.x
 scripts/test-rsvp.mjs       RSVP API checks (47)
+scripts/check-styles.mjs    does a deployed/served site render styled? (core principle 6)
 src/lib/rsvp-*.js     RSVP: shared answer lists, the store, the API logic
 src/pages/api/        rsvp.js + rsvp-admin.js — the ONLY server routes
 src/pages/rsvp/       index.astro (the permanent /rsvp) + admin.astro
