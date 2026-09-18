@@ -53,6 +53,16 @@ principle 5 below, and **RSVP** further down).
    its own, so a page left open from an earlier deploy (a restored phone tab) asks
    for stylesheets that now 404 and shows raw HTML until it's refreshed. Every
    RSVP triggers a rebuild, so this happens more than it used to.
+   **If the site ever looks broken after a deploy, rule out the browser first:**
+   open it in a fresh incognito/private window AND on a second device before
+   assuming the deploy is at fault. (September 2026: the owner's desktop showed
+   every page unstyled after a deploy; the live site was fine — that browser was
+   holding a cached copy from the deploy window. Clearing its cache fixed it.)
+   Then verify the LIVE site, never the local build: curl the production homepage,
+   list the stylesheet URLs in its `<head>`, curl each one and confirm **200** +
+   `text/css` + real content (`scripts/check-styles.mjs` does exactly this), and
+   render the production URL in a real browser. That is the standard for calling
+   a deploy healthy — and for calling it broken.
 
 ### Two point concepts — keep them straight
 - **Team standings** (the official 16.5–13.5): each match is worth its
