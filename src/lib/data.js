@@ -172,7 +172,32 @@ function validateTrip(trip, file, validTournamentIds) {
       if (typeof c.tee !== 'object' || Array.isArray(c.tee)) bad(`${at} → "tee" must be an object { "name": "Blue", "yardage": 6511, "rating": 71.4, "slope": 132 }.`);
       if (!c.tee.name) bad(`${at} → "tee" is missing "name" — a rating and slope mean nothing without the tee they came off.`);
       str(c.tee.name, `${at} → "tee" → "name"`);
-      ['yardage', 'rating', 'slope'].forEach((k) => num(c.tee[k], `${at} → "tee" → "${k}"`));
+      ['yardage', 'rating', 'slope', 'par'].forEach((k) => num(c.tee[k], `${at} → "tee" → "${k}"`));
+      // confirmed: false = the figures came from a scorecard database, not the
+      // club's own card — shown as "to be confirmed on the ground".
+      if (c.tee.confirmed !== undefined && c.tee.confirmed !== null && typeof c.tee.confirmed !== 'boolean') {
+        bad(`${at} → "tee" → "confirmed" must be true or false (no quotes), got ${JSON.stringify(c.tee.confirmed)}.`);
+      }
+      ['source', 'note'].forEach((k) => str(c.tee[k], `${at} → "tee" → "${k}"`));
+    }
+    // The full tee table (every set the course offers). The one matching
+    // "tee.name" is highlighted as ours.
+    if (c.tees !== undefined && c.tees !== null) {
+      arr(c.tees, `${at} → "tees"`).forEach((x, j) => {
+        const tat = `${at} → tees[${j}]` + (x?.name ? ` ("${x.name}")` : '');
+        if (x === null || typeof x !== 'object' || Array.isArray(x) || !x.name) bad(`${tat} must be an object with a "name", e.g. { "name": "Blue", "yardage": 6401, "rating": 71.6, "slope": 133 }.`);
+        str(x.name, `${tat} → "name"`);
+        ['yardage', 'rating', 'slope', 'par'].forEach((k) => num(x[k], `${tat} → "${k}"`));
+      });
+      if (c.tee?.name && c.tees.length && !c.tees.some((x) => x.name === c.tee.name)) {
+        bad(`${at} → "tee" is "${c.tee.name}", which isn't one of the names in "tees" (${c.tees.map((x) => `"${x.name}"`).join(', ')}). Use the same spelling so it can be highlighted.`);
+      }
+    }
+    // A flyover / course-tour video: YouTube links embed, anything else is a link.
+    if (c.flyover !== undefined && c.flyover !== null) {
+      if (typeof c.flyover !== 'object' || Array.isArray(c.flyover) || !c.flyover.url) bad(`${at} → "flyover" must be an object with a "url", e.g. { "url": "https://www.youtube.com/watch?v=…", "title": "…", "by": "…" }.`);
+      ['url', 'title', 'by', 'note'].forEach((k) => str(c.flyover[k], `${at} → "flyover" → "${k}"`));
+      if (!/^https:\/\//.test(c.flyover.url)) bad(`${at} → "flyover" → "url" must start with https://.`);
     }
   });
 

@@ -45,14 +45,48 @@
    "par": 72,
    "yardage": 7044,
    "tee": {
-    "name": "Blue",
-    "yardage": null,
+    "name": "Blue (Championship)",
+    "yardage": 6401,
     "rating": 71.6,
-    "slope": 133
+    "slope": 133,
+    "par": 72,
+    "confirmed": false,
+    "source": "https://images.squarespace-cdn.com/content/v1/5b4f6ff9e17ba367c23c31cd/1539901295534-29OB8BFT804XLI1FB69B/course_scorecard.jpg",
+    "note": "Figures match the club’s own scorecard (c. 2018) and GolfPass. The club’s card calls this the Championship tee (a gold row); “Blue” is GolfPass’s name. Older listings show 70.9/130 — confirm at the pro shop."
    },
    "signature": "The 2nd — the “Box Car” par 4, played hard along a canal and crossed by a bridge built from an old railway wagon.",
    "description": "Formerly Landmark Golf Club, and host of the PGA Tour's Skins Game from 1999 to 2002. Big contoured greens with water and bunkering throughout, and the club's trademark railway-wagon bridges.",
-   "source": "https://www.golfpass.com/travel-advisor/courses/15284-golf-club-at-terra-lago-south-course"
+   "source": "https://www.golfpass.com/travel-advisor/courses/15284-golf-club-at-terra-lago-south-course",
+   "tees": [
+    {
+     "name": "Black (Professional)",
+     "yardage": 7044,
+     "rating": 75.1,
+     "slope": 140,
+     "par": 72
+    },
+    {
+     "name": "Blue (Championship)",
+     "yardage": 6401,
+     "rating": 71.6,
+     "slope": 133,
+     "par": 72
+    },
+    {
+     "name": "White (Regular)",
+     "yardage": 5838,
+     "rating": 68.9,
+     "slope": 126,
+     "par": 72
+    },
+    {
+     "name": "Red (Forward)",
+     "yardage": 5045,
+     "rating": null,
+     "slope": null,
+     "par": 72
+    }
+   ]
   },
   {
    "round": "Round 2",
@@ -68,14 +102,48 @@
    "par": 72,
    "yardage": 7060,
    "tee": {
-    "name": "Blue",
+    "name": "Yellow (Championship)",
     "yardage": 6511,
     "rating": 71.4,
-    "slope": 132
+    "slope": 132,
+    "par": 72,
+    "confirmed": false,
+    "source": "https://images.squarespace-cdn.com/content/v1/5b4f6ff9e17ba367c23c31cd/1539901295534-29OB8BFT804XLI1FB69B/course_scorecard.jpg",
+    "note": "Figures match the club’s own scorecard (c. 2018) and GolfPass. The club’s card calls this the Championship tee (a gold row); other sites call it Blue, Yellow or Gold. Older listings show 71.5/131 — confirm at the pro shop."
    },
    "signature": "The island-green par 3 — the hole the Skins Game was built around.",
    "description": "The longer of Terra Lago's two. Dramatic elevation changes across the Coachella Valley, and from the seventh tee a view that runs from one end of the valley to the other.",
-   "source": "https://www.golfpass.com/travel-advisor/courses/15283-golf-club-at-terra-lago-north-course"
+   "source": "https://www.golfpass.com/travel-advisor/courses/15283-golf-club-at-terra-lago-north-course",
+   "tees": [
+    {
+     "name": "Black (Professional)",
+     "yardage": 7060,
+     "rating": 73.7,
+     "slope": 137,
+     "par": 72
+    },
+    {
+     "name": "Yellow (Championship)",
+     "yardage": 6511,
+     "rating": 71.4,
+     "slope": 132,
+     "par": 72
+    },
+    {
+     "name": "White (Regular)",
+     "yardage": 5870,
+     "rating": 68.5,
+     "slope": 125,
+     "par": 72
+    },
+    {
+     "name": "Red (Forward)",
+     "yardage": 5067,
+     "rating": null,
+     "slope": null,
+     "par": 72
+    }
+   ]
   },
   {
    "round": "Round 3",
@@ -91,14 +159,75 @@
    "par": 72,
    "yardage": 6913,
    "tee": {
-    "name": "Blue",
-    "yardage": 6507,
-    "rating": 71.2,
-    "slope": 128
+    "name": "Purple/White",
+    "yardage": 6316,
+    "rating": 70.3,
+    "slope": 126,
+    "par": 72,
+    "confirmed": true,
+    "source": "https://www.desertwillow.com/wp-content/uploads/sites/9291/2024/03/Desert_Willow_MOUNTAIN_VIEW_CA_6.26-Updated-2023.pdf",
+    "note": "Official Desert Willow scorecard (06/2023). Purple/White: 3,141 out, 3,175 in. Men’s ratings."
    },
    "signature": null,
    "description": "The gentler half of Desert Willow — wider fairways and a resort feel, with the Santa Rosa mountains behind almost every shot. Shorter than Firecliff, but water and desert are still very much in play.",
-   "source": "https://www.golfpass.com/travel-advisor/courses/15372-mountain-view-at-desert-willow-golf-resort"
+   "source": "https://www.golfpass.com/travel-advisor/courses/15372-mountain-view-at-desert-willow-golf-resort",
+   "tees": [
+    {
+     "name": "Black",
+     "yardage": 6913,
+     "rating": 73.0,
+     "slope": 132,
+     "par": 72
+    },
+    {
+     "name": "Purple",
+     "yardage": 6507,
+     "rating": 71.2,
+     "slope": 128,
+     "par": 72
+    },
+    {
+     "name": "Purple/White",
+     "yardage": 6316,
+     "rating": 70.3,
+     "slope": 126,
+     "par": 72
+    },
+    {
+     "name": "White",
+     "yardage": 6128,
+     "rating": 69.4,
+     "slope": 124,
+     "par": 72
+    },
+    {
+     "name": "White/Tan",
+     "yardage": 5866,
+     "rating": 68.1,
+     "slope": 121,
+     "par": 72
+    },
+    {
+     "name": "Tan",
+     "yardage": 5573,
+     "rating": 66.6,
+     "slope": 117,
+     "par": 72
+    },
+    {
+     "name": "Green",
+     "yardage": 5040,
+     "rating": 64.0,
+     "slope": 110,
+     "par": 72
+    }
+   ],
+   "flyover": {
+    "url": "https://www.youtube.com/playlist?list=PLmwn3OunhB42Vmrj9QPCVOj_vTn7GuceZ",
+    "title": "Mountain View — all 18 holes from above",
+    "by": "Desert Willow Golf Resort",
+    "note": "official playlist, filmed 2015"
+   }
   },
   {
    "round": "Round 4",
@@ -114,14 +243,75 @@
    "par": 72,
    "yardage": 7056,
    "tee": {
-    "name": "Purple",
-    "yardage": 6676,
-    "rating": 72.1,
-    "slope": 136
+    "name": "Purple/White",
+    "yardage": 6427,
+    "rating": 71.0,
+    "slope": 132,
+    "par": 72,
+    "confirmed": true,
+    "source": "https://www.desertwillow.com/wp-content/uploads/sites/9291/2024/03/Desert_Willow_FIRECLIFF_CA_6.26-Updated-2023.pdf",
+    "note": "Official Desert Willow scorecard (06/2023). Purple/White: 3,191 out, 3,236 in. Men’s ratings."
    },
    "signature": null,
    "description": "The tougher half of Desert Willow and the resort's tournament course: over 100 bunkers, Mini Verde Bermuda greens and native desert planting framing every hole. Recently renovated.",
-   "source": "https://www.golfpass.com/travel-advisor/courses/15542-firecliff-at-desert-willow-golf-resort"
+   "source": "https://www.golfpass.com/travel-advisor/courses/15542-firecliff-at-desert-willow-golf-resort",
+   "tees": [
+    {
+     "name": "Black",
+     "yardage": 7056,
+     "rating": 74.1,
+     "slope": 141,
+     "par": 72
+    },
+    {
+     "name": "Purple",
+     "yardage": 6676,
+     "rating": 72.1,
+     "slope": 136,
+     "par": 72
+    },
+    {
+     "name": "Purple/White",
+     "yardage": 6427,
+     "rating": 71.0,
+     "slope": 132,
+     "par": 72
+    },
+    {
+     "name": "White",
+     "yardage": 6173,
+     "rating": 69.9,
+     "slope": 128,
+     "par": 72
+    },
+    {
+     "name": "White/Tan",
+     "yardage": 5907,
+     "rating": 68.7,
+     "slope": 124,
+     "par": 72
+    },
+    {
+     "name": "Tan",
+     "yardage": 5642,
+     "rating": 67.5,
+     "slope": 120,
+     "par": 72
+    },
+    {
+     "name": "Green",
+     "yardage": 5079,
+     "rating": 65.0,
+     "slope": 112,
+     "par": 72
+    }
+   ],
+   "flyover": {
+    "url": "https://www.desertwillow.com/firecliffcourse/",
+    "title": "Firecliff — hole-by-hole drone flyovers",
+    "by": "Desert Willow Golf Resort",
+    "note": "filmed 2024–26, after the renovation"
+   }
   },
   {
    "round": "Round 5",
@@ -137,14 +327,89 @@
    "par": 72,
    "yardage": 7322,
    "tee": {
-    "name": "Blue",
-    "yardage": 6711,
-    "rating": 72.9,
-    "slope": 135
+    "name": "White",
+    "yardage": 6229,
+    "rating": 71.0,
+    "slope": 129,
+    "par": 72,
+    "confirmed": false,
+    "source": "https://www.classicclubgolf.com/wp-content/uploads/sites/8937/2025/03/CC-SC.jpg",
+    "note": "Yardage and par from the club’s official card (02/2025), which prints no ratings. 71.0/129 is from GolfPass and GolfLink (an older 2020 listing shows 70.4/127) — confirm at the pro shop."
    },
    "signature": null,
    "description": "An Arnold Palmer design that hosted the PGA Tour's Bob Hope Classic from 2006 to 2008, and the odd one out in the desert — olive, pepper and pine rather than palms. Water is in play on 13 holes across a rolling, tree-lined layout.",
-   "source": "https://www.golfpass.com/travel-advisor/courses/16392-the-classic-club"
+   "source": "https://www.golfpass.com/travel-advisor/courses/16392-the-classic-club",
+   "tees": [
+    {
+     "name": "Black",
+     "yardage": 7322,
+     "rating": 75.8,
+     "slope": 144,
+     "par": 72
+    },
+    {
+     "name": "Blue",
+     "yardage": 6711,
+     "rating": 72.9,
+     "slope": 135,
+     "par": 72
+    },
+    {
+     "name": "Blue/White",
+     "yardage": 6478,
+     "rating": null,
+     "slope": null,
+     "par": 72
+    },
+    {
+     "name": "White",
+     "yardage": 6229,
+     "rating": 71.0,
+     "slope": 129,
+     "par": 72
+    },
+    {
+     "name": "White/Gold",
+     "yardage": 5991,
+     "rating": null,
+     "slope": null,
+     "par": 72
+    },
+    {
+     "name": "Gold",
+     "yardage": 5782,
+     "rating": 68.7,
+     "slope": 125,
+     "par": 72
+    },
+    {
+     "name": "Gold/Purple",
+     "yardage": 5505,
+     "rating": null,
+     "slope": null,
+     "par": 72
+    },
+    {
+     "name": "Purple",
+     "yardage": 5279,
+     "rating": 66.2,
+     "slope": 118,
+     "par": 72
+    },
+    {
+     "name": "Orange",
+     "yardage": 4219,
+     "rating": 60.7,
+     "slope": 105,
+     "par": 72
+    }
+   ],
+   "flyover": {
+    "url": "https://www.youtube.com/playlist?list=PLCBIebWN-rHnbBV2jqd4JSExfrIv_9fWJ",
+    "title": "The Classic Club — all 18 holes from above",
+    "by": "The Classic Club",
+    "note": "official playlist"
+   }
   }
  ],
  "itinerary": [

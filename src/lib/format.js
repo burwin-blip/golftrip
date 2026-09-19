@@ -53,3 +53,14 @@ export const longDate = (iso) => {
   const d = new Date(iso + 'T00:00:00');
   return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 };
+
+// Course ratings are always written to one decimal (71.0, not 71).
+export const rating1 = (r) => (r == null ? '—' : Number(r).toFixed(1));
+
+// "Blue · 6,401 yds · 71.6/133" — the tee a course is played off, the one line
+// that decides everyone's strokes. Only the parts we have.
+export const teeLine = (tee) => tee ? [
+  tee.name,
+  tee.yardage != null ? `${tee.yardage.toLocaleString('en-US')} yds` : null,
+  tee.rating != null || tee.slope != null ? `${rating1(tee.rating)}/${tee.slope ?? '—'}` : null,
+].filter(Boolean).join(' · ') : '';

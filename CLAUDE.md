@@ -362,6 +362,32 @@ Field notes:
     scratch-ish to 21.
   - `slug` must be lower-case-hyphenated: it's both the URL **and** the photo
     folder name, and the build rejects anything else.
+  - **The tees are decided (2027)** — `tee` is the set THIS group plays and
+    drives every yardage/rating/slope shown: `{ name, yardage, rating, slope,
+    par, confirmed, source, note }`. It renders as the **"Playing: <tee> · <yds>
+    · <rating>/<slope>"** callout (navy band under the hero on the profile, and on
+    every rota card) — `teeLine()` in `format.js`; ratings always print to one
+    decimal (`rating1()`). These numbers set everyone's handicap strokes, so:
+    **`confirmed: true`** only when the figures came from the club's own card
+    (Desert Willow — official PDFs, 06/2023); **`confirmed: false`** shows a
+    **"To be confirmed on the ground"** flag (Terra Lago — club card c. 2018 +
+    GolfPass; Classic Club — its card prints no ratings, so 71.0/129 is
+    GolfPass/GolfLink). `note` says exactly where each figure came from.
+    Terra Lago's own card names tees Professional / **Championship** / Regular /
+    Forward, not colours — hence "Blue (Championship)" / "Yellow (Championship)".
+  - **`tees`** is the full table (every set) under the callout; the row whose
+    `name` equals `tee.name` is highlighted "We play" (the build rejects a
+    mismatch). A null rating renders "—" (combos with no published rating). The
+    par column only appears when sets differ.
+  - **`flyover`** `{ url, title, by, note }` → a "Course flyover" section
+    (`CourseFlyover.astro`). YouTube videos/playlists embed via
+    youtube-nocookie **only after a tap** — until then it's a drawn poster and
+    the page makes no external request (Privacy rule). Anything else renders as
+    a styled external link. Only official/quality videos: 2027 has the club
+    playlists for Mountain View (2015) and Classic Club, and a link to
+    Desert Willow's post-renovation drone flyovers for Firecliff (its YouTube
+    set pre-dates the renovation). **Terra Lago: none found** (only a 2008
+    StrackaLine render and a 1-min agency promo — deliberately not linked).
 
 ### Course photos (`public/photos/<year>/courses/<slug>/`)
 Same idea as the player portraits — **the folder name is the wiring**. Drop
@@ -373,6 +399,9 @@ lightbox gallery. Read by `src/lib/course-photos.js`; no JSON to edit.
 public/photos/2027/courses/terra-lago-south/01-first-tee.jpg
 public/photos/2027/courses/classic-club/02-clubhouse.jpg
 ```
+All five 2027 folders exist (with a `.gitkeep`) and are **empty** as of
+September 2026 — `public/photos/2027/courses/README.md` lists each folder and
+the official gallery pages to collect from.
 
 - Files sort by filename, so **number them** (`01-`, `02-`) to choose the hero
   and the order. `.jpg` `.jpeg` `.png` `.webp` `.avif` all work.

@@ -9,9 +9,10 @@
 import Base from '../../layouts/Base.astro';
 import CoursePhoto from '../../components/CoursePhoto.astro';
 import PhotoGallery from '../../components/PhotoGallery.astro';
+import CourseFlyover from '../../components/CourseFlyover.astro';
 import { trips, tournamentById } from '../../lib/data.js';
 import { coursePhotos } from '../../lib/course-photos.js';
-import { weekday, dayMonth } from '../../lib/format.js';
+import { weekday, dayMonth, teeLine, rating1 } from '../../lib/format.js';
 
 export function getStaticPaths() {
   return trips.flatMap((trip) => {
@@ -28,6 +29,11 @@ const hero = photos[0] ?? null;
 const rest = photos.slice(1);
 
 const yds = (n) => `${n.toLocaleString('en-US')} yds`;
+const tee = c.tee ?? null;
+// Full tee table, longest first; our set is highlighted.
+const tees = [...(c.tees ?? [])].sort((a, b) => (b.yardage ?? 0) - (a.yardage ?? 0));
+// A par column only earns its width when the sets differ.
+const showPar = new Set(tees.map((x) => x.par ?? c.par)).size > 1;
 const host = (u) => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch { return u; } };
 ---
 <Base
@@ -54,19 +60,28 @@ const host = (u) => { try { return new URL(u).hostname.replace(/^www\./, ''); } 
         <CoursePhoto course={c} photo={hero} loading="eager" ratio="16 / 9" sizes="(max-width: 1160px) 100vw, 1100px" />
       </div>
 
+      {tee && (
+        <!-- THE callout: the tee we play decides everyone's strokes -->
+        <div class="cplay">
+          <div class="cplay__main">
+            <span class="cplay__k">Playing</span>
+            <span class="cplay__v tabnums">{teeLine(tee)}</span>
+            <span class="cplay__sub">
+              {tee.name} tees{(tee.par ?? c.par) != null && ` · par ${tee.par ?? c.par}`} · rating / slope set the handicap strokes on the day
+            </span>
+          </div>
+          {tee.confirmed === false
+            ? <span class="cplay__flag cplay__flag--tbc" title={tee.note || undefined}>To be confirmed on the ground</span>
+            : tee.confirmed === true ? <span class="cplay__flag">From the official scorecard</span> : null}
+        </div>
+      )}
+
       <div class="grid tiles cstats">
         {c.par != null && (
           <div class="tile"><div class="tile__k">Par</div><div class="tile__v mono-nums">{c.par}</div></div>
         )}
         {c.yardage != null && (
           <div class="tile"><div class="tile__k">Length</div><div class="tile__v mono-nums">{c.yardage.toLocaleString('en-US')}</div><div class="tile__sub">yards from the back tees</div></div>
-        )}
-        {c.tee && (c.tee.rating != null || c.tee.slope != null) && (
-          <div class="tile tile--gold">
-            <div class="tile__k">Rating · Slope</div>
-            <div class="tile__v mono-nums">{c.tee.rating ?? '—'}<span class="faint" style="font-size:1rem"> / </span>{c.tee.slope ?? '—'}</div>
-            <div class="tile__sub">{c.tee.name} tees{c.tee.yardage != null ? ` · ${yds(c.tee.yardage)}` : ''}</div>
-          </div>
         )}
         {c.designer && (
           <div class="tile"><div class="tile__k">Design</div><div class="tile__v cstats__who">{c.designer}</div>{c.opened != null && <div class="tile__sub">Opened {c.opened}</div>}</div>
@@ -90,12 +105,40 @@ const host = (u) => { try { return new URL(u).hostname.replace(/^www\./, ''); } 
         </div>
       )}
 
+      {tees.length > 0 && (
+        <div class="ctees">
+          <div class="section-head"><div><p class="eyebrow">Every set</p><h2>The tees</h2></div><span class="faint">{showPar ? 'Ours highlighted' : `All par ${tees[0]?.par ?? c.par} · ours highlighted`}</span></div>
+          <div class="table-scroll">
+            <table class="data ctees__table">
+              <thead><tr><th>Tee</th><th class="num">Yards</th><th class="num">Rating</th><th class="num">Slope</th>{showPar && <th class="num">Par</th>}</tr></thead>
+              <tbody>
+                {tees.map((x) => {
+                  const ours = tee && x.name === tee.name;
+                  return (
+                    <tr class:list={[{ 'is-ours': ours }]}>
+                      <td class="name">{x.name}{ours && <span class="ctees__ours">We play</span>}</td>
+                      <td class="num">{x.yardage != null ? x.yardage.toLocaleString('en-US') : '—'}</td>
+                      <td class="num">{rating1(x.rating)}</td>
+                      <td class="num">{x.slope ?? '—'}</td>
+                      {showPar && <td class="num">{x.par ?? c.par ?? '—'}</td>}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          {tee?.source && <p class="csource" style="margin-top:.7rem">Tee figures: <a href={tee.source} target="_blank" rel="noopener">the scorecard</a>{tee.note ? ` — ${tee.note}` : ''}</p>}
+        </div>
+      )}
+
       <div class="cactions">
         {c.url && <a class="btn btn--terra" href={c.url} target="_blank" rel="noopener">Course website <span aria-hidden="true">↗</span></a>}
         <a class="btn btn--navy" href={`/tournaments/${t.id}#trip`}>Back to the rota <span aria-hidden="true">→</span></a>
       </div>
     </div>
   </section>
+
+  {c.flyover && <CourseFlyover flyover={c.flyover} courseName={c.name} />}
 
   {rest.length > 0 && (
     <section class="section" style="padding-top:0">
@@ -110,7 +153,7 @@ const host = (u) => { try { return new URL(u).hostname.replace(/^www\./, ''); } 
     <section class="section" style="padding-top:0">
       <div class="wrap">
         <p class="csource">
-          Par, length, rating and slope from <a href={c.source} target="_blank" rel="noopener">{host(c.source)}</a>.
+          Course details (par, back-tee length, design) from <a href={c.source} target="_blank" rel="noopener">{host(c.source)}</a>.
           Ratings are re-issued from time to time — check the pro shop's card before anyone argues about strokes.
         </p>
       </div>
@@ -126,6 +169,21 @@ const host = (u) => { try { return new URL(u).hostname.replace(/^www\./, ''); } 
   .chero { margin-top: clamp(1.1rem, 3vw, 1.6rem); border-radius: var(--r-lg); overflow: hidden; box-shadow: var(--shadow-lg); background: var(--panel-2); }
 
   /* 140px so the four tiles still pair up two-across on a phone. */
+  /* "Playing" — navy band under the hero; the one number set that matters */
+  .cplay { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .8rem 1.2rem; margin-top: clamp(1rem, 3vw, 1.4rem); padding: 1rem clamp(1.1rem, 3vw, 1.6rem); border-radius: var(--r); background: var(--navy-ink); color: var(--navy-text); box-shadow: var(--shadow); border-left: 5px solid var(--terra); }
+  .cplay__main { display: flex; flex-direction: column; gap: .15rem; min-width: 0; }
+  .cplay__k { font-size: .66rem; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; color: var(--terra-bright); }
+  .cplay__v { font-family: var(--serif); font-weight: 600; font-size: clamp(1.35rem, 1.1rem + 1.4vw, 2rem); line-height: 1.1; color: #fff; }
+  .cplay__sub { font-size: .8rem; color: color-mix(in srgb, var(--navy-text) 75%, transparent); }
+  .cplay__flag { flex: none; font-size: .68rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; padding: .35rem .7rem; border-radius: 999px; background: color-mix(in srgb, var(--navy-text) 14%, transparent); color: var(--navy-text); }
+  .cplay__flag--tbc { background: var(--gold-soft); color: var(--gold); }
+
+  .ctees { margin-top: clamp(2rem, 5vw, 3rem); }
+  .ctees .section-head { margin-bottom: 1rem; }
+  .ctees__table tr.is-ours td { background: color-mix(in srgb, var(--terra) 12%, var(--paper)); font-weight: 700; color: var(--text); }
+  .ctees__table tr.is-ours td:first-child { box-shadow: inset 4px 0 0 var(--terra); }
+  .ctees__ours { margin-left: .55rem; font-size: .6rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: #fff; background: var(--terra); padding: .18rem .45rem; border-radius: 99px; vertical-align: .1em; }
+
   .cstats { margin-top: clamp(1.1rem, 3vw, 1.6rem); grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
   /* a designer credit is words, not a number — it shouldn't wear the stat face */
   .cstats__who { font-family: var(--serif); font-weight: 600; font-size: 1.12rem; line-height: 1.15; margin-top: .4rem; color: var(--text); }
@@ -146,6 +204,11 @@ const host = (u) => { try { return new URL(u).hostname.replace(/^www\./, ''); } 
     .cbody { grid-template-columns: 1fr; }
   }
   @media (max-width: 620px) {
+    /* four columns must fit a phone without scrolling: tighter cells, names may
+       wrap ("Black (Professional)"), and the "We play" tag sits under the name */
+    .ctees__table th, .ctees__table td { padding: .55rem .55rem; }
+    .ctees__table td.name { white-space: normal; }
+    .ctees__ours { display: table; margin: .3rem 0 0; }
     /* These names are long — "Desert Willow — Mountain View Course" — so the
        display size comes down rather than stacking into five lines. */
     .chead__name { font-size: clamp(1.7rem, 1.2rem + 2.6vw, 2.3rem); overflow-wrap: break-word; }
