@@ -8,8 +8,13 @@ Applies kebab-case ids and the three confirmed editorial decisions:
 import json, os
 import openpyxl
 
-SRC = "/Users/benurwin/Desktop/Golf Trip/The_Duel_Database_v1_0_Website_Ready.xlsx"
-OUT = "/Users/benurwin/Desktop/Golf Trip/the-annual/data"
+# Paths are relative to the repo, so they hold wherever the project lives. The
+# source workbook sits beside the repo in ~/GolfTrip/source/workbooks/ (see
+# "Where things live" in CLAUDE.md); override with THE_ANNUAL_WORKBOOK if needed.
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+SRC = os.environ.get("THE_ANNUAL_WORKBOOK") or os.path.join(
+    ROOT, "..", "source", "workbooks", "The_Duel_Database_v1_0_Website_Ready.xlsx")
+OUT = os.path.join(ROOT, "data")
 os.makedirs(OUT, exist_ok=True)
 wb = openpyxl.load_workbook(SRC, data_only=True)
 

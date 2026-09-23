@@ -1,5 +1,9 @@
 # Course photos — drop images in, they appear on the next build
 
+> **Owner: drop new photos in `~/GolfTrip/inbox/` instead** (players/ or
+> courses/<course>/). Claude processes them into this folder. The notes below
+> describe the format they end up in.
+
 One folder per course (the folder name is the course's slug — don't rename it):
 
 | Folder | Course | Where official imagery lives |

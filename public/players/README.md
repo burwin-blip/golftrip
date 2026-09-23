@@ -1,5 +1,9 @@
 # Player portraits
 
+> **Owner: drop new photos in `~/GolfTrip/inbox/` instead** (players/ or
+> courses/<course>/). Claude processes them into this folder. The notes below
+> describe the format they end up in.
+
 Drop a photo in this folder named after the player and it appears on the Players
 wall and at the top of their profile on the next build. Nothing else to edit.
 

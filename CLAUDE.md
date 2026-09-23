@@ -11,6 +11,38 @@ principle 5 below, and **RSVP** further down).
 > `The_Duel_Database_v1_0_Website_Ready.xlsx` in `scripts/gen_data.py`; rename the
 > source file and update `SRC` if you want it gone entirely.)
 
+## Where things live (the one true local copy)
+
+The project lives in **`~/GolfTrip/`**, which is outside iCloud. In September 2026
+the old copy under `~/Desktop/Golf Trip/` kept being offloaded by iCloud "Optimise
+Mac Storage": builds hung, git broke, and new photos couldn't be read. That copy
+has been renamed **"Golf Trip - OLD, do not use"** and must not be built or pushed
+from. Never move the project back under Desktop or Documents.
+
+```
+~/GolfTrip/
+  the-annual/        this repo (git → github.com/burwin-blip/golftrip; push main = deploy)
+  inbox/             the OWNER'S DROP FOLDER: players/, courses/<slug>/, other/
+  source/
+    workbooks/       The_Duel_Database_v1_0_Website_Ready.xlsx (gen_data.py's SRC),
+                     the V4 Scorecards workbook, match-summaries PDF, written-record
+                     DOCX, The_Duel_2026_Claude_Code_Data_Pack/
+    art/             flyer, banners, Redcoats, ChatGPT art, Airbnb shots
+    scorecard-screenshots/
+    photos/          player-originals/, course-originals/<slug>/, st-george-2026-album/
+```
+
+**Photo intake:** the owner drops files into `~/GolfTrip/inbox/` (not into
+`public/`). Process them into `public/players/<id>.jpg` or
+`public/photos/<year>/courses/<slug>/NN-name.webp` by the rules below, move each
+original into the matching `source/photos/…` folder, and leave the inbox empty.
+Already-optimised files are copied, never re-encoded.
+
+**`scripts/gen_data.py` warning:** re-running it rewrites `players.json` from the
+workbook alone, so it drops players who were added by hand (James Graham and
+Tanner Curley aren't in the workbook) and loses their `invitedFor`. Diff
+`data/` after any regen and restore those rows before committing.
+
 ## Core principles (do not break these)
 
 1. **`/data` is the single source of truth.** Six JSON files hold every fact:
