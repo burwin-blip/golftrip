@@ -6,7 +6,9 @@ Portraits live in `public/players/<player-id>.jpg` — that filename IS the wiri
 named file in there is all it takes to replace a player's initials placeholder.
 
 Most portraits will be dropped in by hand (straight from a phone). This script
-exists for the two players whose only portrait is a frame of the 2026 trip album:
+exists for the player whose only portrait is a frame of the 2026 trip album
+(Michael Herring; Tom Brunskill sent a real headshot in September 2026 and was
+removed from SOURCES so a re-run can't put the album crop back):
 it crops the chosen album shot down to a head-and-torso 4:5 so it reads as a
 portrait rather than a snapshot. Re-run it any time the album is re-optimised.
 
@@ -29,12 +31,6 @@ OUT_W, OUT_H = 800, 1000
 
 # player id -> (source album file, crop as fractions of the source, why this shot)
 SOURCES = {
-    "tom-brunskill": (
-        "sg26-11.jpg",
-        (0.180, 0.000, 0.600, 1.000),
-        "Golden-hour portrait, head-on and unobstructed — the better of his two "
-        "album frames (sg26-12 has a hand across the face).",
-    ),
     "michael-herring": (
         "sg26-15.jpg",
         (0.220, 0.060, 0.560, 0.500),

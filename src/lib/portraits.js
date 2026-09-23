@@ -16,6 +16,7 @@
 // two portraits cut from the 2026 album.
 // ---------------------------------------------------------------------------
 import fs from 'node:fs';
+import crypto from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { players } from './data.js';
@@ -41,7 +42,12 @@ function scan() {
   const map = {};
   for (const p of players) {
     const hit = EXTS.map((e) => p.id + e).find((f) => present.has(f));
-    if (hit) map[p.id] = `/players/${hit}`;
+    // ?v=<content hash>: a replaced photo keeps its filename, so the URL has to
+    // change with the bytes or a phone can keep showing the old face.
+    if (hit) {
+      const v = crypto.createHash('sha1').update(fs.readFileSync(path.join(PORTRAIT_DIR, hit))).digest('hex').slice(0, 10);
+      map[p.id] = `/players/${hit}?v=${v}`;
+    }
   }
   return map;
 }

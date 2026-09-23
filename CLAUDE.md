@@ -302,6 +302,10 @@ convention — **the filename is the wiring**.
   `players.json`) and it replaces that player's placeholder on the next build.
   No JSON to edit, no component to touch. `.jpeg`/`.png`/`.webp`/`.avif` also
   resolve, in that preference order after `.jpg`.
+- Portrait URLs carry **`?v=<content hash>`** (first 10 hex of the file's SHA-1),
+  so replacing a photo under the same filename changes its URL everywhere and no
+  phone keeps the old face (September 2026: Tom Brunskill's album crop → a real
+  headshot).
 - **`src/lib/portraits.js`** reads the folder at build time (`fs.readdirSync`,
   path resolved off `import.meta.url` so it holds wherever the build runs) and
   exposes `playerPortrait(id)`, `playersMissingPortraits()`, `playerInitials()`
@@ -350,9 +354,9 @@ convention — **the filename is the wiring**.
   width with its centre 40% down. That keeps the face inside both the 4:5 card
   and the centre-high circle. The owner's raw files (named by first name) are
   kept outside the repo in `../Photos/player-originals/`.
-- **`scripts/gen_portraits.py`** cuts the two portraits that only exist as album
-  frames (Tom Brunskill from `sg26-11`, Michael Herring from `sg26-15`) down to
-  4:5 head-and-torso. Crop boxes are fractions of the source, so they survive a
+- **`scripts/gen_portraits.py`** cuts the one portrait that only exists as an
+  album frame (Michael Herring from `sg26-15`) down to 4:5 head-and-torso. Tom
+  Brunskill was removed from it when his real headshot arrived. Crop boxes are fractions of the source, so they survive a
   re-export. Everyone else's portrait is expected to be dropped in by hand;
   `public/players/README.md` is the note for the owner on how.
 
@@ -1059,10 +1063,9 @@ public/               robots.txt, hero-banner.jpg (home hero), favicon.svg/png, 
 
 ## Not done yet
 
-- **5 of the 14 players have no portrait yet** — they're on the initials
-  placeholder until a photo lands in `public/players/`. Missing: `ben-urwin`,
-  `steve-urwin`, `alan-lozer`, `james-graham`, `tanner-curley`. The build prints
-  the current list every time.
+- **3 of the 14 players have no portrait yet** — they're on the initials
+  placeholder until a photo lands in `public/players/`. Missing: `alan-lozer`,
+  `james-graham`, `tanner-curley`. The build prints the current list every time.
 - **No nicknames on file.** `players.json` has a `nickname` field on every player
   and both the wall card and the profile header render it when it's set — every
   one is currently `null`, so nothing shows. Filling them in is a data edit, not

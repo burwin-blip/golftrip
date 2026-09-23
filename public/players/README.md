@@ -40,9 +40,9 @@ The same file also feeds the small round avatars (Power Rankings, Draft Pool,
 match cards, scorecards). They crop the top-centre of the portrait, so keep the
 face in the upper half of the frame, as the photos already here do.
 
-## The two cut from the album
+## The one cut from the album
 
-`tom-brunskill.jpg` and `michael-herring.jpg` are cropped out of the 2026 St
-George album by `scripts/gen_portraits.py`. Replace either with a better photo
-any time — just overwrite the file (and drop its entry from that script so a
-re-run doesn't put the old crop back).
+`michael-herring.jpg` is cropped out of the 2026 St George album by
+`scripts/gen_portraits.py`. Replace it with a better photo any time: overwrite the
+file and drop its entry from that script so a re-run doesn't put the old crop back.
+(Tom Brunskill's album crop was replaced by a real headshot in September 2026.)
