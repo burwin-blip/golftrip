@@ -94,6 +94,7 @@ const STEPS = [
           <p class="rv-hint">You’ll join the field as a 2027 rookie.</p>
         </div>
         <p class="rv-err" data-err="playerId newName" role="alert"></p>
+        <p class="rv-note" id="rv-samename" role="status" hidden></p>
       </section>
 
       <!-- 2 · RSVP -->
@@ -125,7 +126,7 @@ const STEPS = [
             <input id="rv-hcp" name="handicap" type="text" inputmode="decimal" class="rv-input rv-input--num" placeholder="e.g. 12.4" maxlength="4" />
             <label class="rv-check"><input type="checkbox" name="hcpPlus" /><span>It’s a plus handicap</span></label>
           </div>
-          <p class="rv-hint">Your handicap index today. Decimals are fine.</p>
+          <p class="rv-hint">Your handicap index today. Decimals are fine. No official handicap? Give your best guess.</p>
           <p class="rv-err" data-err="handicap" role="alert"></p>
         </div>
 
@@ -155,7 +156,7 @@ const STEPS = [
       <!-- 4 · 2027 QUESTIONS (event data; private) -->
       <section class="rv-screen" data-screen="event" aria-labelledby="rv-event-h">
         <h2 class="rv-h" id="rv-event-h" tabindex="-1">The 2027 questions</h2>
-        <p class="rv-sub">These stay private. Only the organiser sees them, and only as totals.</p>
+        <p class="rv-sub">These stay private. Only the organiser sees them.</p>
 
         <fieldset class="rv-field">
           <legend class="rv-label">Who would you nominate as captains? <span class="rv-label__aside">Pick one or two</span></legend>
@@ -302,6 +303,8 @@ const STEPS = [
   .rv-input--area { resize: vertical; min-height: 5.5rem; line-height: 1.45; }
   .rv-input[aria-invalid="true"] { box-shadow: inset 0 0 0 2px var(--terra-ink); }
   .rv-hint { font-size: .8rem; color: var(--faint); margin-top: .45rem; }
+  .rv-note { margin-top: .8rem; padding: .7rem .9rem; border-radius: var(--r-sm); background: var(--terra-soft); color: var(--terra-ink); font-size: .88rem; font-weight: 600; }
+  .rv-note[hidden] { display: none; }
   .rv-err { font-size: .85rem; font-weight: 600; color: var(--terra-ink); margin-top: .5rem; }
   .rv-err:empty { display: none; }
   .rv-err--send { padding: .9rem 1rem; border-radius: var(--r-sm); background: var(--terra-soft); margin-top: 1rem; }
@@ -417,6 +420,19 @@ const STEPS = [
   const hcpOut = () => (isPlus() ? '+' : '') + val('handicap').replace(',', '.');
   const setHcp = (n) => { if (n == null) return; setVal('handicap', Math.abs(n).toFixed(1)); form.elements.hcpPlus.checked = n < 0; };
 
+  // Bring an element into view, reliably: smooth first, then — if that got
+  // cancelled (this site's global smooth scroll can drop one mid-layout, and a
+  // background tab never runs it) — jump there.
+  const reveal = (el) => {
+    if (!el) return;
+    el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    setTimeout(() => {
+      const r = el.getBoundingClientRect();
+      const barTop = bar.hidden ? innerHeight : bar.getBoundingClientRect().top;
+      if (r.top < 0 || r.bottom > barTop) el.scrollIntoView({ block: 'center', behavior: 'instant' });
+    }, 450);
+  };
+
   // ---- errors ----
   const clearErrors = () => { $$('.rv-err').forEach((e) => (e.textContent = '')); $$('[aria-invalid]').forEach((e) => e.removeAttribute('aria-invalid')); };
   const showError = (field, msg) => {
@@ -424,7 +440,7 @@ const STEPS = [
     box.textContent = msg;
     const input = form.elements[field];
     if (input && !(input instanceof RadioNodeList)) { input.setAttribute('aria-invalid', 'true'); }
-    box.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    reveal(box);
   };
   const stepOfField = (f) => ({ playerId: 'who', newName: 'who', status: 'rsvp', dob: 'game', handicap: 'game', strengths: 'game', weaknesses: 'game', sentence: 'game', captainVoteIds: 'event', teamNames: 'event', greenFee: 'event', longestDrive: 'event' }[f] || 'review');
 
@@ -437,6 +453,21 @@ const STEPS = [
       if (val('playerId') === '__new') {
         const n = val('newName').replace(/\s+/g, ' ');
         if (n.split(' ').filter(Boolean).length < 2) return e('newName', 'Enter your first and last name.');
+        // Already on the list? (A veteran who missed their face, or a rookie who
+        // RSVP'd earlier.) Select their card rather than start a second player:
+        // the server would attach it to them anyway, but say so, visibly.
+        const key = (x) => x.toLowerCase().normalize('NFKD').replace(/[^a-z]/g, '');
+        const match = players.find((p) => key(p.name) === key(n));
+        if (match) {
+          setVal('playerId', match.id);
+          $('#rv-newname').hidden = true;
+          const note = $('#rv-samename');
+          note.textContent = `You’re already on the list as ${match.name}. We’ve selected your card. Tap Continue.`;
+          note.hidden = false;
+          const tile = form.querySelector(`input[name="playerId"][value="${CSS.escape(match.id)}"]`)?.closest('.rv-face');
+          reveal(tile || note);
+          return false;
+        }
       }
     }
     if (s === 'rsvp' && !val('status')) return e('status', 'Choose Yes, Maybe or No.');
@@ -513,7 +544,16 @@ const STEPS = [
     if (e.target.name === 'playerId') {
       const isNew = e.target.value === '__new';
       $('#rv-newname').hidden = !isNew;
-      if (isNew) setTimeout(() => $('#rv-newName').focus(), 50);
+      if (isNew) {
+        // On a phone this tile sits at the bottom of the wall, so the name box it
+        // reveals lands below the fold (and under the sticky bar). Focus it inside
+        // this same tap (iOS only raises the keyboard then) and scroll it to the
+        // middle of the screen, so the tap visibly does something.
+        const box = $('#rv-newName');
+        box.focus({ preventScroll: true });
+        reveal(box);
+      }
+      $('#rv-samename').hidden = true;
       clearErrors();
     }
     // a part of your game can't be both strongest and weakest

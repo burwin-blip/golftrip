@@ -22,7 +22,8 @@ import { normalizeProfile } from './rsvp-shared.js';
 //     anything else leaves it out. players.json may not set it by hand (the build
 //     fails if it does) — an RSVP through /rsvp is the only way anyone is confirmed.
 //     A debutant who hasn't replied yet can carry `invitedFor` instead: it keeps
-//     them a rookie and in the pool's "Waiting on", and a NO clears it.
+//     them a rookie and in the pool's "Waiting on", and a NO clears it. A MAYBE
+//     RSVP adds the edition to `invitedFor` (derived, never written back).
 //   - each self-reported handicap becomes a snapshot with `source: "rsvp"`
 //   - strongest / weakest / one-sentence answers → gameProfileFor()
 // ---------------------------------------------------------------------------
@@ -47,7 +48,10 @@ const players = (() => {
     }));
   return [...rawPlayers, ...created].map((p) => {
     const status = rsvp.tournamentId ? rsvp.statuses?.[p.id] : null;
-    const invitedFor = (p.invitedFor || []).filter((t) => !(status === 'no' && t === rsvp.tournamentId));
+    // A MAYBE counts as lined up (not confirmed): it keeps a debutant a rookie on
+    // the Players wall and profile, same as an invitation. A NO clears it.
+    let invitedFor = (p.invitedFor || []).filter((t) => !(status === 'no' && t === rsvp.tournamentId));
+    if (status === 'maybe' && !invitedFor.includes(rsvp.tournamentId)) invitedFor = [...invitedFor, rsvp.tournamentId];
     return { ...p, invitedFor, confirmedFor: status === 'yes' ? [rsvp.tournamentId] : [] };
   });
 })();

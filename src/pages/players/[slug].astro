@@ -4,7 +4,7 @@ import TeamLogo from '../../components/TeamLogo.astro';
 import PhotoGallery from '../../components/PhotoGallery.astro';
 import PlayerPortrait from '../../components/PlayerPortrait.astro';
 import GameProfile from '../../components/GameProfile.astro';
-import { players, teamById, playerById, roundById, getCourse, tournamentById, moments } from '../../lib/data.js';
+import { players, teamById, playerById, roundById, getCourse, tournamentById, moments, rsvpStatusFor } from '../../lib/data.js';
 import {
   careerStats, formatRecords, opponentRecords,
   handicapAnalysis, draftValue, scorecardIndex, ANALYTICS_CAVEAT,
@@ -25,6 +25,7 @@ const myPhotos = photosForPlayer(p.id);
 const isProspect = c.appearances.length === 0;
 const rookieTid = upcomingFor(p)[0] || null;
 const rookieConfirmed = rookieTid ? (p.confirmedFor || []).includes(rookieTid) : false;
+const rookieRsvp = rookieTid ? rsvpStatusFor(p.id, rookieTid) : null;
 const rookieYear = rookieTid ? tournamentById[rookieTid]?.year : null;
 
 // This player's live power-ranking row (works for veterans and rookies alike).
@@ -83,7 +84,7 @@ const FMT_SHORT = { 'Scramble': 'Scramble', 'Best Ball Match Play (NET)': 'Best 
           <div class="tcard__bar">
             <span class="tcard__seal" aria-hidden="true">A</span>
             <span class="tcard__barteam">The Annual</span>
-            {rookieYear && <span class="tcard__barmeta">{rookieConfirmed ? `Confirmed for ${rookieYear}` : `${rookieYear} · awaiting RSVP`}</span>}
+            {rookieYear && <span class="tcard__barmeta">{rookieConfirmed ? `Confirmed for ${rookieYear}` : rookieRsvp === 'maybe' ? `${rookieYear} · a maybe` : `${rookieYear} · awaiting RSVP`}</span>}
           </div>
 
           <div class="tcard__photo">

@@ -741,7 +741,9 @@ of creating a second one. New ids are kebab-case like every other id.
 3. `src/lib/data.js` merges it (optional file — a bare `astro build` still works):
    new players join `players`; **`confirmedFor` is built from the RSVPs alone** (YES
    → confirmed for 2027, debutants become rookies automatically; anything else →
-   not confirmed; a NO also clears that edition from `invitedFor`); each
+   not confirmed; a MAYBE adds the edition to `invitedFor` so a debutant stays a
+   rookie on the Players wall with a "<year> · a maybe" profile bar; a NO clears
+   it); each
    day's RSVP handicap becomes a snapshot with **`source: "rsvp"`** appended to
    `handicapSnapshots` (the JSON file is never modified); Q3–Q5 are read with
    `gameProfileFor(id)`; the status with `rsvpStatusFor(id, tid)`.
@@ -819,9 +821,25 @@ shapes, and step 2 above exercises exactly that path.
 **Diagnosing production:** send the admin key as an `x-admin-key` header to any
 `/api/rsvp*` call and a 500 includes the real error (`detail`); players only ever
 see the generic message. Errors are also in Vercel → the project → **Logs**.
-**Clearing a test entry:** `DELETE /api/rsvp-admin?player=<id>` with the
-`x-admin-key` header removes that player's response, profile answers and (if the
-RSVP created them) the player record, then triggers a rebuild.
+**Clearing a test entry:** the admin page has a **Remove** button on every row
+that has replied (two taps: the first arms it, the second deletes). It calls
+`DELETE /api/rsvp-admin?player=<id>` with the `x-admin-key` header, which removes
+that player's response, profile answers and (if the RSVP created them) the player
+record, then triggers a rebuild.
+
+**New-player ("I'm not listed") flow, hardened Sept 2026 after a live cold test:**
+- Tapping the tile focuses the name box *inside the tap* (so iOS raises the
+  keyboard) and scrolls it into view. On a phone it otherwise appears below the
+  fold, under the sticky bar, and the tap looks like it did nothing.
+- All scrolling in the form goes through `reveal()`: smooth first, then an
+  instant jump if the element still isn't visible above the sticky bar (smooth
+  scrolls can be dropped). Error messages use it too.
+- A typed name that matches someone already listed (case, spacing and accents
+  ignored) selects that player's card and says "You're already on the list as …"
+  instead of silently merging on the server.
+- The handicap hint tells newcomers without an official index to give their
+  best guess. The 2027-questions copy says "Only the organiser sees them", not
+  "only as totals": the admin page shows each person's picks.
 **After a save succeeds nothing may fail the request** — the deploy hook and the
 live count are best-effort (logged, never surfaced as an error).
 Existing/new-player RSVP, changing an RSVP, duplicate prevention, one-or-two
