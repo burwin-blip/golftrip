@@ -1,6 +1,7 @@
 ---
 import Base from '../layouts/Base.astro';
 import TeamLogo from '../components/TeamLogo.astro';
+import PlayerAvatar from '../components/PlayerAvatar.astro';
 import { powerRankings, handicapCheckInList } from '../lib/stats.js';
 import { longDate } from '../lib/format.js';
 
@@ -136,6 +137,7 @@ const MOVE = {
 
               <div class="pr-main">
                 <div class="pr-nameline">
+                  <PlayerAvatar player={r.player} size={36} className="pr-avatar" />
                   {r.teamId && <TeamLogo teamId={r.teamId} size={22} />}
                   <a class="pr-name" href={`/players/${r.player.slug}`}>{r.player.name}</a>
                   {r.isRookie && <span class="pr-rookie" title="Rookie — debuts 2027">(R)</span>}

@@ -1,0 +1,49 @@
+---
+// A player's small round avatar — the face for boards, cards and scorecards,
+// where the full 4:5 PlayerPortrait would be too big. Same wiring: the photo at
+// `public/players/<id>.jpg` when there is one (see src/lib/portraits.js), and
+// otherwise the initials on the house sunset gradient, so a photo-less player
+// still reads as part of the set. Portraits are cut with the face in the upper
+// half of the frame, which is exactly what a centre-high circle crop keeps.
+//
+// Props: player ({ id, name }), size (px), ring (CSS colour — usually the team's).
+import { playerPortrait, playerInitials } from '../lib/portraits.js';
+
+const { player, size = 32, ring = null, className = '' } = Astro.props;
+const src = player ? playerPortrait(player.id) : null;
+const style = `--av:${size}px;${ring ? `--av-ring:${ring};` : ''}`;
+---
+{src ? (
+  <img class:list={['pavatar', { 'pavatar--ring': ring }, className]} src={src} alt="" width={size} height={size}
+       loading="lazy" decoding="async" style={style} />
+) : (
+  <span class:list={['pavatar', 'pavatar--init', { 'pavatar--ring': ring }, className]} style={style} aria-hidden="true">
+    {playerInitials(player?.name)}
+  </span>
+)}
+
+<style>
+  .pavatar {
+    flex: none;
+    display: block;
+    width: var(--av);
+    height: var(--av);
+    border-radius: 50%;
+    object-fit: cover;
+    object-position: center 26%;
+    background: var(--panel-2);
+  }
+  .pavatar--ring { box-shadow: 0 0 0 2px var(--paper, #fff), 0 0 0 3.5px var(--av-ring); }
+  .pavatar--init {
+    display: grid;
+    place-items: center;
+    background: linear-gradient(180deg, #DE9660 0%, #EFC095 55%, #F9E4C6 100%);
+    color: #17293F;
+    font-family: var(--serif);
+    font-weight: 600;
+    font-size: calc(var(--av) * 0.4);
+    line-height: 1;
+    letter-spacing: -0.02em;
+    user-select: none;
+  }
+</style>

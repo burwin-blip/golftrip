@@ -1,5 +1,6 @@
 ---
 import TeamLogo from './TeamLogo.astro';
+import PlayerAvatar from './PlayerAvatar.astro';
 import TripCountdown from './TripCountdown.astro';
 import TripHub from './TripHub.astro';
 import { draftPoolFor } from '../lib/stats.js';
@@ -122,6 +123,7 @@ const TABS = [['overview', 'Overview'], ...(trip ? [['trip', 'Trip']] : []), ['p
             {g.rows.map((p) => (
               <a class:list={["card card--pad pool-card", { 'pool-card--waiting': g.id === 'waiting' }]} href={`/players/${p.player.slug}`} style={p.teamId ? `--accent:${p.teamId === 'woodpeckers' ? 'var(--wp)' : 'var(--ss)'}` : '--accent:var(--gold-bright)'}>
                 <div class="pool-card__head">
+                  <PlayerAvatar player={p.player} size={44} ring="var(--accent)" />
                   {p.teamId ? <TeamLogo teamId={p.teamId} size={26} /> : <span class="pool-new-dot">★</span>}
                   <span class="pool-card__name">{p.player.name}</span>
                   {p.isChampion && <span class="pill gold" style="margin-left:auto">♛ Champ</span>}

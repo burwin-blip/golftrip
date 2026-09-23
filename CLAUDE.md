@@ -296,6 +296,17 @@ convention — **the filename is the wiring**.
   defeats the grid stretch and leaves a gap under the photo — don't "simplify"
   it back. Likewise `.pportrait` needs `height:auto`, or the `<img>`'s `height`
   attribute wins over the aspect ratio.
+- **`PlayerAvatar.astro`** is the small ROUND face (same wiring, same file) for
+  the places a 4:5 card is too big: the Power Rankings board, Draft Pool cards,
+  match rows (`MatchRow.astro`, a face stack per side with a team-colour ring —
+  the crest drops out under 540px) and the player rows of `HoleScorecard.astro`
+  (the face replaces the crest there). No photo → initials on the sunset
+  gradient. It crops the 4:5 file centre-high (`object-position: center 26%`).
+- **Headshot framing (September 2026 batch):** head-and-shoulders, 800×1000,
+  JPEG q82, cropped around a detected face so the face is ~34% of the frame
+  width with its centre 40% down. That keeps the face inside both the 4:5 card
+  and the centre-high circle. The owner's raw files (named by first name) are
+  kept outside the repo in `../Photos/player-originals/`.
 - **`scripts/gen_portraits.py`** cuts the two portraits that only exist as album
   frames (Tom Brunskill from `sg26-11`, Michael Herring from `sg26-15`) down to
   4:5 head-and-torso. Crop boxes are fractions of the source, so they survive a
@@ -399,9 +410,13 @@ lightbox gallery. Read by `src/lib/course-photos.js`; no JSON to edit.
 public/photos/2027/courses/terra-lago-south/01-first-tee.jpg
 public/photos/2027/courses/classic-club/02-clubhouse.jpg
 ```
-All five 2027 folders exist (with a `.gitkeep`) and are **empty** as of
-September 2026 — `public/photos/2027/courses/README.md` lists each folder and
-the official gallery pages to collect from.
+As of September 2026 three folders are filled (web-optimised `.webp`, full
+≤1600px q80 + a `-thumb.webp` at 560px q68, renamed `01-…` so the chosen hero
+sorts first): Firecliff (3), Mountain View (5), Terra Lago South (7).
+**`terra-lago-north/` and `classic-club/` are still empty** and show the drawn
+placeholder. The raw downloads are kept outside the repo in
+`../Photos/course-originals/`. `public/photos/2027/courses/README.md` lists each
+folder and the official gallery pages to collect from.
 
 - Files sort by filename, so **number them** (`01-`, `02-`) to choose the hero
   and the order. `.jpg` `.jpeg` `.png` `.webp` `.avif` all work.
@@ -939,11 +954,10 @@ public/               robots.txt, hero-banner.jpg (home hero), favicon.svg/png, 
 
 ## Not done yet
 
-- **12 of the 14 players have no portrait yet** — they're on the initials
+- **5 of the 14 players have no portrait yet** — they're on the initials
   placeholder until a photo lands in `public/players/`. Missing: `ben-urwin`,
-  `rupert-pedler`, `chase-hellmers`, `colton-mckivitz`, `anthony-herring`,
-  `steve-urwin`, `scott-benesh`, `alan-lozer`, `ed-nelson`, `miles-honens`,
-  `james-graham`, `tanner-curley`. The build prints the current list every time.
+  `steve-urwin`, `alan-lozer`, `james-graham`, `tanner-curley`. The build prints
+  the current list every time.
 - **No nicknames on file.** `players.json` has a `nickname` field on every player
   and both the wall card and the profile header render it when it's set — every
   one is currently `null`, so nothing shows. Filling them in is a data edit, not

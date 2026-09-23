@@ -30,7 +30,13 @@ sips -Z 1000 --setProperty formatOptions 82 ~/Desktop/photo.jpg \
      --out public/players/ben-urwin.jpg
 ```
 
-## The two already here
+## Circle avatars
+
+The same file also feeds the small round avatars (Power Rankings, Draft Pool,
+match cards, scorecards). They crop the top-centre of the portrait, so keep the
+face in the upper half of the frame, as the photos already here do.
+
+## The two cut from the album
 
 `tom-brunskill.jpg` and `michael-herring.jpg` are cropped out of the 2026 St
 George album by `scripts/gen_portraits.py`. Replace either with a better photo

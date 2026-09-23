@@ -1,8 +1,9 @@
 ---
 // A compact per-match row: winner's side tints in team colour, logos alongside.
-import { teamById } from '../lib/data.js';
+import { teamById, playerById } from '../lib/data.js';
 import { fullName, num } from '../lib/format.js';
 import TeamLogo from './TeamLogo.astro';
+import PlayerAvatar from './PlayerAvatar.astro';
 
 const { match } = Astro.props;
 
@@ -15,11 +16,13 @@ const bWon = match.winnerTeamId === teamB.id;
 // The result chip carries the winner's colour (gold for a halved match).
 const winColor = aWon ? teamA.color : bWon ? teamB.color : 'var(--gold-bright)';
 
+const faces = (side) => side.map((p) => playerById[p.playerId] ?? { id: p.playerId, name: fullName(p.playerId) });
 const names = (side) => side.map((p) => fullName(p.playerId)).join(' & ');
 ---
 <div class="mrow">
   <div class:list={["mrow__side", "mrow__side--a", { win: aWon }]} style={`--accent:${teamA.color}`}>
     <TeamLogo teamId={teamA.id} size={26} className="mrow__logo" />
+    <span class="mrow__faces">{faces(sideA).map((pl) => <PlayerAvatar player={pl} size={30} ring={teamA.color} />)}</span>
     <div class="mrow__body">
       <div class="mrow__names">{names(sideA)}</div>
       <div class="mrow__tag">{teamA.name}</div>
@@ -31,6 +34,7 @@ const names = (side) => side.map((p) => fullName(p.playerId)).join(' & ');
   </div>
   <div class:list={["mrow__side", "mrow__side--b", { win: bWon }]} style={`--accent:${teamB.color}`}>
     <TeamLogo teamId={teamB.id} size={26} className="mrow__logo" />
+    <span class="mrow__faces">{faces(sideB).map((pl) => <PlayerAvatar player={pl} size={30} ring={teamB.color} />)}</span>
     <div class="mrow__body">
       <div class="mrow__names">{names(sideB)}</div>
       <div class="mrow__tag">{teamB.name}</div>

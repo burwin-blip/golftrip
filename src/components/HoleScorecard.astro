@@ -8,6 +8,7 @@
 import { matchScorecard, HOLE_STATS_COVERAGE } from '../lib/stats.js';
 import { teamById } from '../lib/data.js';
 import TeamLogo from './TeamLogo.astro';
+import PlayerAvatar from './PlayerAvatar.astro';
 
 const { match } = Astro.props;
 const sc = matchScorecard(match.id);
@@ -112,7 +113,7 @@ const teamShort = (id) => teamById[id]?.name.split(/\s+/).map((w) => w[0]).join(
                   return (
                     <tr class="hsc__player" style={`--accent:${teamById[p.teamId]?.color}`}>
                       <th class="hsc__name">
-                        <TeamLogo teamId={p.teamId} size={18} className="hsc__logo" />
+                        <PlayerAvatar player={{ id: p.playerId, name: p.name }} size={20} ring={teamById[p.teamId]?.color} className="hsc__face" />
                         <span>{p.name}</span>
                         {p.hcp != null && <em class="hsc__hcp">{p.hcp}</em>}
                       </th>
