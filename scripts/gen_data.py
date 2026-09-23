@@ -210,6 +210,7 @@ upcoming = [{
     "accommodation": {
         "name": "The house",
         "type": "Home in Indio · Palm Springs area",
+        "blurb": "Sixteen bedrooms across four houses — the whole field, one booking.",  # one Airbnb booking, four houses
         "rating": 4.8,
         "bedrooms": 16,
         "beds": 25,

@@ -200,6 +200,7 @@ const KIND_ICON = { golf: '⛳', draft: '🎯', awards: '🏆', travel: '✈', s
             )}
             <div class="basecamp__main">
               <p class="basecamp__type">{acc.type}</p>
+              {acc.blurb && <p class="basecamp__blurb">{acc.blurb}</p>}
               <div class="basecamp__stats">
                 <div><b>★&nbsp;{acc.rating}</b><span>rating</span></div>
                 <div><b>{acc.bedrooms}</b><span>bedrooms</span></div>
@@ -425,6 +426,8 @@ const KIND_ICON = { golf: '⛳', draft: '🎯', awards: '🏆', travel: '✈', s
   /* ---- accommodation (inside Getting there so travel + a bed live together) -- */
   .basecamp { border-top: 3px solid var(--gold-bright); display: grid; gap: clamp(1.2rem, 3vw, 1.8rem); }
   .basecamp__type { font-family: var(--serif); font-size: 1.25rem; color: var(--text); margin-bottom: 1.1rem; }
+  .basecamp__type:has(+ .basecamp__blurb) { margin-bottom: .35rem; }
+  .basecamp__blurb { color: var(--muted); font-size: .95rem; margin-bottom: 1.1rem; }
   .basecamp__stats { display: flex; flex-wrap: wrap; gap: 1.2rem 2.2rem; }
   .basecamp__stats div { display: flex; flex-direction: column; }
   .basecamp__stats b { font-family: var(--serif); font-weight: 600; font-size: clamp(1.5rem,1.2rem+1vw,1.9rem); line-height: 1; color: var(--text); }
