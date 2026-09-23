@@ -708,8 +708,14 @@ the repo; the `#` part is never sent to servers or logs). Shows everyone incl.
 no-reply, timestamps + change history, handicaps (with history), DOB, strengths /
 weaknesses (one per line), each person's captain picks with their team names,
 captain vote tallies (**each nomination = one vote**, so one person can back two
-captains), team names grouped by captain, Q8/Q9 totals, and a CSV download (lists
-joined with "; "; captain1/team1/captain2/team2 columns).
+captains), team names grouped by captain, Q8/Q9 totals, and an **"Export results
+(CSV)"** button: one row per player (non-replies included) with every field, including
+the RSVP and handicap histories, DOB, both captain picks with their team names, and
+Q8/Q9 **as the answer wording**, not the stored key. Lists are joined with "; ". It's a
+UTF-8 file with a BOM, and any typed answer that starts with `= + - @` is prefixed with
+`'` so a spreadsheet can't run it as a formula (a plain negative number, i.e. a plus
+handicap, is left alone). Built in the browser from the key-unlocked admin API
+response. Nothing new is served.
 To change the URL, change `RSVP_ADMIN_KEY` in Vercel.
 
 ### Environment variables (Vercel → Settings → Environment Variables)
