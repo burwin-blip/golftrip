@@ -43,7 +43,7 @@ const host = (u) => { try { return new URL(u).hostname.replace(/^www\./, ''); } 
 >
   <section class="section">
     <div class="wrap">
-      <a class="back-link" href={`/tournaments/${t.id}#trip`}>← {t.shortName} · the trip</a>
+      <a class="back-link" href={`/tournaments/${t.id}#courses`}>← {t.shortName} · the courses</a>
 
       <div class="chead reveal">
         <p class="eyebrow gold">
@@ -133,7 +133,7 @@ const host = (u) => { try { return new URL(u).hostname.replace(/^www\./, ''); } 
 
       <div class="cactions">
         {c.url && <a class="btn btn--terra" href={c.url} target="_blank" rel="noopener">Course website <span aria-hidden="true">↗</span></a>}
-        <a class="btn btn--navy" href={`/tournaments/${t.id}#trip`}>Back to the rota <span aria-hidden="true">→</span></a>
+        <a class="btn btn--navy" href={`/tournaments/${t.id}#courses`}>Back to the rota <span aria-hidden="true">→</span></a>
       </div>
     </div>
   </section>

@@ -1,5 +1,10 @@
 ---
-// THE TRIP TAB — the official program for an upcoming event.
+// THE TRIP PROGRAMME — courses, itinerary, travel + basecamp, costs, key dates
+// for an upcoming event. Rendered INSIDE the Overview tab of
+// TournamentUpcoming.astro, straight after the scoreboard/flyer/facts, so it has
+// no masthead of its own (the Overview already carries the flyer, the dates and
+// the RSVP banner). Each section has an id (#courses #itinerary #getting-there
+// #costs #key-dates) for the Overview's jump links.
 //
 // Everything here renders from data/trip-<year>.json (see tripFor() in
 // src/lib/data.js) plus the tournament's own dates and accommodation. Nothing
@@ -11,8 +16,7 @@ import CoursePhoto from './CoursePhoto.astro';
 import { coursePhotos } from '../lib/course-photos.js';
 import { dateRange, weekday, dayMonth, longDate, teeLine } from '../lib/format.js';
 
-const { t, trip, pool = [] } = Astro.props;
-const flyer = t.flyer || {};
+const { t, trip } = Astro.props;
 const acc = t.accommodation || null;
 
 const courses = (trip?.courses ?? []).map((c) => ({
@@ -71,31 +75,9 @@ const KIND_ICON = { golf: '⛳', draft: '🎯', awards: '🏆', travel: '✈', s
 ---
 <div class="wrap">
 
-  <!-- PROGRAM MASTHEAD — the poster leads, the way a program cover should -->
-  <div class="prog">
-    {flyer.display && (
-      <a class="prog__poster" href={flyer.full} data-full={flyer.full} aria-label={`View the ${t.name} poster full size`}>
-        <img src={flyer.display} width="480" height="680" alt={`${t.name} — ${t.location}, ${dateRange(t.startDate, t.endDate)}`} loading="eager" decoding="async" />
-        <span class="prog__cue">⤢ Enlarge</span>
-      </a>
-    )}
-    <div class="prog__body">
-      <p class="eyebrow gold">The programme</p>
-      <h2 class="prog__title">Everything you need for the desert</h2>
-      <p class="muted prog__lede">The courses, the running order, how to get there and what it costs — updated as each piece gets locked in. Anything still marked TBA is genuinely still open.</p>
-      <div class="prog__facts">
-        <div><span class="prog__k">When</span><b>{dateRange(t.startDate, t.endDate)}</b></div>
-        <div><span class="prog__k">Where</span><b>{t.location}</b></div>
-        {address?.area && <div><span class="prog__k">Basecamp</span><b>{address.area}</b></div>}
-        <div><span class="prog__k">The field</span><b>{pool.filter((p) => p.group === 'confirmed').length} confirmed</b></div>
-      </div>
-      <a class="btn btn--terra prog__rsvp" href="/rsvp">RSVP for {t.year} <span aria-hidden="true">→</span></a>
-    </div>
-  </div>
-
   <!-- COURSES -->
   {courses.length > 0 && (
-    <section class="tsec">
+    <section class="tsec" id="courses">
       <div class="section-head"><div><p class="eyebrow gold">The rota</p><h2>The courses</h2></div><span class="faint">{courses.filter((c) => c.name).length} of {courses.length} locked in</span></div>
       <div class="grid course-grid">
         {courses.map((c) => {
@@ -131,7 +113,7 @@ const KIND_ICON = { golf: '⛳', draft: '🎯', awards: '🏆', travel: '✈', s
 
   <!-- ITINERARY -->
   {itinerary.length > 0 && (
-    <section class="tsec">
+    <section class="tsec" id="itinerary">
       <div class="section-head"><div><p class="eyebrow gold">Running order</p><h2>The itinerary</h2></div><span class="faint">{itinerary.length} days</span></div>
       <div class="itin">
         {itinerary.map((day) => (
@@ -171,7 +153,7 @@ const KIND_ICON = { golf: '⛳', draft: '🎯', awards: '🏆', travel: '✈', s
 
   <!-- GETTING THERE (+ basecamp) -->
   {(travel || acc) && (
-    <section class="tsec">
+    <section class="tsec" id="getting-there">
       <div class="section-head"><div><p class="eyebrow gold">Logistics</p><h2>Getting there</h2></div></div>
 
       {travel?.landingWindow && (
@@ -243,7 +225,7 @@ const KIND_ICON = { golf: '⛳', draft: '🎯', awards: '🏆', travel: '✈', s
 
   <!-- COSTS -->
   {costItems.length > 0 && (
-    <section class="tsec">
+    <section class="tsec" id="costs">
       <div class="section-head"><div><p class="eyebrow gold">Budget</p><h2>The damage</h2></div>{!costs?.estimate && <span class="faint">a checklist, not an invoice</span>}</div>
 
       {costs?.estimate && (
@@ -304,7 +286,7 @@ const KIND_ICON = { golf: '⛳', draft: '🎯', awards: '🏆', travel: '✈', s
 
   <!-- KEY DATES -->
   {(datedKeys.length > 0 || undatedKeys.length > 0) && (
-    <section class="tsec">
+    <section class="tsec" id="key-dates">
       <div class="section-head"><div><p class="eyebrow gold">Diary</p><h2>Key dates</h2></div></div>
       <ol class="timeline">
         {datedKeys.map((k) => (
@@ -332,22 +314,8 @@ const KIND_ICON = { golf: '⛳', draft: '🎯', awards: '🏆', travel: '✈', s
   .course__play { display: flex; flex-wrap: wrap; align-items: baseline; gap: .15rem .45rem; margin-top: .45rem; padding: .45rem .6rem; border-radius: var(--r-xs); background: var(--navy-ink); color: #fff; font-weight: 700; font-size: .84rem; line-height: 1.25; }
   .course__play span { font-size: .6rem; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: var(--terra-bright); }
   .course__play i { font-style: normal; font-size: .58rem; font-weight: 800; letter-spacing: .08em; color: var(--gold); background: var(--gold-soft); padding: .1rem .35rem; border-radius: 99px; }
-  .prog__rsvp { margin-top: 1.2rem; min-height: 46px; padding-inline: 1.4rem; }
-  .tsec { margin-top: clamp(2.4rem, 6vw, 4rem); }
+  .tsec { margin-top: clamp(2.4rem, 6vw, 4rem); scroll-margin-top: 140px; } /* clear the sticky masthead + tab bar on a jump */
   .tsec .section-head { margin-bottom: 1.2rem; }
-
-  /* ---- programme masthead ---- */
-  .prog { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: clamp(1.2rem, 4vw, 2.6rem); align-items: center; }
-  .prog__poster { position: relative; display: block; border-radius: var(--r); overflow: hidden; border: 1px solid var(--line-strong); box-shadow: 0 18px 44px -18px rgba(22,34,27,.5); transition: transform .25s var(--ease), box-shadow .25s var(--ease); }
-  .prog__poster img { display: block; width: clamp(190px, 26vw, 290px); height: auto; }
-  .prog__poster:hover { transform: translateY(-3px) rotate(-.5deg); box-shadow: 0 26px 56px -18px rgba(22,34,27,.55); }
-  .prog__cue { position: absolute; top: .5rem; right: .5rem; padding: .3rem .55rem; font-size: .66rem; font-weight: 700; color: #fff; background: rgba(20,30,24,.62); border-radius: 999px; }
-  .prog__title { font-size: clamp(1.6rem, 1.2rem + 2vw, 2.5rem); margin-top: .3rem; }
-  .prog__lede { margin-top: .7rem; font-size: .95rem; max-width: 56ch; }
-  .prog__facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: .9rem 1.4rem; margin-top: 1.4rem; padding-top: 1.2rem; border-top: 1px solid var(--line); }
-  .prog__facts div { display: flex; flex-direction: column; gap: .2rem; min-width: 0; }
-  .prog__k { font-size: .62rem; letter-spacing: .14em; text-transform: uppercase; font-weight: 700; color: var(--faint); }
-  .prog__facts b { font-family: var(--serif); font-weight: 600; font-size: 1.02rem; line-height: 1.2; }
 
   /* ---- courses (the rota) ---- */
   .course-grid { grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 1rem; }
@@ -486,9 +454,6 @@ const KIND_ICON = { golf: '⛳', draft: '🎯', awards: '🏆', travel: '✈', s
 
   /* ---- phones: everything stacks, nothing shrinks to unreadable ---- */
   @media (max-width: 760px) {
-    .prog { grid-template-columns: 1fr; justify-items: center; text-align: left; }
-    .prog__poster img { width: min(72vw, 300px); }
-    .prog__body { width: 100%; }
     .course-grid { grid-template-columns: 1fr 1fr; }
     .course { gap: .35rem; }
     /* Two-up, "Round 1" and the date can't share a line without breaking. */

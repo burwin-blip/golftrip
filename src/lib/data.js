@@ -109,7 +109,7 @@ const handicapSnapshots = validateHandicapSnapshots(
 // event: itinerary, courses, travel, costs, key dates. Hand-edited the same way
 // as the handicap check-ins (often from a phone), so it gets the same defensive
 // treatment: validate at build time and FAIL LOUDLY naming the offending field
-// rather than shipping a broken Trip tab.
+// rather than shipping a broken trip programme.
 //
 // Everything is optional. A missing section simply doesn't render; a null value
 // renders as "TBA". That's the point — the page is meant to look deliberate on

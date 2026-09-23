@@ -19,11 +19,21 @@ const poolGroups = [
   { id: 'waiting', eyebrow: 'Still to come', title: 'Waiting on', rows: waitingPool, empty: null },
 ];
 const flyer = t.flyer || {};
-// Basecamp + the whole trip programme live on the Trip tab (TripHub.astro), so
-// accommodation and travel sit together. The Overview stays the scoreboard view.
+// One Overview for an upcoming edition: countdown, RSVP, the TBA scoreboard +
+// flyer, the facts, then the whole trip programme (TripHub.astro) flowing
+// straight on underneath. (There used to be a separate Trip tab; old #trip links
+// still land on the programme — see the id on .up-trip.)
 const trip = tripFor(t.id);
 
-const TABS = [['overview', 'Overview'], ...(trip ? [['trip', 'Trip']] : []), ['pool', 'Draft Pool'], ['guide', 'Draft Guide']];
+const TABS = [['overview', 'Overview'], ['pool', 'Draft Pool'], ['guide', 'Draft Guide']];
+// Jump links for the long Overview — only to sections that actually render
+// (same guards as TripHub).
+const JUMPS = trip ? [
+  (trip.courses ?? []).length > 0 && ['courses', 'Courses'],
+  (trip.itinerary ?? []).length > 0 && ['itinerary', 'Itinerary'],
+  (trip.travel || t.accommodation) && ['getting-there', 'Getting there'],
+  (trip.costs?.items ?? []).length > 0 && ['costs', 'Costs'],
+].filter(Boolean) : [];
 ---
 <!-- HEADER -->
 <section class="section" style="padding-bottom: clamp(1.2rem,3vw,1.6rem)">
@@ -47,6 +57,13 @@ const TABS = [['overview', 'Overview'], ...(trip ? [['trip', 'Trip']] : []), ['p
   <!-- OVERVIEW -->
   <section class="tabpanel active section" data-panel="overview">
     <div class="wrap">
+      {JUMPS.length > 0 && (
+        <nav class="jumps" aria-label="Jump to a section">
+          <span class="jumps__k">Jump to</span>
+          {JUMPS.map(([id, label]) => <a href={`#${id}`}>{label}</a>)}
+        </nav>
+      )}
+
       {trip && (
         <div class="cdown-wrap">
           <TripCountdown startDate={t.startDate} endDate={t.endDate} location={t.location} utcOffset={trip.utcOffset} />
@@ -94,22 +111,16 @@ const TABS = [['overview', 'Overview'], ...(trip ? [['trip', 'Trip']] : []), ['p
         )}
       </div>
 
-      {trip && (
-        <a class="to-trip" href="#trip" data-goto-tab="trip">
-          <span class="to-trip__k">The programme</span>
-          <span class="to-trip__v">Courses, itinerary, travel and costs</span>
-          <span class="to-trip__go" aria-hidden="true">→</span>
-        </a>
-      )}
     </div>
-  </section>
 
-  <!-- TRIP — the programme: courses, itinerary, travel, costs, key dates -->
-  {trip && (
-    <section class="tabpanel section" data-panel="trip">
-      <TripHub t={t} trip={trip} pool={pool} />
-    </section>
-  )}
+    <!-- the programme: courses, itinerary, travel + basecamp, costs, key dates.
+         id="trip" keeps old links to the retired Trip tab landing here. -->
+    {trip && (
+      <div class="up-trip" id="trip">
+        <TripHub t={t} trip={trip} />
+      </div>
+    )}
+  </section>
 
   <!-- DRAFT POOL -->
   <section class="tabpanel section" data-panel="pool">
@@ -223,16 +234,15 @@ const TABS = [['overview', 'Overview'], ...(trip ? [['trip', 'Trip']] : []), ['p
   .up-rsvp__v { font-family: var(--serif); font-weight: 600; font-size: clamp(1.3rem, 1.1rem + 1vw, 1.7rem); line-height: 1.1; }
   .up-rsvp__go { margin-left: auto; display: grid; place-items: center; width: 2.4rem; height: 2.4rem; border-radius: 50%; background: rgba(255,255,255,.18); font-weight: 800; }
 
-  /* countdown sits above the scoreboard; basecamp moved to the Trip tab */
+  /* countdown sits above the scoreboard */
   .cdown-wrap { margin-bottom: clamp(1.6rem, 4vw, 2.4rem); }
 
-  /* Overview's hand-off to the programme */
-  .to-trip { display: flex; align-items: center; gap: .3rem 1rem; flex-wrap: wrap; margin-top: clamp(1.8rem, 4vw, 2.6rem); padding: 1rem clamp(1.1rem, 3vw, 1.5rem); border-radius: var(--r); background: var(--panel); box-shadow: var(--shadow); transition: transform .2s var(--ease), box-shadow .2s var(--ease); }
-  .to-trip:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
-  .to-trip__k { font-size: .62rem; letter-spacing: .14em; text-transform: uppercase; font-weight: 700; color: var(--terra-ink); width: 100%; }
-  .to-trip__v { font-family: var(--serif); font-weight: 600; font-size: clamp(1.05rem, .95rem + .6vw, 1.35rem); }
-  .to-trip__go { margin-left: auto; font-weight: 800; color: var(--faint); transition: color .2s var(--ease), transform .2s var(--ease); }
-  .to-trip:hover .to-trip__go { color: var(--terra); transform: translateX(3px); }
+  /* jump links for the long Overview (small, under the tab bar) */
+  .jumps { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem .45rem; margin: -.4rem 0 clamp(1.2rem, 3vw, 1.6rem); font-size: .78rem; }
+  .jumps__k { font-size: .6rem; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: var(--faint); margin-right: .15rem; }
+  .jumps a { padding: .32rem .7rem; border-radius: 999px; font-weight: 700; color: var(--terra-ink); background: var(--paper); box-shadow: inset 0 0 0 1px var(--line-strong); transition: background .15s var(--ease), color .15s var(--ease); }
+  .jumps a:hover { background: var(--terra-soft); }
+  .up-trip { scroll-margin-top: 140px; }
 
   /* guide placeholder */
   .guide-placeholder { text-align: center; padding: clamp(2rem,6vw,3.5rem); max-width: 620px; }
@@ -262,18 +272,28 @@ const TABS = [['overview', 'Overview'], ...(trip ? [['trip', 'Trip']] : []), ['p
         if (push && history.replaceState) history.replaceState(null, '', '#' + id);
       };
       tabs.forEach((t) => t.addEventListener('click', () => activate(t.dataset.tab, true)));
-      // In-page links that jump to another tab (the Overview's programme card).
-      document.querySelectorAll('[data-goto-tab]').forEach((el) => {
-        el.addEventListener('click', (e) => {
-          const id = el.getAttribute('data-goto-tab');
-          if (!tabs.some((t) => t.dataset.tab === id)) return;   // no such tab — let the link be
+      const hash = location.hash.replace('#', '');
+      // Sections of the long Overview (#trip — the old Trip tab's links — #courses,
+      // #itinerary, #getting-there, #costs, #key-dates). The browser's own jump
+      // gets cancelled by the global scroll-behavior:smooth while the page is still
+      // laying out, so scroll instantly and re-assert as images settle (the same
+      // fix as the completed view's round jumps; offset = scroll-margin-top).
+      const toSection = (id) => {
+        const go = () => { const el = document.getElementById(id); if (el) el.scrollIntoView({ behavior: 'instant', block: 'start' }); };
+        activate('overview', false);
+        go();
+        [40, 120, 260, 450].forEach((ms) => setTimeout(go, ms));
+      };
+      root.querySelectorAll('.jumps a').forEach((a) => {
+        a.addEventListener('click', (e) => {
           e.preventDefault();
-          activate(id, true);
-          root.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          const id = a.getAttribute('href').slice(1);
+          if (history.replaceState) history.replaceState(null, '', '#' + id);
+          toSection(id);
         });
       });
-      const hash = location.hash.replace('#', '');
       if (hash && tabs.some((t) => t.dataset.tab === hash)) activate(hash, false);
+      else if (hash && document.getElementById(hash)) toSection(hash);
     }
     // Lightbox: the flyer and every accommodation photo carry data-full.
     const box = document.getElementById('up-lightbox');

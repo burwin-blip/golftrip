@@ -326,9 +326,27 @@ convention — **the filename is the wiring**.
 
 ## The Trip hub (`data/trip-2027.json`) — the lead-up page
 
-An upcoming event's page is the one everyone checks *before* the trip, so it
-carries a **Trip** tab: the official programme. Tabs are Overview · **Trip** ·
-Draft Pool · Draft Guide (the Trip tab only appears when a planner file exists).
+An upcoming event's page is the one everyone checks *before* the trip, so the
+programme lives right on it. **Upcoming tournaments use a single-Overview
+layout** (owner's call, September 2026; there used to be a separate Trip tab).
+Tabs are **Overview · Draft Pool · Draft Guide**, and the Overview runs top to
+bottom:
+1. a row of **jump links** (Courses · Itinerary · Getting there · Costs, only for
+   sections that render) — they scroll instantly and re-assert, because the
+   global `scroll-behavior: smooth` otherwise cancels the jump mid-layout (same
+   fix as the completed view's round jumps);
+2. countdown; 3. RSVP banner; 4. Teams-TBA scoreboard + the flyer;
+5. When / Where / Status cards (+ the tournament notes);
+6. then the programme itself, `TripHub.astro`: the courses rota (`#courses`),
+   itinerary (`#itinerary`), getting there + The Compound basecamp
+   (`#getting-there`), the damage (`#costs`), key dates (`#key-dates`).
+The flyer and the dates each appear **once**. TripHub has no masthead of its
+own, so don't add a poster/when/where block back into it. The programme's wrapper
+carries **`id="trip"`**, so any old `#trip` link (the retired tab) still lands at
+the start of the programme; course pages link back to `#courses`. Section anchors
+use `scroll-margin-top: 140px` to clear the sticky masthead + tab bar. When the
+edition is played and flips to `completed`, it gets the completed tab structure
+(Matches / Stats / …) instead, and none of this applies.
 
 ### The planner file — this is the one the owner edits
 `data/trip-<year>.json` is a **single JSON object**, hand-edited the same way as
@@ -474,7 +492,7 @@ folder and the official gallery pages to collect from.
   can't disagree. **Weekday names are always derived** (`weekday()` in
   `format.js`) — never hand-typed. (March 25, 2027 is a **Thursday**.)
 - **Accommodation** stays in `tournaments.json` — it's written by
-  `scripts/gen_data.py`, so moving it would fight the generator. The Trip tab
+  `scripts/gen_data.py`, so moving it would fight the generator. The programme
   renders it *inside* "Getting there" so a bed and how to reach it read together.
 - **The field size** is computed by `draftPoolFor(tid)`.
 
@@ -634,8 +652,8 @@ ONE place, `src/lib/rsvp-shared.js`.
   After this device RSVPs YES, `/rsvp` stores `annual-rsvp:last` in localStorage
   and the banner becomes "You're in — see who else is coming →" (the Draft Pool).
   Best-effort: with no storage it simply stays "RSVP now".
-- **2027 page**: an RSVP band on the Overview (under the countdown), a button in
-  the Trip tab's masthead, and a link in the Draft Pool intro.
+- **2027 page**: an RSVP band on the Overview (under the countdown) and a link in
+  the Draft Pool intro.
 
 ### Where the data lives
 **Upstash Redis** (free tier, connected via Vercel → Storage; env vars
@@ -876,10 +894,10 @@ views it).
     hole-in-one story lives in the Moments tab) — see the `isShotOfTournament` filter
     in `TournamentCompleted.astro`. A **Photos** tab appears when the event has any
     photos (see **Trip photos** below).
-  - **upcoming** → `TournamentUpcoming.astro`: **Overview** (countdown band + flyer
-    + dates + "Teams/Captains to be announced"), **Trip** (the programme —
-    `TripHub.astro`; see **The Trip hub** above), **Draft Pool** (eligible players
-    → profiles), **Draft Guide** (placeholder). No Matches/Stats/Awards until
+  - **upcoming** → `TournamentUpcoming.astro`: the **single-Overview layout**:
+    **Overview** (jump links, countdown, RSVP, TBA scoreboard + flyer, facts, then
+    the whole programme via `TripHub.astro`; see **The Trip hub** above),
+    **Draft Pool** (eligible players → profiles), **Draft Guide** (placeholder). No Matches/Stats/Awards until
     results exist.
   `[id].astro` is a thin wrapper that picks the component so the completed
   frontmatter never runs for an upcoming event.
