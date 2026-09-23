@@ -208,7 +208,7 @@ upcoming = [{
     # hero, the rest form the gallery strip. Web-optimised jpgs live under
     # public/photos/2027/airbnb/ (generated with sips from the source .avif).
     "accommodation": {
-        "name": "The Compound",
+        "name": "The house",
         "type": "Home in Indio · Palm Springs area",
         "rating": 4.8,
         "bedrooms": 16,

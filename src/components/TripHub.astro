@@ -1,5 +1,5 @@
 ---
-// THE TRIP PROGRAMME — courses, itinerary, travel + basecamp, costs, key dates
+// THE TRIP PROGRAMME — courses, itinerary, travel + accommodation, costs, key dates
 // for an upcoming event. Rendered INSIDE the Overview tab of
 // TournamentUpcoming.astro, straight after the scoreboard/flyer/facts, so it has
 // no masthead of its own (the Overview already carries the flyer, the dates and
@@ -149,7 +149,7 @@ const KIND_ICON = { golf: '⛳', draft: '🎯', awards: '🏆', travel: '✈', s
     </section>
   )}
 
-  <!-- GETTING THERE (+ basecamp) -->
+  <!-- GETTING THERE (+ accommodation) -->
   {(travel || acc) && (
     <section class="tsec" id="getting-there">
       <div class="section-head"><div><p class="eyebrow gold">Logistics</p><h2>Getting there</h2></div></div>
@@ -177,7 +177,7 @@ const KIND_ICON = { golf: '⛳', draft: '🎯', awards: '🏆', travel: '✈', s
       {acc && (
         <div class="basecamp-wrap">
           <div class="section-head" style="margin-top:clamp(1.8rem,4vw,2.6rem)">
-            <div><p class="eyebrow">Basecamp</p><h3 class="bc-h">{acc.name}</h3></div>
+            <div><h3 class="bc-h">Accommodation</h3></div>
             {address?.area && <span class="faint">{address.area}</span>}
           </div>
           <div class:list={["card card--pad basecamp", { "basecamp--has-photos": acc.photos && acc.photos.length > 0 }]}>
@@ -422,7 +422,7 @@ const KIND_ICON = { golf: '⛳', draft: '🎯', awards: '🏆', travel: '✈', s
   .timeline__node.is-tba .timeline__label { color: var(--muted); }
   .timeline__node.is-tba .timeline__dot { box-shadow: inset 0 0 0 2px var(--line); }
 
-  /* ---- basecamp (moved here from Overview so travel + a bed live together) -- */
+  /* ---- accommodation (inside Getting there so travel + a bed live together) -- */
   .basecamp { border-top: 3px solid var(--gold-bright); display: grid; gap: clamp(1.2rem, 3vw, 1.8rem); }
   .basecamp__type { font-family: var(--serif); font-size: 1.25rem; color: var(--text); margin-bottom: 1.1rem; }
   .basecamp__stats { display: flex; flex-wrap: wrap; gap: 1.2rem 2.2rem; }

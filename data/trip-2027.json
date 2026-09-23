@@ -419,7 +419,7 @@
    "items": [
     {
      "time": null,
-     "title": "Check in at The Compound",
+     "title": "Check in at the house",
      "detail": "Indio — the whole field under one roof.",
      "kind": "travel"
     },
@@ -522,7 +522,7 @@
      "20": 418
     },
     "due": null,
-    "note": "The Compound, split across the field."
+    "note": "The house, split across the field."
    },
    {
     "label": "Golf",
@@ -577,7 +577,7 @@
   {
    "label": "Draft night",
    "date": "2027-03-25",
-   "note": "Teams decided at The Compound."
+   "note": "Teams decided at the house."
   }
  ]
 }

@@ -374,7 +374,7 @@ bottom:
 2. countdown; 3. RSVP banner; 4. Teams-TBA scoreboard + the flyer;
 5. When / Where / Status cards (+ the tournament notes);
 6. then the programme itself, `TripHub.astro`: the courses rota (`#courses`),
-   itinerary (`#itinerary`), getting there + The Compound basecamp
+   itinerary (`#itinerary`), getting there + the accommodation
    (`#getting-there`), the damage (`#costs`), key dates (`#key-dates`).
 The flyer and the dates each appear **once**. TripHub has no masthead of its
 own, so don't add a poster/when/where block back into it. The programme's wrapper
