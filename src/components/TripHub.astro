@@ -14,7 +14,7 @@
 // booked, and fill in as the trip comes together.
 import CoursePhoto from './CoursePhoto.astro';
 import { coursePhotos } from '../lib/course-photos.js';
-import { dateRange, weekday, dayMonth, longDate, teeLine } from '../lib/format.js';
+import { dateRange, weekday, dayMonth, longDate, playingLine } from '../lib/format.js';
 
 const { t, trip } = Astro.props;
 const acc = t.accommodation || null;
@@ -25,12 +25,10 @@ const courses = (trip?.courses ?? []).map((c) => ({
   href: c.slug && c.name ? `/courses/${c.slug}` : null,
 }));
 const courseBySlug = Object.fromEntries(courses.filter((c) => c.slug).map((c) => [c.slug, c]));
-// Without a decided tee: "Par 72 · 7,044 yds" (back tees) — only what we know.
-// With one, the card leads with "Playing: Blue · 6,401 yds · 71.6/133" instead.
-const courseLine = (c) => [
-  c.par != null ? `Par ${c.par}` : null,
-  !c.tee && c.yardage != null ? `${c.yardage.toLocaleString('en-US')} yds` : null,
-].filter(Boolean).join(' · ');
+// The card's numbers are only ever the tees we play: one strip,
+// "Par 72 · Blue (Championship) tees · 6,401 yards · 71.6/133" (playingLine).
+// Before a tee is decided, just the par — never back-tee length.
+const courseLine = (c) => (c.tee ? '' : c.par != null ? `Par ${c.par}` : '');
 const itinerary = [...(trip?.itinerary ?? [])].sort((a, b) => a.date.localeCompare(b.date));
 const travel = trip?.travel ?? null;
 const airports = travel?.airports ?? [];
@@ -97,7 +95,7 @@ const KIND_ICON = { golf: '⛳', draft: '🎯', awards: '🏆', travel: '✈', s
                 <h3 class="course__name">{c.name || 'Course TBA'}</h3>
                 <p class="course__loc">{c.name ? (c.location || 'Location to come') : 'Being scouted'}</p>
                 {c.name && c.tee && (
-                  <p class="course__play tabnums"><span>Playing</span>{teeLine(c.tee)}{c.tee.confirmed === false && <i title="Figures from a scorecard database — to be confirmed on the ground">TBC</i>}</p>
+                  <p class="course__play tabnums">{playingLine(c.tee, c.par)}{c.tee.confirmed === false && <i title="Figures from a scorecard database — to be confirmed on the ground">TBC</i>}</p>
                 )}
                 {c.name && courseLine(c) && <p class="course__spec tabnums">{courseLine(c)}</p>}
                 {c.format && <span class="pill course__fmt">{c.format}</span>}
@@ -312,7 +310,6 @@ const KIND_ICON = { golf: '⛳', draft: '🎯', awards: '🏆', travel: '✈', s
 
 <style>
   .course__play { display: flex; flex-wrap: wrap; align-items: baseline; gap: .15rem .45rem; margin-top: .45rem; padding: .45rem .6rem; border-radius: var(--r-xs); background: var(--navy-ink); color: #fff; font-weight: 700; font-size: .84rem; line-height: 1.25; }
-  .course__play span { font-size: .6rem; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: var(--terra-bright); }
   .course__play i { font-style: normal; font-size: .58rem; font-weight: 800; letter-spacing: .08em; color: var(--gold); background: var(--gold-soft); padding: .1rem .35rem; border-radius: 99px; }
   .tsec { margin-top: clamp(2.4rem, 6vw, 4rem); scroll-margin-top: 140px; } /* clear the sticky masthead + tab bar on a jump */
   .tsec .section-head { margin-bottom: 1.2rem; }

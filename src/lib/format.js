@@ -57,10 +57,12 @@ export const longDate = (iso) => {
 // Course ratings are always written to one decimal (71.0, not 71).
 export const rating1 = (r) => (r == null ? '—' : Number(r).toFixed(1));
 
-// "Blue · 6,401 yds · 71.6/133" — the tee a course is played off, the one line
-// that decides everyone's strokes. Only the parts we have.
-export const teeLine = (tee) => tee ? [
-  tee.name,
-  tee.yardage != null ? `${tee.yardage.toLocaleString('en-US')} yds` : null,
+// "Par 72 · Blue (Championship) tees · 6,401 yards · 71.6/133" — THE headline for a
+// course: only ever the tee set we're actually playing (never back-tee length).
+// Used under the hero on the course profile and on the Overview rota cards.
+export const playingLine = (tee, par = null) => tee ? [
+  (tee.par ?? par) != null ? `Par ${tee.par ?? par}` : null,
+  `${tee.name} tees`,
+  tee.yardage != null ? `${tee.yardage.toLocaleString('en-US')} yards` : null,
   tee.rating != null || tee.slope != null ? `${rating1(tee.rating)}/${tee.slope ?? '—'}` : null,
 ].filter(Boolean).join(' · ') : '';

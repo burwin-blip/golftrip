@@ -423,7 +423,8 @@ Field notes:
   A course with a **`slug`** gets a **profile page at `/courses/<slug>`**
   (`src/pages/courses/[slug].astro`) and its rota card becomes a link to it.
   - Profile fields, all optional, all rendered only when present: `designer`,
-    `opened`, `par`, `yardage` (back tees), `signature`, `description`, `url`
+    `opened`, `par`, `yardage` (back tees — kept in the data but **never shown as a
+    headline**; see below), `signature`, `description`, `url`
     (the club's own site) and **`source`** — the URL the numbers came from, which
     is printed at the foot of the profile. **Leave a field null rather than guess
     it**; the page is built to look right with gaps.
@@ -436,10 +437,16 @@ Field notes:
     folder name, and the build rejects anything else.
   - **The tees are decided (2027)** — `tee` is the set THIS group plays and
     drives every yardage/rating/slope shown: `{ name, yardage, rating, slope,
-    par, confirmed, source, note }`. It renders as the **"Playing: <tee> · <yds>
-    · <rating>/<slope>"** callout (navy band under the hero on the profile, and on
-    every rota card) — `teeLine()` in `format.js`; ratings always print to one
-    decimal (`rating1()`). These numbers set everyone's handicap strokes, so:
+    par, confirmed, source, note }`. It renders as ONE strip, **"Par 72 · Blue
+    (Championship) tees · 6,401 yards · 71.6/133"** (`playingLine()` in
+    `format.js`): the navy band under the hero on the profile, and the same line on
+    every rota card. **Owner's rule (Sept 2026): the headline numbers are only ever
+    the tees we play.** No back-tee / championship length anywhere near the top of
+    the page or on the cards (people read 7,000+ yards and thought that's what
+    they're playing). The old Par / Length / Design tiles are gone; the designer and
+    opening year sit under the description as a small line, and the full tee table
+    further down is the only place other sets' yardages appear. Ratings always
+    print to one decimal (`rating1()`). These numbers set everyone's handicap strokes, so:
     **`confirmed: true`** only when the figures came from the club's own card
     (Desert Willow — official PDFs, 06/2023); **`confirmed: false`** shows a
     **"To be confirmed on the ground"** flag (Terra Lago — club card c. 2018 +
