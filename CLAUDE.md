@@ -445,12 +445,12 @@ and South; the folders are the source of truth). Everything is web-optimised
 chosen hero sorts first; files already optimised are copied, never re-encoded.
 Firecliff 3 · Mountain View 5 · Terra Lago South 7 (incl. `06-tee-boxes`, the
 aerial of the stepped tees through the badlands, placed on South by judgement
-because the owner filed it there) · Terra Lago North 2 (clubhouse + the shared
-aerial, which is deliberately in BOTH Terra Lago galleries) · **Classic Club 0**.
-**Pending:** four Classic Club photos and two more North photos are in the
-owner's local folders but were iCloud-offloaded and unreadable at sync time. Add
-them next. A saved web page (`Golf-Club-at-Terra-Lago.html`) in the South folder
-is intentionally NOT on the site. The raw downloads live outside the repo in
+because the owner filed it there) · Terra Lago North 4 (hero `01-island-green`,
+its signature par 3; the clubhouse; and the shared aerial, which is deliberately
+in BOTH Terra Lago galleries) · Classic Club 4 (hero `01-green-mountain`).
+Firecliff is the thin one (3 shots, 768px wide). A saved web page
+(`Golf-Club-at-Terra-Lago.html`) the owner had in the South folder is
+intentionally NOT on the site. The raw downloads live outside the repo in
 `../Photos/course-originals/`. `public/photos/2027/courses/README.md` lists each
 folder and the official gallery pages to collect from.
 
