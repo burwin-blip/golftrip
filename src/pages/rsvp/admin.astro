@@ -37,7 +37,7 @@ import BrandMark from '../../components/BrandMark.astro';
 
       <section class="ad-sec">
         <h2>Everyone</h2>
-        <p class="muted ad-note">Includes everyone who hasn’t replied. “Confirmed by hand” = set in players.json before any RSVP.</p>
+        <p class="muted ad-note">Includes everyone who hasn’t replied.</p>
         <div class="table-scroll"><table class="data ad-table" id="ad-table"></table></div>
       </section>
 
@@ -148,7 +148,7 @@ import BrandMark from '../../components/BrandMark.astro';
     $('#ad-table').innerHTML = `<thead><tr><th>Player</th><th>RSVP</th><th>Replied</th><th class="num">Handicap</th><th>Date of birth</th><th>Strongest</th><th>Weakest</th><th>In a sentence</th><th>Captain picks · team names</th><th>$250</th><th>LD / CTP</th></tr></thead><tbody>${rows.map((r) => {
       const st = r.status
         ? `<span class="ad-st ad-st--${r.status}">${LABEL[r.status]}</span>`
-        : r.handConfirmed ? `<span class="ad-st ad-st--none">Confirmed by hand</span>` : `<span class="ad-st ad-st--none">No reply</span>`;
+        : `<span class="ad-st ad-st--none">No reply</span>`;
       const hist = r.handicapHistory.map((h) => hcp(h.index)).join(' → ');
       const changes = r.statusHistory.length > 1 ? `<span class="ad-sub">${r.statusHistory.map((s) => LABEL[s.status]).join(' → ')}</span>` : '';
       return `<tr>

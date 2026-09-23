@@ -64,6 +64,17 @@ principle 5 below, and **RSVP** further down).
    render the production URL in a real browser. That is the standard for calling
    a deploy healthy — and for calling it broken.
 
+7. **Only an RSVP confirms a player.** (Owner's rule, September 2026.) Nobody is
+   marked confirmed for an edition except by answering YES on `/rsvp`. There are
+   **no hand-set confirmations**: `confirmedFor` is derived at build time from the
+   RSVPs alone (`src/lib/data.js`), and the build **fails** if `players.json` sets
+   it. A debutant who's been invited but hasn't replied carries
+   `invitedFor: ["<tournament-id>"]` instead. That keeps them a rookie (badge,
+   prospect profile, wall card) and puts them in the pool's **"Waiting on"**, and
+   their YES moves them to Confirmed like anyone else. (James Graham and Tanner
+   Curley were hand-confirmed before the RSVP existed; they were moved to
+   `invitedFor` under this rule.)
+
 ### Two point concepts — keep them straight
 - **Team standings** (the official 16.5–13.5): each match is worth its
   `pointsAvailable`; the winner takes it all, a halved match splits it. Computed
@@ -521,7 +532,7 @@ tournament handicap, so the page works before any real check-in (flagged "seed")
 `players.json` has a `ghin` field per player (their GHIN number), `null` until
 filled in, and a `system` field — `"ghin"` (default) or `"ga"` for the Australian
 GA handicap system (indices are comparable numbers, no conversion). `ghin`,
-`system` and `confirmedFor` are all **hand-maintained**; `scripts/gen_data.py`
+`system` and `invitedFor` are all **hand-maintained**; `scripts/gen_data.py`
 **preserves them by id on regen**. Snapshots may also carry a per-check-in
 `system` and an optional `homeClub` (both validated). The UI labels the system
 subtly — **"GA index" / "GHIN index"** on the board, **"GA handicap · <club>"** /
@@ -577,17 +588,22 @@ check-in helper table is `handicapCheckInList()` (name · GHIN · index · last
 check-in). To retune the model, edit only `POWER_RANKING_WEIGHTS` /
 `POWER_RANKING_TREND_DAYS` / `POWER_RANKING_STALE_DAYS`.
 
-## Rookies (confirmed, not yet debuted)
+## Rookies (lined up, not yet debuted)
 
-A player with `confirmedFor: ["<upcoming-tid>"]` and **zero completed appearances**
-is a *rookie*. Helpers: `rookiesFor(tid)` / `allRookies()` in `stats.js`. Rookies
+A player lined up for an upcoming edition, either **confirmed by RSVP**
+(`confirmedFor`, derived) or **invited and still to reply** (`invitedFor`, in
+`players.json`), with **zero completed appearances** is a *rookie*
+(`upcomingFor(p)` in `stats.js` is the union). Helpers: `rookiesFor(tid)` /
+`allRookies()`. The profile's team bar reads "Confirmed for <year>" once they've
+RSVP'd YES, "<year> · awaiting RSVP" until then. Rookies
 get, automatically: a **"Rookie — debuts <year>"** profile treatment (badge, bio,
 handicap/GHIN, live power-ranking once snapshots exist, and a "no tournament record
 yet" panel **instead of blank stat tables**); their own **"Confirmed for <year>"**
 group under the veterans on the Players page; and a **"Rookie" tag** in the upcoming
-Draft Pool. To add one: they RSVP YES on `/rsvp` via "I'm not listed" — or add a
-player row to `players.json` with `confirmedFor` set (and a `ghin` when known).
-Nothing else required.
+Draft Pool. To add one: they RSVP YES on `/rsvp` via "I'm not listed", or add a
+player row to `players.json` with `invitedFor` set (and a `ghin` when known) so
+they appear in "Waiting on" and find themselves in the `/rsvp` picker. Never set
+`confirmedFor` by hand (core principle 7).
 
 ## RSVP (`/rsvp`) — the 2027 invitation replies
 
@@ -659,13 +675,14 @@ of creating a second one. New ids are kebab-case like every other id.
    If Redis is connected but unreachable the build FAILS (the last good deploy
    stays up) rather than publishing a site with everyone's RSVPs missing.
 3. `src/lib/data.js` merges it (optional file — a bare `astro build` still works):
-   new players join `players`; an RSVP **overrides `confirmedFor`** for 2027 (YES
-   adds it → debutants become rookies automatically; NO / MAYBE remove it); each
+   new players join `players`; **`confirmedFor` is built from the RSVPs alone** (YES
+   → confirmed for 2027, debutants become rookies automatically; anything else →
+   not confirmed; a NO also clears that edition from `invitedFor`); each
    day's RSVP handicap becomes a snapshot with **`source: "rsvp"`** appended to
    `handicapSnapshots` (the JSON file is never modified); Q3–Q5 are read with
    `gameProfileFor(id)`; the status with `rsvpStatusFor(id, tid)`.
-- **Draft Pool** (`draftPoolFor`) groups: **confirmed** (YES, or `confirmedFor` set
-  by hand with no RSVP) · **maybe** · **waiting** (played before, no reply yet).
+- **Draft Pool** (`draftPoolFor`) groups: **confirmed** (RSVP YES, nothing else) ·
+  **maybe** · **waiting** (no reply yet: played before, or an `invitedFor` rookie).
   A NO is out of the pool. The pool tab renders Confirmed, then "Waiting on"
   (MAYBE gets a "Maybe — not sure yet" tag). Captain nominees on `/rsvp` = the pool.
 - **Power Rankings** with RSVP snapshots: they move a player's index + trend, but
@@ -887,11 +904,11 @@ careers, records, leaderboards, or the home page's "results". `allTournaments()`
    `status: "upcoming"`, dates/location, a `flyer: {display, full}` (images in
    `public/`), and empty `teams/rounds/roster/scores`. It shows in the nav and gets
    its Overview / Draft Pool / Draft Guide page automatically.
-2. **Draft pool** = driven by the RSVPs (see **RSVP**): confirmed (YES / hand-set
-   `confirmedFor`), maybe, and veterans still to reply; a NO is out. (A future
+2. **Draft pool** = driven by the RSVPs (see **RSVP**): confirmed (RSVP YES
+   only), maybe, and veterans / invited rookies still to reply; a NO is out. (A future
    edition's RSVP needs `RSVP_TOURNAMENT_ID` in `src/lib/rsvp-shared.js` changed.) To add a **new
-   bloke**: add a player row (with `confirmedFor: ["<tournament-id>"]`) — they appear
-   in the pool and get a **prospect profile** (guarded in `players/[slug].astro` for
+   bloke**: add a player row (with `invitedFor: ["<tournament-id>"]`), and they appear
+   in the pool's "Waiting on" until they RSVP and get a **prospect profile** (guarded in `players/[slug].astro` for
    zero-appearance players) until they play.
 
 ### Flipping upcoming → completed (after the trip)

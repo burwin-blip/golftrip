@@ -451,9 +451,10 @@ export function stablefordLeaderboard(tid) {
 }
 
 // Player pool for an UPCOMING tournament, driven by the /rsvp answers:
-//   confirmed — RSVP'd YES (or confirmed by hand in players.json)
+//   confirmed — RSVP'd YES (the only way in — never set by hand)
 //   maybe     — RSVP'd MAYBE
-//   waiting   — has played before but hasn't RSVP'd yet
+//   waiting   — hasn't RSVP'd yet: has played before, or is an invited rookie
+//               (`invitedFor` in players.json)
 // An RSVP of NO takes a player out of the pool entirely. New blokes appear once
 // they RSVP (YES → confirmed rookie, MAYBE → waiting on). Within each group,
 // sorted by career points so captains see the most productive players first.
@@ -465,7 +466,8 @@ export function draftPoolFor(tid) {
       const last = c.appearances[c.appearances.length - 1] || null;
       const confirmed = (p.confirmedFor || []).includes(tid);
       const rsvp = rsvpStatusFor(p.id, tid);
-      const group = confirmed ? 'confirmed' : rsvp === 'maybe' ? 'maybe' : (c.played > 0 && rsvp == null) ? 'waiting' : null;
+      const invited = (p.invitedFor || []).includes(tid);
+      const group = confirmed ? 'confirmed' : rsvp === 'maybe' ? 'maybe' : ((c.played > 0 || invited) && rsvp == null) ? 'waiting' : null;
       return {
         player: p, confirmed, rsvp, group,
         eligible: group != null,
@@ -1371,15 +1373,17 @@ export function handicapCheckInList() {
     .sort((a, b) => a.player.name.localeCompare(b.player.name));
 }
 
-// Players confirmed for an upcoming event who have never played an Annual —
-// "rookies". Ordered by name. Used by the Players page and profile treatment.
+// Players lined up for an upcoming event — confirmed by RSVP, or invited and
+// still to reply — who have never played an Annual: "rookies". Ordered by name.
+// Used by the Players page and profile treatment.
+export const upcomingFor = (p) => [...new Set([...(p.confirmedFor || []), ...(p.invitedFor || [])])];
 export function rookiesFor(tid) {
   return players
-    .filter((p) => (p.confirmedFor || []).includes(tid) && careerStats(p.id).played === 0)
+    .filter((p) => upcomingFor(p).includes(tid) && careerStats(p.id).played === 0)
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 export function allRookies() {
   return players
-    .filter((p) => (p.confirmedFor || []).length > 0 && careerStats(p.id).played === 0)
+    .filter((p) => upcomingFor(p).length > 0 && careerStats(p.id).played === 0)
     .sort((a, b) => a.name.localeCompare(b.name));
 }

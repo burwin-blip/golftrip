@@ -8,8 +8,7 @@
   "nickname": null,
   "notes": null,
   "ghin": "3202528",
-  "system": "ghin",
-  "confirmedFor": []
+  "system": "ghin"
  },
  {
   "id": "tom-brunskill",
@@ -20,8 +19,7 @@
   "nickname": null,
   "notes": null,
   "ghin": null,
-  "system": "ghin",
-  "confirmedFor": []
+  "system": "ghin"
  },
  {
   "id": "michael-herring",
@@ -32,8 +30,7 @@
   "nickname": null,
   "notes": null,
   "ghin": null,
-  "system": "ga",
-  "confirmedFor": []
+  "system": "ga"
  },
  {
   "id": "rupert-pedler",
@@ -44,8 +41,7 @@
   "nickname": null,
   "notes": null,
   "ghin": null,
-  "system": "ghin",
-  "confirmedFor": []
+  "system": "ghin"
  },
  {
   "id": "chase-hellmers",
@@ -56,8 +52,7 @@
   "nickname": null,
   "notes": null,
   "ghin": null,
-  "system": "ghin",
-  "confirmedFor": []
+  "system": "ghin"
  },
  {
   "id": "colton-mckivitz",
@@ -68,8 +63,7 @@
   "nickname": null,
   "notes": null,
   "ghin": null,
-  "system": "ghin",
-  "confirmedFor": []
+  "system": "ghin"
  },
  {
   "id": "anthony-herring",
@@ -80,8 +74,7 @@
   "nickname": null,
   "notes": null,
   "ghin": null,
-  "system": "ghin",
-  "confirmedFor": []
+  "system": "ghin"
  },
  {
   "id": "steve-urwin",
@@ -92,8 +85,7 @@
   "nickname": null,
   "notes": null,
   "ghin": null,
-  "system": "ga",
-  "confirmedFor": []
+  "system": "ga"
  },
  {
   "id": "scott-benesh",
@@ -104,8 +96,7 @@
   "nickname": null,
   "notes": null,
   "ghin": null,
-  "system": "ghin",
-  "confirmedFor": []
+  "system": "ghin"
  },
  {
   "id": "alan-lozer",
@@ -116,8 +107,7 @@
   "nickname": null,
   "notes": null,
   "ghin": null,
-  "system": "ghin",
-  "confirmedFor": []
+  "system": "ghin"
  },
  {
   "id": "ed-nelson",
@@ -128,8 +118,7 @@
   "nickname": null,
   "notes": null,
   "ghin": null,
-  "system": "ghin",
-  "confirmedFor": []
+  "system": "ghin"
  },
  {
   "id": "miles-honens",
@@ -140,8 +129,7 @@
   "nickname": null,
   "notes": null,
   "ghin": null,
-  "system": "ghin",
-  "confirmedFor": []
+  "system": "ghin"
  },
  {
   "id": "james-graham",
@@ -153,7 +141,7 @@
   "notes": null,
   "ghin": null,
   "system": "ghin",
-  "confirmedFor": [
+  "invitedFor": [
    "duel-in-the-desert-2027"
   ]
  },
@@ -167,7 +155,7 @@
   "notes": null,
   "ghin": null,
   "system": "ghin",
-  "confirmedFor": [
+  "invitedFor": [
    "duel-in-the-desert-2027"
   ]
  }

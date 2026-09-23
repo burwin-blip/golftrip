@@ -25,14 +25,14 @@ const isoDate = (d) => d.toISOString().slice(0, 10);
 // plus anyone created through "I'm not listed".
 async function allKnownPlayers(env) {
   const created = await store.listNewPlayers(env);
-  const byId = new Map(staticPlayers.map((p) => [p.id, { id: p.id, name: p.name, confirmedFor: p.confirmedFor || [], created: false }]));
-  for (const p of Object.values(created)) if (!byId.has(p.id)) byId.set(p.id, { id: p.id, name: p.name, confirmedFor: [], created: true, createdAt: p.createdAt });
+  const byId = new Map(staticPlayers.map((p) => [p.id, { id: p.id, name: p.name, created: false }]));
+  for (const p of Object.values(created)) if (!byId.has(p.id)) byId.set(p.id, { id: p.id, name: p.name, created: true, createdAt: p.createdAt });
   return byId;
 }
 
-// A player's effective 2027 status: their RSVP if they've sent one, otherwise
-// "yes" when they were confirmed by hand in players.json, otherwise none.
-const effectiveStatus = (p, event) => event[p.id]?.status ?? (p.confirmedFor.includes(TID) ? 'yes' : null);
+// A player's effective 2027 status is their RSVP, or none. Nothing else confirms
+// anyone — there are no hand-set confirmations (data.js rejects them).
+const effectiveStatus = (p, event) => event[p.id]?.status ?? null;
 
 export function countConfirmed(known, event) {
   let n = 0;
@@ -98,7 +98,7 @@ async function resolvePlayer(body, known, now) {
   if (!id) throw new RsvpError('Enter your full name using letters.', 'newName');
   const existing = known.get(id);
   if (existing) return { player: existing, isNew: false, matchedExisting: true };
-  const player = { id, name, confirmedFor: [], created: true, createdAt: now.toISOString() };
+  const player = { id, name, created: true, createdAt: now.toISOString() };
   return { player, isNew: true };
 }
 
@@ -277,7 +277,6 @@ export async function readAdmin(key, { env = process.env } = {}) {
     const pr = normalizeProfile(profiles[p.id]);
     return {
       id: p.id, name: p.name, created: p.created, createdAt: p.createdAt ?? null,
-      handConfirmed: p.confirmedFor.includes(TID),
       status: e?.status ?? null, effectiveStatus: effectiveStatus(p, event),
       submittedAt: e?.submittedAt ?? null, firstSubmittedAt: e?.firstSubmittedAt ?? null,
       submissions: e?.submissions ?? 0, statusHistory: e?.statusHistory ?? [],

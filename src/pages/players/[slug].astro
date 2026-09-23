@@ -8,7 +8,7 @@ import { players, teamById, playerById, roundById, getCourse, tournamentById, mo
 import {
   careerStats, formatRecords, opponentRecords,
   handicapAnalysis, draftValue, scorecardIndex, ANALYTICS_CAVEAT,
-  playerHoleStats, HOLE_STATS_COVERAGE, powerRankings, photosForPlayer,
+  playerHoleStats, HOLE_STATS_COVERAGE, powerRankings, photosForPlayer, upcomingFor,
 } from '../../lib/stats.js';
 import { fullName, num, pctText } from '../../lib/format.js';
 
@@ -20,10 +20,11 @@ const c = careerStats(p.id);
 const bright = { woodpeckers: 'var(--wp-bright)', 'silver-spoons': 'var(--ss-bright)' };
 const myPhotos = photosForPlayer(p.id);
 
-// A "rookie" is confirmed for an upcoming event but has no completed record yet.
+// A "rookie" is lined up for an upcoming event (confirmed by RSVP, or invited
+// and still to reply) but has no completed record yet.
 const isProspect = c.appearances.length === 0;
-const confirmedFor = p.confirmedFor || [];
-const rookieTid = confirmedFor[0] || null;
+const rookieTid = upcomingFor(p)[0] || null;
+const rookieConfirmed = rookieTid ? (p.confirmedFor || []).includes(rookieTid) : false;
 const rookieYear = rookieTid ? tournamentById[rookieTid]?.year : null;
 
 // This player's live power-ranking row (works for veterans and rookies alike).
@@ -82,7 +83,7 @@ const FMT_SHORT = { 'Scramble': 'Scramble', 'Best Ball Match Play (NET)': 'Best 
           <div class="tcard__bar">
             <span class="tcard__seal" aria-hidden="true">A</span>
             <span class="tcard__barteam">The Annual</span>
-            {rookieYear && <span class="tcard__barmeta">Confirmed for {rookieYear}</span>}
+            {rookieYear && <span class="tcard__barmeta">{rookieConfirmed ? `Confirmed for ${rookieYear}` : `${rookieYear} · awaiting RSVP`}</span>}
           </div>
 
           <div class="tcard__photo">

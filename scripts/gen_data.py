@@ -57,14 +57,15 @@ def dump(name, obj):
     print(f"wrote {name}: {len(obj) if isinstance(obj, list) else 'obj'} records")
 
 # ---------- players.json ----------
-# `confirmedFor` lists the ids of any UPCOMING tournaments a player has committed
-# to. Existing players (who have played a completed event) are auto-eligible for
-# the next draft pool; new blokes with no record appear once they're added here
-# with the upcoming tournament id in `confirmedFor`.
-# `ghin` (the player's GHIN number) and `confirmedFor` are HAND-MAINTAINED after
+# Nobody is confirmed here: `confirmedFor` is derived at build time from the /rsvp
+# answers ONLY (src/lib/data.js rejects it in players.json). `invitedFor` lists the
+# UPCOMING tournaments a debutant has been invited to but not yet RSVP'd for — it
+# keeps them a rookie in the pool's "Waiting on" until they reply. Existing players
+# (who have played a completed event) are in the pool automatically.
+# `ghin` (the player's GHIN number) and `invitedFor` are HAND-MAINTAINED after
 # generation (edited directly in players.json, often from a phone via GitHub). So
 # we preserve any existing values by id when regenerating — a regen never wipes a
-# GHIN number or a confirmed-for list that was entered by hand.
+# GHIN number or an invited-for list that was entered by hand.
 _existing = {}
 _pp = os.path.join(OUT, "players.json")
 if os.path.exists(_pp):
@@ -84,7 +85,7 @@ for r in rows("DB Players"):
         "notes": r["Notes"] or None,
         "ghin": prev.get("ghin"),                 # hand-maintained; preserved on regen
         "system": prev.get("system", "ghin"),     # handicap system: "ghin" | "ga"; hand-maintained
-        "confirmedFor": prev.get("confirmedFor", []),  # hand-maintained; preserved on regen
+        **({"invitedFor": prev["invitedFor"]} if prev.get("invitedFor") else {}),  # hand-maintained; preserved on regen
     })
 dump("players.json", players)
 

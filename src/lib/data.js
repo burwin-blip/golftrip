@@ -18,8 +18,11 @@ import { normalizeProfile } from './rsvp-shared.js';
 // repo is public). Optional: a missing file means "nobody has RSVP'd", so a
 // bare `astro build` still works. Merged here so every page sees one roster:
 //   - players created via "I'm not listed" join the players list
-//   - an RSVP overrides `confirmedFor` for that edition: YES adds it (so a
-//     debutant becomes a rookie automatically), NO / MAYBE remove it
+//   - `confirmedFor` is DERIVED HERE, from the RSVPs alone: YES adds that edition,
+//     anything else leaves it out. players.json may not set it by hand (the build
+//     fails if it does) — an RSVP through /rsvp is the only way anyone is confirmed.
+//     A debutant who hasn't replied yet can carry `invitedFor` instead: it keeps
+//     them a rookie and in the pool's "Waiting on", and a NO clears it.
 //   - each self-reported handicap becomes a snapshot with `source: "rsvp"`
 //   - strongest / weakest / one-sentence answers → gameProfileFor()
 // ---------------------------------------------------------------------------
@@ -27,18 +30,25 @@ const rsvpFiles = import.meta.glob('../../data/rsvp.generated.json', { eager: tr
 const rsvp = Object.values(rsvpFiles)[0] ?? { tournamentId: null, players: [], statuses: {}, profiles: {}, snapshots: [] };
 
 const players = (() => {
+  const handSet = rawPlayers.filter((p) => 'confirmedFor' in p).map((p) => p.id);
+  if (handSet.length) {
+    throw new Error(
+      `data/players.json: "confirmedFor" is set by hand on ${handSet.join(', ')}. ` +
+      `Only an RSVP through /rsvp confirms a player — remove the field ` +
+      `(use "invitedFor": ["<tournament-id>"] for a rookie who still needs to RSVP).`
+    );
+  }
   const known = new Set(rawPlayers.map((p) => p.id));
   const created = (rsvp.players || [])
     .filter((p) => !known.has(p.id))
     .map((p) => ({
       id: p.id, name: p.name, slug: p.id, active: true, country: null, nickname: null,
-      notes: null, ghin: null, system: 'ghin', confirmedFor: [], viaRsvp: true,
+      notes: null, ghin: null, system: 'ghin', viaRsvp: true,
     }));
   return [...rawPlayers, ...created].map((p) => {
     const status = rsvp.tournamentId ? rsvp.statuses?.[p.id] : null;
-    if (!status) return p;
-    const others = (p.confirmedFor || []).filter((t) => t !== rsvp.tournamentId);
-    return { ...p, confirmedFor: status === 'yes' ? [...others, rsvp.tournamentId] : others };
+    const invitedFor = (p.invitedFor || []).filter((t) => !(status === 'no' && t === rsvp.tournamentId));
+    return { ...p, invitedFor, confirmedFor: status === 'yes' ? [rsvp.tournamentId] : [] };
   });
 })();
 
