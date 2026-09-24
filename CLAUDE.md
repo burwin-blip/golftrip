@@ -1070,9 +1070,13 @@ public/               robots.txt, hero-banner.jpg (home hero), favicon.svg/png, 
 
 ## Not done yet
 
-- **3 of the 14 players have no portrait yet** — they're on the initials
-  placeholder until a photo lands in `public/players/`. Missing: `alan-lozer`,
-  `james-graham`, `tanner-curley`. The build prints the current list every time.
+- **2 of the 14 players have no portrait yet** — they're on the initials
+  placeholder until a photo lands in `public/players/`. Missing: `james-graham`,
+  `tanner-curley` (the two rookies). The build prints the current list every time.
+- Alan Lozer's portrait is cut from a scanned 2014 school-newspaper cover: the
+  other people's names printed beside his head were whited out, and the crop
+  keeps the cover headlines to the edge. His head touches the top of the frame
+  because the scan itself cuts it off.
 - **No nicknames on file.** `players.json` has a `nickname` field on every player
   and both the wall card and the profile header render it when it's set — every
   one is currently `null`, so nothing shows. Filling them in is a data edit, not
