@@ -12,7 +12,7 @@ import staticPlayers from '../../data/players.json';
 import * as store from './rsvp-store.js';
 import {
   RSVP_TOURNAMENT_ID as TID, RSVP_STATUSES, GAME_PARTS, GREEN_FEE_ANSWERS,
-  SIDE_GAME_ANSWERS, LIMITS, slugify, tidyName, normalizeProfile, normalizeEvent,
+  SIDE_GAME_ANSWERS, LIMITS, slugify, tidyName, normalizeProfile, normalizeEvent, matchPlayerName, nameKey,
 } from './rsvp-shared.js';
 
 export class RsvpError extends Error {
@@ -149,25 +149,50 @@ export async function submitRsvp(body, { env = process.env, now = new Date() } =
   const sentence = optText(body.sentence, LIMITS.sentence, 'sentence', 'Your one-sentence description');
 
   // Q6–Q9 are only asked of people who might come; a NO skips them.
-  // Captains: one or two, stored by player id; an optional team name for each.
-  let captainVoteIds = [], teamNames = {}, greenFee = null, longestDrive = null;
+  // Captains: as many as they like. Picks from the list are player ids; a
+  // "Someone else" write-in that cleanly matches a player (matchPlayerName) is
+  // stored as a vote for that id too, and anything else is kept as typed text
+  // (`captainWriteIns`), which the admin tally re-matches every time, so the
+  // vote merges into that player once they join. An optional team name each.
+  let captainVoteIds = [], teamNames = {}, captainWriteIns = [], greenFee = null, longestDrive = null;
   if (status !== 'no') {
     const { event: evNow } = await store.loadAll(TID, env);
     const rawIds = Array.isArray(body.captainVoteIds) ? body.captainVoteIds : body.captainVoteId ? [body.captainVoteId] : [];
     const ids = [...new Set(rawIds.map(String))];
-    if (!ids.length) throw new RsvpError('Pick one or two captains.', 'captainVoteIds');
-    if (ids.length > LIMITS.maxCaptains) throw new RsvpError(`Pick no more than ${LIMITS.maxCaptains} captains.`, 'captainVoteIds');
+    if (ids.length > LIMITS.maxNominations) throw new RsvpError('That’s more captains than there are players.', 'captainVoteIds');
     for (const id of ids) {
       const nominee = known.get(id);
       if (!nominee || effectiveStatus(nominee, evNow) === 'no') throw new RsvpError('Pick your captains from the list.', 'captainVoteIds');
     }
-    captainVoteIds = ids;
     const rawNames = body.teamNames && typeof body.teamNames === 'object' ? body.teamNames
       : (body.teamName && ids.length === 1 ? { [ids[0]]: body.teamName } : {});
     for (const id of ids) {
       const t = optText(rawNames[id], LIMITS.teamName, 'teamNames', 'Each team name');
       if (t) teamNames[id] = t;
     }
+    // write-ins: [{ name, teamName }] (a bare string is accepted too)
+    const rawWrite = Array.isArray(body.captainWriteIns) ? body.captainWriteIns : [];
+    if (rawWrite.length > LIMITS.maxWriteIns) throw new RsvpError(`Add no more than ${LIMITS.maxWriteIns} write-in names.`, 'captainWriteIns');
+    const seen = new Set();
+    for (const w of rawWrite) {
+      const typed = tidyName(typeof w === 'string' ? w : w?.name);
+      if (!typed) continue;                                   // an empty "Someone else" box is just ignored
+      if (typed.length > LIMITS.name || !/\p{L}/u.test(typed)) throw new RsvpError('Write-in names must be a real name.', 'captainWriteIns');
+      const team = optText(typeof w === 'object' ? w?.teamName : null, LIMITS.teamName, 'teamNames', 'Each team name');
+      const m = matchPlayerName(typed, [...known.values()]);
+      if (m.kind === 'match') {
+        const id = m.ids[0];
+        if (!ids.includes(id)) ids.push(id);
+        if (team && !teamNames[id]) teamNames[id] = team;
+        continue;
+      }
+      const k = nameKey(typed);
+      if (seen.has(k)) continue;
+      seen.add(k);
+      captainWriteIns.push(team ? { name: typed, teamName: team } : { name: typed });
+    }
+    if (!ids.length && !captainWriteIns.length) throw new RsvpError('Pick at least one captain, or add someone else.', 'captainVoteIds');
+    captainVoteIds = ids;
     greenFee = oneOf(body.greenFee, Object.keys(GREEN_FEE_ANSWERS), 'greenFee', 'Answer the green-fee question.');
     longestDrive = oneOf(body.longestDrive, Object.keys(SIDE_GAME_ANSWERS), 'longestDrive', 'Answer the longest-drive question.');
   }
@@ -187,7 +212,7 @@ export async function submitRsvp(body, { env = process.env, now = new Date() } =
   const statusHistory = [...(prev.event?.statusHistory || [])];
   if (!statusHistory.length || statusHistory[statusHistory.length - 1].status !== status) statusHistory.push({ at, status });
   const event = {
-    status, handicapEntering: handicap, captainVoteIds, teamNames, greenFee, longestDrive,
+    status, handicapEntering: handicap, captainVoteIds, teamNames, captainWriteIns, greenFee, longestDrive,
     submittedAt: at, firstSubmittedAt: prev.event?.firstSubmittedAt ?? at,
     submissions: (prev.event?.submissions || 0) + 1, statusHistory,
   };
@@ -271,8 +296,19 @@ export async function readAdmin(key, { env = process.env } = {}) {
   const known = await allKnownPlayers(env);
   const { event, profiles, backend } = await store.loadAll(TID, env);
   const nameOf = (id) => known.get(id)?.name ?? id;
+  const everyone = [...known.values()];
 
-  const rows = [...known.values()].map((p) => {
+  // A write-in is re-matched against today's players every time: once "Harry"
+  // has joined via the RSVP, the votes typed for him count in his tally. Only a
+  // clean match merges; ambiguous / possible ones stay as typed and are flagged.
+  const resolveWriteIn = (w) => {
+    const m = matchPlayerName(w.name, everyone);
+    if (m.kind === 'match') return { id: m.ids[0], name: nameOf(m.ids[0]), teamName: w.teamName ?? null, writeIn: w.name };
+    return { id: null, name: w.name, teamName: w.teamName ?? null, writeIn: w.name,
+      flag: m.kind === 'none' ? null : { kind: m.kind, candidates: m.ids.map((id) => ({ id, name: nameOf(id) })) } };
+  };
+
+  const rows = everyone.map((p) => {
     const e = normalizeEvent(event[p.id]);
     const pr = normalizeProfile(profiles[p.id]);
     return {
@@ -282,21 +318,33 @@ export async function readAdmin(key, { env = process.env } = {}) {
       submissions: e?.submissions ?? 0, statusHistory: e?.statusHistory ?? [],
       handicapEntering: e?.handicapEntering ?? null, handicapHistory: pr?.handicapHistory ?? [],
       dob: pr?.dob ?? null, strengths: pr?.strengths ?? [], weaknesses: pr?.weaknesses ?? [], sentence: pr?.sentence ?? null,
-      captainVotes: (e?.captainVoteIds ?? []).map((id) => ({ id, name: nameOf(id), teamName: e.teamNames?.[id] ?? null })),
+      captainVotes: (() => {
+        const votes = (e?.captainVoteIds ?? []).map((id) => ({ id, name: nameOf(id), teamName: e.teamNames?.[id] ?? null }));
+        for (const w of e?.captainWriteIns ?? []) {
+          const v = resolveWriteIn(w);
+          if (v.id && votes.some((x) => x.id === v.id)) continue;   // already a vote for them — one each
+          votes.push(v);
+        }
+        return votes;
+      })(),
       greenFee: e?.greenFee ?? null, longestDrive: e?.longestDrive ?? null,
     };
   });
 
-  // Captain tallies — each nomination is one vote for that captain (so one
-  // person can back two captains), with the team names suggested for each.
+  // Captain tallies — each nomination is one vote for that captain (people can
+  // nominate as many as they like), with the team names suggested for each.
+  // Unmatched write-ins are tallied under the typed name (same name, any case,
+  // counts together) and carry any flag for the organiser.
   const captains = new Map();
   for (const r of rows) {
     if (r.status === 'no') continue;
     for (const v of r.captainVotes) {
-      const c = captains.get(v.id) || { id: v.id, name: v.name, votes: 0, voters: [], teamNames: [] };
+      const key = v.id ?? `writein:${nameKey(v.name)}`;
+      const c = captains.get(key) || { id: v.id, name: v.name, writeIn: !v.id, votes: 0, voters: [], teamNames: [], viaWriteIn: 0, flag: v.flag ?? null };
       c.votes++; c.voters.push(r.name);
+      if (v.id && v.writeIn) c.viaWriteIn++;
       if (v.teamName) c.teamNames.push({ name: v.teamName, by: r.name });
-      captains.set(v.id, c);
+      captains.set(key, c);
     }
   }
   const tally = (field, answers) => {

@@ -26,7 +26,9 @@ export const GREEN_FEE_ANSWERS = { yes: 'Yes', no: 'No', dontcare: "Don't care a
 // Q9 — longest drive / closest to the pin for team points.
 export const SIDE_GAME_ANSWERS = { yes: 'Yes', no: 'No' };
 
-export const LIMITS = { name: 60, sentence: 280, teamName: 60, hcpMin: -10, hcpMax: 54, maxCaptains: 2 };
+// Captains are unlimited (owner's call, Sept 2026): `maxNominations` / `maxWriteIns`
+// are only sanity caps against a garbage request, far above any real answer.
+export const LIMITS = { name: 60, sentence: 280, teamName: 60, hcpMin: -10, hcpMax: 54, maxNominations: 40, maxWriteIns: 10 };
 
 // ---- format migration -------------------------------------------------------
 // The first version of the form stored ONE strongest / weakest part and ONE
@@ -48,7 +50,43 @@ export function normalizeEvent(e) {
   const teamNames = e.teamNames && typeof e.teamNames === 'object'
     ? e.teamNames
     : (captainVoteId && teamName ? { [captainVoteId]: teamName } : {});
-  return { ...rest, captainVoteIds, teamNames };
+  // write-in nominations ({ name, teamName }) arrived with unlimited captains;
+  // every older record simply has none
+  const captainWriteIns = Array.isArray(e.captainWriteIns) ? e.captainWriteIns.filter((w) => w && w.name) : [];
+  return { ...rest, captainVoteIds, teamNames, captainWriteIns };
+}
+
+// ---- write-in captains: match a typed name to a player ----------------------
+// Used when a write-in arrives (a clean match is stored as a vote for that
+// player's id) AND every time the admin tally is built (so a write-in for
+// "Harry" merges into Harry's tally by itself once Harry joins via the RSVP).
+//   match     — one clear player: same full name, or a single first name that
+//               only one player has ("Tom" → Tom Brunskill)
+//   ambiguous — a first name that several players share ("Jack" with two Jacks)
+//   possible  — same first name as someone, different surname ("Tom Smith" vs
+//               Tom Brunskill), or a lone surname ("Urwin"): might be them, might
+//               be a new bloke, so it is flagged and never merged by itself
+//   none      — nobody like them yet: stays a text write-in
+export const nameKey = (s) =>
+  String(s || '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+    .replace(/['’.]/g, '').replace(/[^a-z]+/g, ' ').trim();
+
+export function matchPlayerName(typed, players) {
+  const k = nameKey(typed);
+  if (!k) return { kind: 'none', ids: [] };
+  const full = players.filter((p) => nameKey(p.name) === k);
+  if (full.length === 1) return { kind: 'match', ids: [full[0].id] };
+  if (full.length > 1) return { kind: 'ambiguous', ids: full.map((p) => p.id) };
+  const words = k.split(' ');
+  const first = players.filter((p) => nameKey(p.name).split(' ')[0] === words[0]);
+  if (words.length === 1) {
+    if (first.length === 1) return { kind: 'match', ids: [first[0].id] };
+    if (first.length > 1) return { kind: 'ambiguous', ids: first.map((p) => p.id) };
+    // a lone surname ("Urwin") is a lead, not a match — flag it
+    const last = players.filter((p) => { const w = nameKey(p.name).split(' '); return w.length > 1 && w[w.length - 1] === words[0]; });
+    return last.length ? { kind: 'possible', ids: last.map((p) => p.id) } : { kind: 'none', ids: [] };
+  }
+  return first.length ? { kind: 'possible', ids: first.map((p) => p.id) } : { kind: 'none', ids: [] };
 }
 
 // Same rule as every other id on the site: kebab-case off the name.

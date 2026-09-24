@@ -44,7 +44,7 @@ import BrandMark from '../../components/BrandMark.astro';
       <div class="ad-two">
         <section class="ad-sec">
           <h2>Captain votes</h2>
-          <p class="muted ad-note">From YES and MAYBE replies. Everyone can nominate one or two captains; each nomination is one vote. Team names are listed under the captain they were suggested for.</p>
+          <p class="muted ad-note">From YES and MAYBE replies. Everyone can nominate as many captains as they like; each nomination is one vote. “Someone else” write-ins count under the typed name until that person joins via the RSVP, then merge into their tally automatically. Anything unclear is flagged, never guessed. Team names are listed under the captain they were suggested for.</p>
           <div id="ad-captains"></div>
         </section>
         <section class="ad-sec">
@@ -107,6 +107,9 @@ import BrandMark from '../../components/BrandMark.astro';
   .ad-cap__votes { font-weight: 800; color: var(--terra-ink); white-space: nowrap; }
   .ad-cap ul { list-style: none; padding: 0; margin-top: .6rem; display: grid; gap: .35rem; font-size: .9rem; }
   .ad-cap li b { font-family: var(--serif); font-weight: 600; }
+  .ad-cap--flag { box-shadow: inset 0 0 0 2px var(--gold-bright), var(--shadow); }
+  .ad-tag { display: inline-block; vertical-align: .15em; margin-left: .4rem; font-family: var(--sans); font-size: .62rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); background: var(--panel-2); padding: .15rem .45rem; border-radius: 99px; }
+  .ad-flag { margin: .45rem 0 .2rem; padding: .45rem .7rem; border-radius: var(--r-sm); background: var(--gold-soft); color: var(--gold); font-size: .85rem; font-weight: 700; }
   @media (max-width: 760px) { .ad-two { grid-template-columns: 1fr; gap: 0; } }
 </style>
 
@@ -163,16 +166,20 @@ import BrandMark from '../../components/BrandMark.astro';
         <td class="listcell">${r.strengths.map(esc).join('<br>')}</td>
         <td class="listcell">${r.weaknesses.map(esc).join('<br>')}</td>
         <td class="wrapcell">${esc(r.sentence || '')}</td>
-        <td class="listcell">${r.captainVotes.map((v) => `${esc(v.name)}${v.teamName ? `<span class="ad-sub">“${esc(v.teamName)}”</span>` : ''}`).join('<div class="ad-gap"></div>')}</td>
+        <td class="listcell">${r.captainVotes.map((v) => `${esc(v.name)}${v.writeIn ? `<span class="ad-sub">${v.id ? `write-in “${esc(v.writeIn)}” → matched` : 'write-in'}${v.flag ? ' · ⚑ check' : ''}</span>` : ''}${v.teamName ? `<span class="ad-sub">“${esc(v.teamName)}”</span>` : ''}`).join('<div class="ad-gap"></div>')}</td>
         <td>${esc(data.greenFee.find((g) => g.key === r.greenFee)?.label || '')}</td>
         <td>${esc(data.longestDrive.find((g) => g.key === r.longestDrive)?.label || '')}</td>
       </tr>`;
     }).join('')}</tbody>`;
 
+    const flagText = (f) => f.kind === 'ambiguous'
+      ? `Could be ${f.candidates.map((c) => esc(c.name)).join(' or ')}. Not merged: check who they meant.`
+      : `Might be ${f.candidates.map((c) => esc(c.name)).join(' or ')}, or someone new. Not merged: check.`;
     $('#ad-captains').innerHTML = data.captains.length ? data.captains.map((cap) => `
-      <div class="ad-cap">
-        <div class="ad-cap__head"><h3>${esc(cap.name)}</h3><span class="ad-cap__votes">${cap.votes} vote${cap.votes === 1 ? '' : 's'}</span></div>
-        <p class="ad-sub">From ${cap.voters.map(esc).join(', ')}</p>
+      <div class="ad-cap${cap.flag ? ' ad-cap--flag' : ''}">
+        <div class="ad-cap__head"><h3>${esc(cap.name)}${cap.writeIn ? ' <span class="ad-tag">Write-in · not on the site yet</span>' : ''}</h3><span class="ad-cap__votes">${cap.votes} vote${cap.votes === 1 ? '' : 's'}</span></div>
+        ${cap.flag ? `<p class="ad-flag">⚑ ${flagText(cap.flag)}</p>` : ''}
+        <p class="ad-sub">From ${cap.voters.map(esc).join(', ')}${cap.viaWriteIn ? ` · ${cap.viaWriteIn} of these typed in as “Someone else” and matched` : ''}</p>
         ${cap.teamNames.length ? `<ul>${cap.teamNames.map((t) => `<li><b>${esc(t.name)}</b> <span class="faint">— ${esc(t.by)}</span></li>`).join('')}</ul>` : '<p class="ad-sub" style="margin-top:.5rem">No team names suggested yet.</p>'}
       </div>`).join('') : '<p class="muted">No votes yet.</p>';
     $('#ad-q8').innerHTML = bars(data.greenFee);
@@ -196,8 +203,8 @@ import BrandMark from '../../components/BrandMark.astro';
       statusHistory: r.statusHistory.map((h) => `${day(h.at)} ${h.status}`).join('; '),
       handicapHistory: r.handicapHistory.map((h) => `${day(h.at)} ${h.index}`).join('; '),
       strengths: r.strengths.join('; '), weaknesses: r.weaknesses.join('; '),
-      captain1: r.captainVotes[0]?.name, team1: r.captainVotes[0]?.teamName,
-      captain2: r.captainVotes[1]?.name, team2: r.captainVotes[1]?.teamName,
+      captains: r.captainVotes.map((v) => v.name + (v.writeIn && !v.id ? ' (write-in)' : v.writeIn ? ` (write-in "${v.writeIn}")` : '') + (v.flag ? ' [check]' : '')).join('; '),
+      teams: r.captainVotes.filter((v) => v.teamName).map((v) => `${v.name}: ${v.teamName}`).join('; '),
       greenFee: label(data.greenFee, r.greenFee),
       longestDrive: label(data.longestDrive, r.longestDrive),
     });
@@ -206,7 +213,7 @@ import BrandMark from '../../components/BrandMark.astro';
       ['firstSubmittedAt', 'First submitted'], ['submittedAt', 'Last submitted'], ['submissions', 'Submissions'], ['statusHistory', 'RSVP history'],
       ['handicapEntering', 'Handicap'], ['handicapHistory', 'Handicap history'], ['dob', 'Date of birth'],
       ['strengths', 'Strongest parts'], ['weaknesses', 'Weakest parts'], ['sentence', 'One sentence'],
-      ['captain1', 'Captain pick 1'], ['team1', 'Team name 1'], ['captain2', 'Captain pick 2'], ['team2', 'Team name 2'],
+      ['captains', 'Captain picks'], ['teams', 'Team names (by captain)'],
       ['greenFee', 'Q8 $250 green fee'], ['longestDrive', 'Q9 Longest drive / CTP'],
     ];
     const cell = (v) => {

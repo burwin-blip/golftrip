@@ -691,8 +691,9 @@ Opening screen (the Duel in the Desert flyer art, dates from `tournaments.json`)
 → **Who are you?** (the wall of faces, or "I'm not listed" → full name) → **RSVP**
 (yes / maybe / no) → **Your game** (Q1 DOB, Q2 handicap, Q3 strongest parts and
 Q4 weakest parts — **multi-select**, at least one each, a part can't be in both —
-Q5 one sentence) → **2027 questions** (Q6 **one or two** captain nominees, Q7 an
-optional team name **per nominated captain**, Q8 $250 green fee, Q9 longest drive /
+Q5 one sentence) → **2027 questions** (Q6 captain nominees, **as many as they like**,
+plus **"Someone else" write-ins** (see below), Q7 an optional team name **per
+nominee, write-ins included**, Q8 $250 green fee, Q9 longest drive /
 closest to the pin — **skipped for a NO**) →
 **Review** → confirmation (YOU'RE IN. with the live confirmed count for YES;
 "Pencilled in." for MAYBE; "Next time, then." for NO — **never repeats answers**).
@@ -721,6 +722,29 @@ ONE place, `src/lib/rsvp-shared.js`.
 - **2027 page**: an RSVP band on the Overview (under the countdown) and a link in
   the Draft Pool intro.
 
+### Captain nominations: unlimited + "Someone else" write-ins (Sept 2026)
+- No cap: tick as many captains as you like; each is one vote. (`LIMITS.maxNominations`
+  / `maxWriteIns` are only sanity caps against a junk request.) At least one pick
+  or one write-in is required.
+- **"+ Someone else"** adds a name box (repeatable) for blokes not on the site yet.
+  Each gets its own optional team-name field.
+- **One matcher, `matchPlayerName()` in `rsvp-shared.js`**, used at submit AND on
+  every admin read. `match` = same full name, or a first name only ONE player has
+  → counted as a vote for that id (on submit it's stored as the id). `ambiguous`
+  (a first name several players share) and `possible` (same first name but a
+  different surname, or a lone surname like "Urwin") are **never merged**. They
+  stay as typed and show a gold ⚑ flag on the admin tally naming the candidates.
+  `none` → tallied under the typed name ("Write-in · not on the site yet"), same
+  name in any case counting together.
+- **Automatic merge:** unmatched write-ins are stored as text and re-matched every
+  time the admin tally is built, so once "Harry" joins via the RSVP his typed votes
+  (and the team names suggested with them) count in his tally, "N typed in as
+  Someone else and matched". Nothing in the store is rewritten.
+- In the form, a write-in that is clearly someone on the list ticks their chip
+  instead ("Michael Herring is on the list — we've ticked him instead").
+- Old records (1–2 ids, or the single `captainVoteId`) read unchanged:
+  `normalizeEvent()` gives them `captainWriteIns: []`.
+
 ### Where the data lives
 **Upstash Redis** (free tier, connected via Vercel → Storage; env vars
 `KV_REST_API_URL` / `KV_REST_API_TOKEN`). `src/lib/rsvp-store.js`. Three hashes,
@@ -730,9 +754,11 @@ one field per player id, so a re-submission can only overwrite — never duplica
   `sentence` (public), `dob` (**private**), `handicapHistory: [{at, index, source}]`
   (append-only — a new entry whenever the number changes).
 - `rsvp:event:duel-in-the-desert-2027` — 2027 EVENT data: `status`,
-  `handicapEntering`, `captainVoteIds[]` (1–2 **player ids, never free text**),
+  `handicapEntering`, `captainVoteIds[]` (**player ids**, unlimited),
   `teamNames` (`{ <captainId>: "name" }` — each suggestion is filed against the
-  respondent's record AND that specific captain), `greenFee`, `longestDrive`,
+  respondent's record AND that specific captain), `captainWriteIns[]`
+  (`{ name, teamName? }` — typed names that matched no player cleanly when sent),
+  `greenFee`, `longestDrive`,
   `submittedAt`, `firstSubmittedAt`, `submissions`, `statusHistory`
   (**all private except `status`**).
 - **Old format (the first version of the form)** stored single values —
@@ -793,10 +819,11 @@ when the key after `#` matches the `RSVP_ADMIN_KEY` env var (set in Vercel; neve
 the repo; the `#` part is never sent to servers or logs). Shows everyone incl.
 no-reply, timestamps + change history, handicaps (with history), DOB, strengths /
 weaknesses (one per line), each person's captain picks with their team names,
-captain vote tallies (**each nomination = one vote**, so one person can back two
-captains), team names grouped by captain, Q8/Q9 totals, and an **"Export results
+captain vote tallies (**each nomination = one vote**, unlimited per person;
+write-ins tallied as described below), team names grouped by captain, Q8/Q9 totals, and an **"Export results
 (CSV)"** button: one row per player (non-replies included) with every field, including
-the RSVP and handicap histories, DOB, both captain picks with their team names, and
+the RSVP and handicap histories, DOB, every captain pick (write-ins marked) and the
+team names by captain, and
 Q8/Q9 **as the answer wording**, not the stored key. Lists are joined with "; ". It's a
 UTF-8 file with a BOM, and any typed answer that starts with `= + - @` is prefixed with
 `'` so a spreadsheet can't run it as a formula (a plain negative number, i.e. a plus
@@ -822,11 +849,11 @@ every portrait silently becomes a placeholder without it.
 
 ### Testing — run BOTH stores
 ```
-# 1. file store (includes the old-format migration checks)            → 51 checks
+# 1. file store (includes the old-format migration checks)            → 67 checks
 RSVP_LOCAL_STORE=/tmp/rsvp-test.json RSVP_ADMIN_KEY=test-key npx astro dev --port 4400
 STORE=/tmp/rsvp-test.json BASE=http://localhost:4400 ADMIN_KEY=test-key npm run test:rsvp
 
-# 2. the REAL Redis code path, via a fake Upstash server (fresh = empty) → 45 checks
+# 2. the REAL Redis code path, via a fake Upstash server (fresh = empty) → 61 checks
 node scripts/fake-upstash.mjs &
 KV_REST_API_URL=http://localhost:4600 KV_REST_API_TOKEN=x RSVP_ADMIN_KEY=test-key npx astro dev --port 4400
 BASE=http://localhost:4400 ADMIN_KEY=test-key npm run test:rsvp
@@ -862,8 +889,9 @@ record, then triggers a rebuild.
   "only as totals": the admin page shows each person's picks.
 **After a save succeeds nothing may fail the request** — the deploy hook and the
 live count are best-effort (logged, never surfaced as an error).
-Existing/new-player RSVP, changing an RSVP, duplicate prevention, one-or-two
-captains by id with a team name each, multi-select strengths/weaknesses, handicap
+Existing/new-player RSVP, changing an RSVP, duplicate prevention, unlimited
+captains by id with a team name each, write-ins (matched / kept / flagged / merged
+when the player joins later), multi-select strengths/weaknesses, handicap
 history, old-format migration (needs `STORE`), privacy of the public API,
 validation. Never point it at
 production (it writes test players).
@@ -1049,7 +1077,7 @@ scripts/gen_portraits.py    cuts the two album-sourced player portraits to 4:5
 scripts/verify_holes.mjs    reconciles the hole layer (54 checks)
 scripts/pull-rsvp.mjs       build step: RSVP store → data/rsvp.generated.json (public slice)
 scripts/set-function-runtime.mjs  post-build: pins the API function to nodejs22.x
-scripts/test-rsvp.mjs       RSVP API checks (51 on the file store / 45 on fake Redis)
+scripts/test-rsvp.mjs       RSVP API checks (67 on the file store / 61 on fake Redis)
 scripts/fake-upstash.mjs    in-memory Upstash REST stand-in, for testing the Redis path
 scripts/check-styles.mjs    does a deployed/served site render styled? (core principle 6)
 src/lib/rsvp-*.js     RSVP: shared answer lists, the store, the API logic

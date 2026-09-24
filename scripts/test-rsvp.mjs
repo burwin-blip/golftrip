@@ -6,7 +6,8 @@
 //   STORE=/tmp/rsvp-test.json BASE=http://localhost:4400 ADMIN_KEY=test-key npm run test:rsvp
 //
 // Covers: existing-player RSVP, new-player RSVP, changing an RSVP, duplicate
-// prevention (by id and by typed name), one-or-two captains stored by id with a
+// prevention (by id and by typed name), unlimited captains stored by id (plus
+// "Someone else" write-ins, matched / merged / flagged) with a
 // team name each, multi-select strengths/weaknesses, handicap history, the
 // migration of responses saved in the old single-select format, private fields
 // kept out of the public GET, validation.
@@ -72,7 +73,7 @@ r = await post({ ...base, playerId: 'ben-urwin', status: 'yes', handicap: '6.8' 
 a = await admin();
 ok(row(a, 'ben-urwin').status === 'yes', 'Ben changes back to YES');
 
-console.log('\n5. Captains — one or two, stored by id, a team name each');
+console.log('\n5. Captains — as many as you like, stored by id, a team name each');
 ok(JSON.stringify(row(a, 'jack-mctest').captainVotes.map((v) => v.id)) === '["ben-urwin"]', 'single captain stored as a player id');
 r = await post({ ...base, playerId: 'tom-brunskill', captainVoteIds: ['ben-urwin', 'michael-herring'],
   teamNames: { 'ben-urwin': 'Urwin’s Irons', 'michael-herring': 'Herring Bone', 'alan-lozer': 'not a pick' } });
@@ -89,10 +90,44 @@ ok(a.body.captains.find((c) => c.id === 'michael-herring')?.teamNames.some((t) =
 r = await post({ ...base, playerId: 'tom-brunskill', captainVoteIds: ['ben-urwin', 'ben-urwin'] });
 a = await admin();
 ok(r.status === 200 && row(a, 'tom-brunskill').captainVotes.length === 1, 'the same captain twice counts once');
-ok((await post({ ...base, playerId: 'tom-brunskill', captainVoteIds: ['ben-urwin', 'michael-herring', 'alan-lozer'] })).status === 400, 'three captains rejected');
+r = await post({ ...base, playerId: 'tom-brunskill', captainVoteIds: ['ben-urwin', 'michael-herring', 'alan-lozer', 'scott-benesh'] });
+a = await admin();
+ok(r.status === 200 && row(a, 'tom-brunskill').captainVotes.length === 4, 'four captains accepted (no cap any more)');
 ok((await post({ ...base, playerId: 'tom-brunskill', captainVoteIds: [] })).status === 400, 'no captain rejected');
 r = await post({ ...base, playerId: 'tom-brunskill', captainVoteIds: ['Ben Urwin'] });
-ok(r.status === 400 && r.body.field === 'captainVoteIds', 'free-text captain name rejected');
+ok(r.status === 400 && r.body.field === 'captainVoteIds', 'a typed name in the id list is rejected (write-ins have their own field)');
+
+console.log('\n5b. "Someone else" write-ins — matched, kept as typed, flagged, merged later');
+r = await post({ ...base, playerId: 'tom-brunskill', captainVoteIds: ['ben-urwin'], teamNames: {},
+  captainWriteIns: [{ name: 'MICHAEL  HERRING', teamName: 'Herring Aid' }, { name: 'alan' }, { name: 'Harry Newguy', teamName: 'Harry’s Heroes' }, { name: 'harry newguy' }, { name: 'Urwin' }, { name: '' }] });
+ok(r.status === 200, 'write-ins accepted alongside list picks (an empty box is ignored)');
+a = await admin();
+let tv = row(a, 'tom-brunskill').captainVotes;
+ok(tv.some((v) => v.id === 'michael-herring' && v.teamName === 'Herring Aid'), 'a full-name write-in for a listed player becomes a vote for that id, with its team name');
+ok(tv.some((v) => v.id === 'alan-lozer'), 'a first name only one player has ("alan") matches that player');
+ok(tv.filter((v) => !v.id && v.name === 'Harry Newguy').length === 1, 'an unknown name is kept as typed, once (the lower-case repeat is a duplicate)');
+let harry = a.body.captains.find((c) => c.writeIn && c.name === 'Harry Newguy');
+ok(harry?.votes === 1 && harry.teamNames.some((t) => t.name === 'Harry’s Heroes'), 'the admin tally lists the write-in under the typed name, with its team name');
+const urwin = a.body.captains.find((c) => c.writeIn && c.name === 'Urwin');
+ok(urwin?.flag?.kind === 'possible' && urwin.flag.candidates.length === 2, 'a bare surname ("Urwin") is flagged with both candidates, not merged');
+ok((await post({ ...base, playerId: 'scott-benesh', captainVoteIds: [], captainWriteIns: [{ name: 'Harry Newguy' }] })).status === 200, 'write-ins alone are enough (no list pick needed)');
+ok((await post({ ...base, playerId: 'scott-benesh', captainVoteIds: [], captainWriteIns: [{ name: '' }] })).status === 400, 'no pick and only an empty write-in is rejected');
+ok((await post({ ...base, playerId: 'scott-benesh', captainWriteIns: [{ name: '12345' }] })).status === 400, 'a write-in with no letters is rejected');
+ok((await post({ ...base, playerId: 'scott-benesh', captainWriteIns: Array.from({ length: 11 }, (_, i) => ({ name: 'Extra Bloke' + 'x'.repeat(i) })) })).status === 400, 'more than 10 write-ins rejected');
+// Harry joins via the RSVP: the typed votes merge into his tally by themselves
+r = await post({ ...base, newName: 'Harry Newguy', status: 'maybe', captainVoteIds: ['ben-urwin'] });
+a = await admin();
+harry = a.body.captains.find((c) => c.id === 'harry-newguy');
+ok(r.status === 200 && harry?.votes === 2 && harry.viaWriteIn === 2, 'once Harry joins, both typed votes count for harry-newguy');
+ok(harry?.teamNames.some((t) => t.name === 'Harry’s Heroes' && t.by === 'Tom Brunskill'), 'the team name suggested for the write-in follows him');
+ok(!a.body.captains.some((c) => c.writeIn && c.name === 'Harry Newguy'), 'no separate write-in entry is left behind');
+// ambiguity: two Jacks on the site, a vote for "Jack" is flagged, never guessed
+await post({ ...base, newName: 'Jack Otherguy', status: 'maybe', captainVoteIds: ['ben-urwin'] });
+await post({ ...base, playerId: 'tom-brunskill', captainVoteIds: ['ben-urwin'], captainWriteIns: [{ name: 'Jack' }] });
+a = await admin();
+const jack = a.body.captains.find((c) => c.writeIn && c.name === 'Jack');
+ok(jack?.flag?.kind === 'ambiguous' && jack.flag.candidates.map((c) => c.id).sort().join() === 'jack-mctest,jack-otherguy', '"Jack" with two Jacks on the site is flagged as ambiguous, not merged');
+ok(!a.body.captains.some((c) => c.id === 'jack-mctest' || c.id === 'jack-otherguy'), 'neither Jack is credited with the ambiguous vote');
 
 console.log('\n6. Strengths & weaknesses — multi-select lists');
 ok(JSON.stringify(row(a, 'ben-urwin').strengths) === '["Putting","Scrambling"]', 'two strengths stored as a list');
@@ -136,9 +171,9 @@ if (!STORE) {
 console.log('\n9. Privacy');
 g = await get('?player=ben-urwin');
 ok(g.player && g.player.handicap === 6.8 && g.player.strengths.includes('Putting'), 'public GET pre-fills handicap / strengths');
-const leaked = ['dob', 'captainVoteIds', 'captainVoteId', 'teamNames', 'teamName', 'greenFee', 'longestDrive'].filter((k) => k in g.player);
+const leaked = ['dob', 'captainVoteIds', 'captainVoteId', 'teamNames', 'teamName', 'captainWriteIns', 'greenFee', 'longestDrive'].filter((k) => k in g.player);
 ok(leaked.length === 0, `public GET exposes no private fields${leaked.length ? ' (leaked: ' + leaked + ')' : ''}`);
-ok(!JSON.stringify(g).includes('1990-05-17') && !JSON.stringify(await get()).includes('Sand Wedgies'), 'no DOB or team names anywhere in the public responses');
+ok(!JSON.stringify(g).includes('1990-05-17') && !JSON.stringify(await get()).includes('Sand Wedgies') && !JSON.stringify(await get('?player=tom-brunskill')).includes('Heroes'), 'no DOB, team names or write-ins anywhere in the public responses');
 ok((await admin('wrong')).status === 401, 'admin API refuses a wrong key');
 ok((await admin('')).status === 401, 'admin API refuses no key');
 
@@ -155,6 +190,7 @@ ok(await del('jack-mctest') === 200, 'delete with the key succeeds');
 a = await admin();
 ok(!a.body.rows.some((x) => x.id === 'jack-mctest'), 'the created player and their answers are gone');
 ok(!(await get()).createdPlayers.some((p) => p.id === 'jack-mctest'), 'no longer pickable on /rsvp');
+ok(await del('harry-newguy') === 200 && await del('jack-otherguy') === 200, 'write-in test players cleaned up');
 
 console.log(`\n${pass} passed, ${fail} failed\n`);
 process.exit(fail ? 1 : 0);

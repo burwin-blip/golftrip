@@ -159,11 +159,15 @@ const STEPS = [
         <p class="rv-sub">These stay private. Only the organiser sees them.</p>
 
         <fieldset class="rv-field">
-          <legend class="rv-label">Who would you nominate as captains? <span class="rv-label__aside">Pick one or two</span></legend>
+          <legend class="rv-label">Who would you nominate as captains? <span class="rv-label__aside">Pick as many as you like.</span></legend>
           <div class="rv-chips rv-chips--names" id="rv-nominees">
             {nominees.map((n) => <label class="rv-chip"><input type="checkbox" name="captainVoteIds" value={n.id} /><span>{n.name}</span></label>)}
+            <button type="button" class="rv-chip rv-chip--add" id="rv-addwritein"><span>+ Someone else</span></button>
           </div>
-          <p class="rv-err" data-err="captainVoteIds" role="alert"></p>
+          <!-- "Someone else": typed names, for blokes not on the site yet (drawn by the script) -->
+          <div class="rv-writeins" id="rv-writeins"></div>
+          <p class="rv-note" id="rv-writein-note" role="status" hidden></p>
+          <p class="rv-err" data-err="captainVoteIds captainWriteIns" role="alert"></p>
         </fieldset>
 
         <!-- one optional team-name field per captain picked above (drawn by the script) -->
@@ -287,6 +291,13 @@ const STEPS = [
   .rv-face__frame--init span { font-family: var(--serif); font-weight: 600; font-size: 1.6rem; color: var(--navy-ink); }
   .rv-newname { margin-top: 1.3rem; }
   .rv-teams:empty { display: none; }
+  .rv-chip--add { border: 0; padding: 0; background: none; font: inherit; }
+  .rv-chip--add span { color: var(--terra-ink); box-shadow: inset 0 0 0 1.5px var(--terra); background: transparent; }
+  .rv-writeins { display: grid; gap: .6rem; margin-top: .8rem; }
+  .rv-writeins:empty { display: none; }
+  .rv-writein { display: flex; gap: .5rem; align-items: center; }
+  .rv-writein .rv-input { flex: 1; min-width: 0; }
+  .rv-writein__rm { flex: none; width: 44px; height: 44px; border: 0; border-radius: 50%; background: var(--paper); box-shadow: inset 0 0 0 1.5px var(--line-strong); color: var(--muted); font-size: 1.1rem; line-height: 1; }
 
   /* ---- fields ---- */
   .rv-field { border: 0; padding: 0; margin: 0 0 1.7rem; min-width: 0; }
@@ -425,6 +436,7 @@ const STEPS = [
     /* 2027: captains spread out as an even grid of name chips */
     .rv-chips--names { display: grid; grid-template-columns: repeat(auto-fill, minmax(12.5rem, 1fr)); }
     .rv-chips--names .rv-chip span { width: 100%; }
+    .rv-writeins { grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: 52rem; }
     .rv-screen[data-screen="event"].is-active { column-gap: clamp(2rem, 4vw, 3.5rem); }
     .rv-teams { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 2rem; }
 
@@ -456,8 +468,7 @@ const STEPS = [
   const ORDER = ['open', 'who', 'rsvp', 'game', 'event', 'review', 'done'];
   const FORM_STEPS = ['who', 'rsvp', 'game', 'event', 'review'];
   const LABELS = { who: 'You', rsvp: 'RSVP', game: 'Your game', event: '2027', review: 'Review' };
-  const PRIVATE = ['dob', 'captainVoteIds', 'teamNames', 'greenFee', 'longestDrive'];
-  const MAX_CAPTAINS = DATA.limits.maxCaptains;
+  const PRIVATE = ['dob', 'captainVoteIds', 'teamNames', 'captainWriteIns', 'greenFee', 'longestDrive'];
   const store = {   // this device only — may be unavailable (private mode), so never required
     get(id) { try { return JSON.parse(localStorage.getItem('annual-rsvp:' + id) || 'null'); } catch { return null; } },
     set(id, v) { try { localStorage.setItem('annual-rsvp:' + id, JSON.stringify(v)); } catch {} },
@@ -477,7 +488,20 @@ const STEPS = [
   const group = (name) => [...form.querySelectorAll(`input[name="${name}"]`)];
   const vals = (name) => group(name).filter((i) => i.checked).map((i) => i.value);
   const setVals = (name, list) => { const want = new Set(list || []); group(name).forEach((i) => (i.checked = want.has(i.value))); };
-  const teamDraft = {};   // typed team names, kept while captains are ticked / unticked
+  const teamDraft = {};   // typed team names, kept while captains are ticked / unticked (write-ins keyed 'w:<uid>')
+  let writeIns = [];      // "Someone else" rows: { uid, name }
+  let wuid = 0;
+  // Same rule as the server's matchPlayerName, 'match' case only: full name, or a
+  // first name only one nominee has. A clean match ticks that player's chip.
+  const nk = (s) => String(s || '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/['’.]/g, '').replace(/[^a-z]+/g, ' ').trim();
+  const nomineeFor = (typed) => {
+    const k = nk(typed); if (!k) return null;
+    const full = DATA.nominees.filter((n) => nk(n.name) === k);
+    if (full.length === 1) return full[0];
+    if (!full.length && !k.includes(' ')) { const f = DATA.nominees.filter((n) => nk(n.name).split(' ')[0] === k); if (f.length === 1) return f[0]; }
+    return null;
+  };
+  const namedWriteIns = () => writeIns.filter((w) => w.name.trim());
   const setVal = (name, v) => {
     const els = form.elements[name];
     if (!els || v == null) return;
@@ -517,7 +541,7 @@ const STEPS = [
     if (input && !(input instanceof RadioNodeList)) { input.setAttribute('aria-invalid', 'true'); }
     reveal(box);
   };
-  const stepOfField = (f) => ({ playerId: 'who', newName: 'who', status: 'rsvp', dob: 'game', handicap: 'game', strengths: 'game', weaknesses: 'game', sentence: 'game', captainVoteIds: 'event', teamNames: 'event', greenFee: 'event', longestDrive: 'event' }[f] || 'review');
+  const stepOfField = (f) => ({ playerId: 'who', newName: 'who', status: 'rsvp', dob: 'game', handicap: 'game', strengths: 'game', weaknesses: 'game', sentence: 'game', captainVoteIds: 'event', captainWriteIns: 'event', teamNames: 'event', greenFee: 'event', longestDrive: 'event' }[f] || 'review');
 
   // ---- per-step validation (the server re-checks everything) ----
   function validate(s) {
@@ -559,9 +583,8 @@ const STEPS = [
       if (!vals('weaknesses').length) return e('weaknesses', 'Pick at least one weakest part.');
     }
     if (s === 'event') {
-      const caps = vals('captainVoteIds').length;
-      if (!caps) return e('captainVoteIds', 'Pick one or two captains.');
-      if (caps > MAX_CAPTAINS) return e('captainVoteIds', `Pick no more than ${MAX_CAPTAINS}.`);
+      if (!vals('captainVoteIds').length && !namedWriteIns().length) return e('captainVoteIds', 'Pick at least one captain, or add someone else.');
+      if (namedWriteIns().some((w) => !/\p{L}/u.test(w.name))) return e('captainWriteIns', 'Type a name for each “Someone else”, or remove the empty one.');
       if (!val('greenFee')) return e('greenFee', 'Answer the green-fee question.');
       if (!val('longestDrive')) return e('longestDrive', 'Answer the longest-drive question.');
     }
@@ -634,8 +657,53 @@ const STEPS = [
     // a part of your game can't be both strongest and weakest
     if (e.target.name === 'strengths' || e.target.name === 'weaknesses') syncParts();
     if (e.target.name === 'captainVoteIds') { syncCaptains(); clearErrors(); }
+    // a write-in that is clearly someone on the list: tick them instead
+    if (e.target.dataset.writein) {
+      const w = writeIns.find((x) => String(x.uid) === e.target.dataset.writein);
+      const n = w && nomineeFor(w.name);
+      if (n) {
+        setVals('captainVoteIds', [...new Set([...vals('captainVoteIds'), n.id])]);
+        if (teamDraft['w:' + w.uid] && !teamDraft[n.id]) teamDraft[n.id] = teamDraft['w:' + w.uid];
+        writeIns = writeIns.filter((x) => x !== w);
+        const note = $('#rv-writein-note');
+        note.textContent = `${n.name} is on the list — we’ve ticked him instead.`;
+        note.hidden = false;
+        drawWriteIns(); syncCaptains();
+      }
+    }
   });
-  form.addEventListener('input', (e) => { if (e.target.dataset.captain) teamDraft[e.target.dataset.captain] = e.target.value; });
+  form.addEventListener('input', (e) => {
+    if (e.target.dataset.captain) teamDraft[e.target.dataset.captain] = e.target.value;
+    if (e.target.dataset.writein) {
+      const w = writeIns.find((x) => String(x.uid) === e.target.dataset.writein);
+      if (w) { w.name = e.target.value; syncCaptains(); }
+    }
+  });
+  // "Someone else": a new name box each tap, each removable
+  $('#rv-addwritein').addEventListener('click', () => {
+    if (writeIns.length >= DATA.limits.maxWriteIns) return;
+    const w = { uid: ++wuid, name: '' };
+    writeIns.push(w);
+    $('#rv-writein-note').hidden = true;
+    drawWriteIns();
+    const box = form.querySelector(`[data-writein="${w.uid}"]`);
+    box.focus({ preventScroll: true }); reveal(box);
+    clearErrors();
+  });
+  $('#rv-writeins').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-rm-writein]');
+    if (!b) return;
+    writeIns = writeIns.filter((x) => String(x.uid) !== b.dataset.rmWritein);
+    delete teamDraft['w:' + b.dataset.rmWritein];
+    drawWriteIns(); syncCaptains();
+  });
+  function drawWriteIns() {
+    $('#rv-writeins').innerHTML = writeIns.map((w) => `<div class="rv-writein">
+        <input type="text" class="rv-input" data-writein="${w.uid}" value="${esc(w.name)}" maxlength="${DATA.limits.name}" autocapitalize="words" autocomplete="off" placeholder="Their name, e.g. Harry Smith" aria-label="Someone else’s name" />
+        <button type="button" class="rv-writein__rm" data-rm-writein="${w.uid}" aria-label="Remove this name">✕</button>
+      </div>`).join('');
+    $('#rv-addwritein span').textContent = writeIns.length ? '+ Add another name' : '+ Someone else';
+  }
 
   // a part of your game can't be both a strength and a weakness: whatever is
   // ticked on one side is greyed out on the other
@@ -644,19 +712,21 @@ const STEPS = [
     group('strengths').forEach((i) => (i.disabled = w.has(i.value)));
     group('weaknesses').forEach((i) => (i.disabled = s.has(i.value)));
   }
-  // one or two captains: once two are ticked the rest grey out; each ticked
-  // captain gets their own optional team-name field
+  // as many captains as they like; every nominee — ticked or written in — gets
+  // their own optional team-name field
   function syncCaptains() {
-    const picked = vals('captainVoteIds');
-    group('captainVoteIds').forEach((i) => (i.disabled = !i.checked && picked.length >= MAX_CAPTAINS));
-    const box = $('#rv-teams');
-    box.innerHTML = picked.map((id) => {
-      const n = DATA.nominees.find((x) => x.id === id)?.name || id;
-      return `<div class="rv-field"><label class="rv-label" for="rv-team-${esc(id)}">What would ${esc(n.split(' ')[0])}’s team name be? <span class="rv-label__aside">Optional</span></label>
-        <input id="rv-team-${esc(id)}" data-captain="${esc(id)}" type="text" class="rv-input" maxlength="${DATA.limits.teamName}" value="${esc(teamDraft[id] || '')}" /></div>`;
-    }).join('');
+    const field = (key, name) => `<div class="rv-field"><label class="rv-label" for="rv-team-${esc(key.replace(':', '-'))}">What would ${esc(name.trim().split(/\s+/)[0])}’s team name be? <span class="rv-label__aside">Optional</span></label>
+        <input id="rv-team-${esc(key.replace(':', '-'))}" data-captain="${esc(key)}" type="text" class="rv-input" maxlength="${DATA.limits.teamName}" value="${esc(teamDraft[key] || '')}" /></div>`;
+    $('#rv-teams').innerHTML = [
+      ...vals('captainVoteIds').map((id) => field(id, DATA.nominees.find((x) => x.id === id)?.name || id)),
+      ...namedWriteIns().map((w) => field('w:' + w.uid, w.name)),
+    ].join('');
   }
   const teamNamesOut = () => Object.fromEntries(vals('captainVoteIds').map((id) => [id, (teamDraft[id] || '').trim()]).filter(([, v]) => v));
+  const writeInsOut = () => namedWriteIns().map((w) => {
+    const t = (teamDraft['w:' + w.uid] || '').trim();
+    return t ? { name: w.name.trim(), teamName: t } : { name: w.name.trim() };
+  });
 
 
 
@@ -672,6 +742,7 @@ const STEPS = [
       else if (form.elements[k]) form.elements[k].value = '';
     });
     for (const k in teamDraft) delete teamDraft[k];
+    writeIns = []; drawWriteIns(); $('#rv-writein-note').hidden = true;
     form.elements.hcpPlus.checked = false;
     if (p?.hcp != null) setHcp(p.hcp);
     nextBtn.disabled = true;
@@ -695,8 +766,14 @@ const STEPS = [
       // saved by the first version of the form: one captain + one team name
       const caps = mine.captainVoteIds || (mine.captainVoteId ? [mine.captainVoteId] : []);
       const names = mine.teamNames || (mine.captainVoteId && mine.teamName ? { [mine.captainVoteId]: mine.teamName } : {});
-      setVals('captainVoteIds', caps.filter((c) => DATA.nominees.some((n) => n.id === c)).slice(0, MAX_CAPTAINS));
+      setVals('captainVoteIds', caps.filter((c) => DATA.nominees.some((n) => n.id === c)));
       Object.assign(teamDraft, names);
+      for (const w of mine.captainWriteIns || []) {
+        const uid = ++wuid;
+        writeIns.push({ uid, name: w.name });
+        if (w.teamName) teamDraft['w:' + uid] = w.teamName;
+      }
+      drawWriteIns();
     }
     syncParts(); syncCaptains();
   }
@@ -721,7 +798,13 @@ const STEPS = [
     html += skipsEvent()
       ? `<section class="rv-rev"><div class="rv-rev__head"><h3>2027 questions</h3></div><p class="rv-rev__skip">Skipped, because you can’t make it.</p></section>`
       : block('2027 questions', 'event', [
-          ...caps.map((id, i) => [caps.length > 1 ? `Captain pick ${i + 1}` : 'Captain pick', nameOf(id) + (teams[id] ? ` — “${teams[id]}”` : '')]),
+          ...(() => {
+            const picks = [
+              ...caps.map((id) => nameOf(id) + (teams[id] ? ` — “${teams[id]}”` : '')),
+              ...writeInsOut().map((w) => `${w.name} (someone else)` + (w.teamName ? ` — “${w.teamName}”` : '')),
+            ];
+            return picks.map((p, i) => [picks.length > 1 ? `Captain pick ${i + 1}` : 'Captain pick', p]);
+          })(),
           ['$250 green fee', DATA.greenFee[val('greenFee')]], ['Longest drive / closest to pin', DATA.sideGame[val('longestDrive')]],
         ]);
     $('#rv-review').innerHTML = html;
@@ -741,7 +824,7 @@ const STEPS = [
       strengths: vals('strengths'), weaknesses: vals('weaknesses'), sentence: val('sentence'),
     };
     if (val('playerId') === '__new') body.newName = val('newName'); else body.playerId = val('playerId');
-    if (!skipsEvent()) Object.assign(body, { captainVoteIds: vals('captainVoteIds'), teamNames: teamNamesOut(), greenFee: val('greenFee'), longestDrive: val('longestDrive') });
+    if (!skipsEvent()) Object.assign(body, { captainVoteIds: vals('captainVoteIds'), teamNames: teamNamesOut(), captainWriteIns: writeInsOut(), greenFee: val('greenFee'), longestDrive: val('longestDrive') });
 
     nextBtn.disabled = true; nextBtn.textContent = 'Sending…';
     let res, data;
