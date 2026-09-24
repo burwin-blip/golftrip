@@ -358,13 +358,88 @@ const STEPS = [
   .rv-done__actions { display: flex; flex-direction: column; gap: .7rem; align-items: stretch; width: min(100%, 320px); margin-top: 1.6rem; }
   .rv-done__fine { font-size: .82rem; color: var(--faint); margin-top: 1.2rem; max-width: 34ch; }
 
+  /* ======================================================================
+     WIDER SCREENS. Everything above is the phone layout and must stay exactly
+     as it is; every rule below only ever applies from 720px up. The invite
+     email sends people to a browser, so desktop is the showcase.
+     ====================================================================== */
+
+  /* tablet: a wider column, four faces a row, the short questions paired */
+  @media (min-width: 720px) {
+    .rv { --rv-w: 720px; }
+    .rv-faces { grid-template-columns: repeat(4, 1fr); gap: 1rem; }
+    .rv-newname { max-width: 30rem; }
+    .rv-review { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
+    .rv-screen[data-screen="event"].is-active { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 2rem; }
+    .rv-screen[data-screen="event"].is-active > :not(fieldset:nth-last-of-type(-n+2)) { grid-column: 1 / -1; }
+    /* the paired questions: same-height legends so their answers line up */
+    .rv-screen[data-screen="event"] fieldset:nth-last-of-type(-n+2) > .rv-label { min-height: 2.6em; }
+  }
+
   @media (min-width: 900px) {
-    .rv { --rv-w: 640px; }
     .rv[data-step="open"] { --rv-w: 980px; }
     .rv-open.is-active { grid-template-columns: auto 1fr; justify-items: start; text-align: left; align-items: center; gap: 4rem; padding-top: 3vh; }
     .rv-open__copy { align-items: flex-start; }
     .rv-open__art { width: 340px; }
-    .rv-faces { grid-template-columns: repeat(4, 1fr); }
+  }
+
+  /* desktop: the site's full content width, laid out for a big screen */
+  @media (min-width: 1024px) {
+    .rv { --rv-w: var(--maxw); padding-bottom: calc(8rem + env(safe-area-inset-bottom)); }
+    .rv[data-step="open"] { --rv-w: 1060px; }
+    .rv-top { padding-block: 1.4rem 1.2rem; }
+    .rv-brand { font-size: 1.2rem; }
+    .rv-top__meta { font-size: .8rem; }
+
+    /* progress: taller bars, readable labels */
+    .rv-steps { gap: .7rem; margin-bottom: 2.6rem; }
+    .rv-steps i { height: 6px; }
+    .rv-steps span { font-size: .78rem; letter-spacing: .1em; }
+
+    .rv-h { font-size: clamp(2.6rem, 1.6rem + 1.8vw, 3.4rem); }
+    .rv-sub { font-size: 1.1rem; margin: .7rem 0 2.2rem; max-width: 60ch; }
+
+    /* who: the wall of faces fills the screen */
+    .rv-faces { grid-template-columns: repeat(5, 1fr); gap: 1.4rem 1.2rem; }
+    .rv-face__name { font-size: .95rem; }
+    .rv-face__frame { transition: transform .18s var(--ease), box-shadow .18s var(--ease); }
+    .rv-face:hover .rv-face__frame { transform: translateY(-3px); box-shadow: var(--shadow-lg); }
+    .rv-face__frame--new span { font-size: 3.2rem; }
+    .rv-face__frame--init span { font-size: 2.2rem; }
+
+    /* rsvp: the three answers side by side */
+    .rv-rsvp { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.1rem; }
+    .rv-big { min-height: 8.5rem; padding: 1.5rem 1.5rem 1.5rem 3.8rem; justify-content: center; }
+    .rv-big::before { top: 50%; margin-top: -.6rem; left: 1.4rem; }
+    .rv-big:hover { transform: translateY(-2px); }
+
+    /* your game: two columns — dob | handicap, strongest | weakest, sentence across */
+    .rv-screen[data-screen="game"].is-active { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: clamp(2rem, 4vw, 3.5rem); }
+    .rv-screen[data-screen="game"].is-active > :is(h2, .rv-sub, .rv-field:last-child) { grid-column: 1 / -1; }
+    .rv-input--area { max-width: 52rem; }
+    .rv-chips { gap: .6rem; }
+    .rv-chip span { font-size: .98rem; padding: .6rem 1.15rem; }
+    .rv-chip span:hover { box-shadow: inset 0 0 0 1.5px var(--terra); }
+    .rv-chip input:checked + span:hover { box-shadow: none; }
+
+    /* 2027: captains spread out as an even grid of name chips */
+    .rv-chips--names { display: grid; grid-template-columns: repeat(auto-fill, minmax(12.5rem, 1fr)); }
+    .rv-chips--names .rv-chip span { width: 100%; }
+    .rv-screen[data-screen="event"].is-active { column-gap: clamp(2rem, 4vw, 3.5rem); }
+    .rv-teams { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 2rem; }
+
+    /* review: airy two-up cards */
+    .rv-review { gap: 1.2rem; }
+    .rv-rev { padding: 1.4rem 1.6rem; }
+    .rv-rev dl { font-size: 1rem; gap: .6rem 1.2rem; }
+
+    /* the sticky bar: buttons sized for a mouse, not stretched across the screen */
+    .rv-bar { padding-block: 1rem calc(1rem + env(safe-area-inset-bottom)); }
+    .rv-bar .rv-btn--go { max-width: 380px; }
+    .rv-bar .rv-btn--back { min-width: 130px; }
+  }
+  @media (min-width: 1240px) {
+    .rv-faces { grid-template-columns: repeat(6, 1fr); }
   }
   @media (max-width: 360px) {
     .rv-faces { grid-template-columns: repeat(2, 1fr); }

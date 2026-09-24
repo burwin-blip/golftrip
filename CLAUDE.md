@@ -696,7 +696,16 @@ optional team name **per nominated captain**, Q8 $250 green fee, Q9 longest driv
 closest to the pin — **skipped for a NO**) →
 **Review** → confirmation (YOU'RE IN. with the live confirmed count for YES;
 "Pencilled in." for MAYBE; "Next time, then." for NO — **never repeats answers**).
-Mobile-first; a sticky Back/Continue bar; the phone's back button steps back.
+Mobile-first; a sticky Back/Continue bar; the phone's back button steps back. **Responsive (Sept 2026):** the phone layout is the base CSS and
+must stay pixel-identical. Every wider-screen rule sits in `min-width` blocks at
+the end of the page's styles. **720px (tablet):** a 720px column, 4 faces a row,
+review cards two-up, the two short 2027 questions side by side. **1024px
+(desktop):** the site's `--maxw` width, 5 faces a row (6 from 1240px), the three
+RSVP answers side by side, Your game in two columns (dob | handicap, strongest |
+weakest), captains as an even grid, larger headings and progress bar, and the
+Continue button capped at 380px. Verify with the scratch puppeteer harness
+approach: fingerprint every element's rect per step at 360/390/430px before and
+after, and they must match exactly.
 `Base.astro` takes `bare` to drop the nav/footer for this flow (head/noindex same).
 The question list is fixed by the owner — **no additions**. Answer options live in
 ONE place, `src/lib/rsvp-shared.js`.
