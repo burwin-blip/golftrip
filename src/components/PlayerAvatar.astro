@@ -4,14 +4,18 @@
 // `public/players/<id>.jpg` when there is one (see src/lib/portraits.js), and
 // otherwise the initials on the house sunset gradient, so a photo-less player
 // still reads as part of the set. Portraits are cut with the face in the upper
-// half of the frame, which is exactly what a centre-high circle crop keeps.
+// half of the frame, which is exactly what a centre-high circle crop keeps. A
+// player whose portrait is a deliberately wide scene can also have a square face
+// crop, `<id>-avatar.jpg`, which the circle uses instead (playerAvatar()).
 //
 // Props: player ({ id, name }), size (px), ring (CSS colour — usually the team's).
-import { playerPortrait, playerInitials } from '../lib/portraits.js';
+import { playerAvatar, playerInitials } from '../lib/portraits.js';
 
 const { player, size = 32, ring = null, className = '' } = Astro.props;
-const src = player ? playerPortrait(player.id) : null;
-const style = `--av:${size}px;${ring ? `--av-ring:${ring};` : ''}`;
+const av = player ? playerAvatar(player.id) : null;
+const src = av?.src ?? null;
+// a square face crop fills the circle as-is; a 4:5 portrait is cropped centre-high
+const style = `--av:${size}px;${ring ? `--av-ring:${ring};` : ''}${av?.square ? 'object-position:center;' : ''}`;
 ---
 {src ? (
   <img class:list={['pavatar', { 'pavatar--ring': ring }, className]} src={src} alt="" width={size} height={size}

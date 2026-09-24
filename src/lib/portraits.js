@@ -31,6 +31,10 @@ const PORTRAIT_DIR = fs.existsSync(fromModule) ? fromModule : path.join(process.
 // quietly takes over from anything else without needing the old file removed.
 const EXTS = ['.jpg', '.jpeg', '.png', '.webp', '.avif'];
 
+// content-hashed URL so a replaced file never lingers in a phone's cache
+const versioned = (file) =>
+  `/players/${file}?v=${crypto.createHash('sha1').update(fs.readFileSync(path.join(PORTRAIT_DIR, file))).digest('hex').slice(0, 10)}`;
+
 function scan() {
   let files;
   try {
@@ -44,15 +48,33 @@ function scan() {
     const hit = EXTS.map((e) => p.id + e).find((f) => present.has(f));
     // ?v=<content hash>: a replaced photo keeps its filename, so the URL has to
     // change with the bytes or a phone can keep showing the old face.
-    if (hit) {
-      const v = crypto.createHash('sha1').update(fs.readFileSync(path.join(PORTRAIT_DIR, hit))).digest('hex').slice(0, 10);
-      map[p.id] = `/players/${hit}?v=${v}`;
-    }
+    if (hit) map[p.id] = versioned(hit);
   }
   return map;
 }
 
 const PORTRAITS = scan();
+
+// Optional square face crop for the small round avatars: `<id>-avatar.jpg`.
+// Only needed when the portrait is deliberately wide (a scene that has to read
+// on the tall card, e.g. Anthony Herring in the ice bath), so the 20–44px circles
+// would otherwise show a tiny face. Everyone else's circle crops the portrait.
+const AVATARS = (() => {
+  let present;
+  try { present = new Set(fs.readdirSync(PORTRAIT_DIR)); } catch { return {}; }
+  const map = {};
+  for (const p of players) {
+    const hit = EXTS.map((e) => `${p.id}-avatar${e}`).find((f) => present.has(f));
+    if (hit) map[p.id] = versioned(hit);
+  }
+  return map;
+})();
+
+/** Source for the small round avatar: { src, square } — the face crop when one
+ *  exists (square: true), else the portrait, else null. */
+export const playerAvatar = (playerId) =>
+  AVATARS[playerId] ? { src: AVATARS[playerId], square: true }
+  : PORTRAITS[playerId] ? { src: PORTRAITS[playerId], square: false } : null;
 
 /** Portrait URL for a player, or null when we're still waiting on a photo. */
 export const playerPortrait = (playerId) => PORTRAITS[playerId] ?? null;

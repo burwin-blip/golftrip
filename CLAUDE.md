@@ -302,6 +302,13 @@ convention — **the filename is the wiring**.
   `players.json`) and it replaces that player's placeholder on the next build.
   No JSON to edit, no component to touch. `.jpeg`/`.png`/`.webp`/`.avif` also
   resolve, in that preference order after `.jpg`.
+- **Optional face crop for the circles: `public/players/<id>-avatar.jpg`** (square,
+  ~400px). `playerAvatar()` in `portraits.js` gives `PlayerAvatar` that file when
+  it exists, else the portrait. Only for a portrait that's deliberately a WIDE scene
+  and must stay wide on the tall cards. **Anthony Herring** is the case: his card
+  is the full-height ice-bath shot (tub rim and ice must stay in frame; owner's
+  instruction: "do NOT crop tight"), while his 20–44px circles use the face crop.
+  Everyone else's circle still crops their normal portrait centre-high.
 - Portrait URLs carry **`?v=<content hash>`** (first 10 hex of the file's SHA-1),
   so replacing a photo under the same filename changes its URL everywhere and no
   phone keeps the old face (September 2026: Tom Brunskill's album crop → a real
