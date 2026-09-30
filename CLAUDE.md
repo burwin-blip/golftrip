@@ -642,6 +642,19 @@ within-tier tiebreak, and isn't shown in the UI). Movement arrows compare each p
 previous check-in date. Verdicts ("Trending sharp", "Hasn't posted in 6 weeks") are
 auto-generated in `powerVerdict()`.
 
+**Official beats self-reported (from the 28 Sept 2026 check-in):** a player with
+an official GHIN / GA check-in beyond their St George seed is rated on the official
+numbers only; RSVP handicaps count only for players without one (seed-only players
+and new RSVP players). `handicapSnapshots` is that current view; boards dated
+before `OFFICIAL_OVER_RSVP_FROM` (data.js) use `allHandicapSnapshots`, so earlier
+boards are reproduced exactly as published. **Movement arrows** compare with the
+board as it stood just before the latest GHIN check-in. **"Last updated"** shows the
+latest GHIN check-in date (`checkInAsOf`), not RSVP days.
+**Commissioner's adjustment** (owner's rule, in `rankingAsOf()`): Ben Urwin can
+never be #1. If he computes top, he swaps with #2, on every board so the arrows
+stay consistent. It's deliberate and deliberately not shown on the site; delete
+that commented block to remove it.
+
 `powerRankings()` returns `{ weights, trendDays, staleDays, dataAsOf, checkInDates,
 hasRealData, rows[] }`; each row carries `rank, movement, movementBy, player,
 teamId, isRookie, ghin, score, index, seedIndex, trend, sinceSeed, sinceLast,

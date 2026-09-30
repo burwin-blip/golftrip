@@ -103,10 +103,27 @@ function validateHandicapSnapshots(rows, validPlayerIds) {
 
 // The hand-entered check-ins plus the RSVP's self-reported handicaps (additive —
 // nothing in the file is ever replaced; see scripts/pull-rsvp.mjs).
-const handicapSnapshots = validateHandicapSnapshots(
+// OFFICIAL BEATS SELF-REPORTED (owner's rule, effective with the 28 Sept 2026
+// check-in): a player with an official GHIN / GA check-in beyond their St George
+// seed (more than one entry in handicap_snapshots.json) is rated on the official
+// numbers only; their RSVP handicaps are ignored. Players with just the seed (or
+// none — a new bloke from "I'm not listed") still use their RSVP number, the best
+// we have until their first official check-in.
+//   handicapSnapshots    — the CURRENT view (the rule applied): profiles, the
+//                          check-in sheet and every board dated on/after the rule
+//   allHandicapSnapshots — everything, for boards dated BEFORE the rule, so the
+//                          previous board (and its arrows) is exactly what was
+//                          published at the time
+export const OFFICIAL_OVER_RSVP_FROM = '2026-09-28';
+const officialCheckIns = new Set(
+  [...new Set(rawHandicapSnapshots.map((s) => s.player))]
+    .filter((pid) => rawHandicapSnapshots.filter((s) => s.player === pid).length > 1),
+);
+const allHandicapSnapshots = validateHandicapSnapshots(
   [...rawHandicapSnapshots, ...(rsvp.snapshots || [])],
   new Set(players.map((p) => p.id)),
 );
+const handicapSnapshots = allHandicapSnapshots.filter((s) => !(s.source === 'rsvp' && officialCheckIns.has(s.player)));
 
 // ---------------------------------------------------------------------------
 // TRIP PLANNERS (data/trip-<year>.json) — the lead-up detail for an upcoming
@@ -324,7 +341,7 @@ const trips = [validateTrip(rawTrip2027, 'trip-2027.json', validTournamentIds)];
 /** The trip planner for a tournament, or null when there isn't one. */
 export const tripFor = (tid) => trips.find((t) => t.tournamentId === tid) ?? null;
 
-export { players, tournaments, matches, drafts, moments, awards, holeScores, photos, handicapSnapshots, trips };
+export { players, tournaments, matches, drafts, moments, awards, holeScores, photos, handicapSnapshots, allHandicapSnapshots, trips };
 
 // Hole rows for one match (by match id), sorted by hole. Individual-score rows
 // only (excludes scramble team rows) unless includeTeam is set.

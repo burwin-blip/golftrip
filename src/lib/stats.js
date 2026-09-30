@@ -15,7 +15,7 @@
 // ============================================================================
 import {
   players, tournaments, matches, drafts, awards, moments, holeScores, photos,
-  handicapSnapshots,
+  handicapSnapshots, allHandicapSnapshots, OFFICIAL_OVER_RSVP_FROM,
   playerById, teamById, matchById, roundById, tournamentById,
   matchesForTournament, rosterForTournament, rsvpStatusFor,
 } from './data.js';
@@ -1046,8 +1046,11 @@ export const POWER_RANKING_STALE_DAYS = 35;  // a check-in older than this (vs t
 
 const DAY_MS = 86400000;
 const dparse = (s) => Date.parse(s);
+// Boards dated before the official-over-RSVP rule are computed exactly as they
+// were published (RSVP handicaps included); from the rule date on, official
+// check-ins win. See OFFICIAL_OVER_RSVP_FROM in data.js.
 const snapsForPlayer = (pid, asOf) =>
-  handicapSnapshots
+  (asOf && asOf < OFFICIAL_OVER_RSVP_FROM ? allHandicapSnapshots : handicapSnapshots)
     .filter((s) => s.player === pid && (!asOf || dparse(s.date) <= dparse(asOf)))
     .sort((a, b) => dparse(a.date) - dparse(b.date));
 
@@ -1152,6 +1155,22 @@ function rankingAsOf(asOf) {
     (a.metrics.index ?? 99) - (b.metrics.index ?? 99) ||
     playerById[a.playerId].name.localeCompare(playerById[b.playerId].name));
   rows.forEach((r, i) => (r.rank = r.metrics.hasData ? i + 1 : null));
+
+  // ------------------------------------------------------------------------
+  // COMMISSIONER'S ADJUSTMENT (owner's rule, September 2026)
+  // Ben Urwin runs the site, so he can never be ranked #1. Everyone's score is
+  // computed normally above; if Ben still comes out on top, he swaps places
+  // with #2. Applied here, inside rankingAsOf(), so the current AND previous
+  // boards both get it and the movement arrows stay consistent. No snapshot
+  // data is touched. To remove the rule, delete this block.
+  const COMMISSIONER_ID = 'ben-urwin';
+  if (rows.length > 1 && rows[0].playerId === COMMISSIONER_ID && rows[1].rank != null) {
+    [rows[0], rows[1]] = [rows[1], rows[0]];
+    rows[0].rank = 1;
+    rows[1].rank = 2;
+  }
+  // ------------------------------------------------------------------------
+
   return { asOf, rows };
 }
 
@@ -1256,14 +1275,16 @@ export function powerRankings() {
   // Check-in dates are the owner's GHIN rounds. RSVP entries land on whatever
   // day someone replied, so they extend `dataAsOf` (so they're included) but
   // never become a "previous check-in" for the movement arrows.
-  const allDates = [...new Set(handicapSnapshots.map((s) => s.date))].sort();
+  const allDates = [...new Set(allHandicapSnapshots.map((s) => s.date))].sort();   // every date (so the previous board is the one people saw)
   const dates = [...new Set(handicapSnapshots.filter((s) => s.source !== 'rsvp').map((s) => s.date))].sort();
   const dataAsOf = allDates[allDates.length - 1];
-  // Movement compares against the last GHIN check-in — or, when RSVP entries
-  // have arrived since it, against that check-in itself.
+  // Movement compares against the board as it stood just BEFORE the latest GHIN
+  // check-in (the newest date of any kind before it, RSVP entries included), so
+  // the arrows show what this check-in changed — and they keep showing it when
+  // later RSVPs nudge an index, instead of resetting at the first one.
   const lastCheckInDate = dates[dates.length - 1] ?? null;
-  const prevDate = lastCheckInDate && dataAsOf > lastCheckInDate ? lastCheckInDate
-    : dates.length > 1 ? dates[dates.length - 2] : null;
+  const before = lastCheckInDate ? allDates.filter((d) => d < lastCheckInDate) : [];
+  const prevDate = before.length ? before[before.length - 1] : null;
   // "Real" data = anything beyond the single seed check-in (a later date, or any
   // posted rounds / differentials).
   const hasRealData = dates.length > 1 ||
@@ -1351,6 +1372,9 @@ export function powerRankings() {
     trendDays: POWER_RANKING_TREND_DAYS,
     staleDays: POWER_RANKING_STALE_DAYS,
     dataAsOf,
+    // the date shown as "Last updated": the owner's latest GHIN check-in (RSVP
+    // handicaps land on whatever day someone replied, so they don't move it)
+    checkInAsOf: lastCheckInDate ?? dataAsOf,
     checkInDates: dates,
     hasRealData,
     rows,

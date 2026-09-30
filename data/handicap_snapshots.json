@@ -163,5 +163,98 @@
     "rounds": 9,
     "avgDifferential": 9.4,
     "note": "ESTIMATED index 5.7 — computed from the best 8 of his last 20 differentials; his actual GHIN index wasn't visible yet and will be confirmed later. Active and dangerous — a 73 (3.7 diff) in May, but June was cold: five straight rounds between 9 and 12. If the estimate holds, one of the lowest indexes in the field."
+  },
+  {
+    "player": "ben-urwin",
+    "date": "2026-09-28",
+    "index": 4.8,
+    "low": 4.8,
+    "rounds": 7,
+    "avgDifferential": 5.7,
+    "note": "Hottest stretch on record: 4.8 (9/19 Pecan Hollow), 6.2 (9/1 Presidio), 3.7 (8/28 Presidio), 7.1 (8/23 Peacock Gap), 0.2 (8/16 Corica North, shot 71), 9.6 (8/14 Presidio), 8.3 (8/9 Peacock Gap). The 0.2 is the best differential in the field this year."
+  },
+  {
+    "player": "alan-lozer",
+    "date": "2026-09-28",
+    "index": 5.0,
+    "low": 5.0,
+    "rounds": 7,
+    "avgDifferential": 7.8,
+    "note": "Down from 5.6: the biggest improvement in the field. September differentials 12.1, 5.9, 11.1, 10.4, 6.4; August 5.6 and 2.8 (shot 72)."
+  },
+  {
+    "player": "anthony-herring",
+    "date": "2026-09-28",
+    "index": 11.4,
+    "low": 11.2,
+    "rounds": 0,
+    "note": "Index unchanged. Nothing posted since June 2026: a full stall."
+  },
+  {
+    "player": "colton-mckivitz",
+    "date": "2026-09-28",
+    "system": "ghin",
+    "index": 12.8,
+    "homeClub": "NCGA GC",
+    "rounds": 1,
+    "avgDifferential": 16.1,
+    "note": "First real GHIN check-in (USGA / NCGA GC), replacing the 14.0 tournament-only figure. One round in 90 days: a 91 in September (16.1 differential)."
+  },
+  {
+    "player": "rupert-pedler",
+    "date": "2026-09-28",
+    "index": 19.4,
+    "rounds": 3,
+    "avgDifferential": 20.0,
+    "note": "Down from 19.9. August differentials 15.2, 19.9, 25.0."
+  },
+  {
+    "player": "james-graham",
+    "date": "2026-09-28",
+    "system": "ghin",
+    "index": 11.6,
+    "homeClub": "EClub San Francisco",
+    "rounds": 5,
+    "avgDifferential": 16.1,
+    "note": "First activity since joining the rankings: five rounds in August (15.6, 15.2, 15.6, 18.3, 15.6), all above his index."
+  },
+  {
+    "player": "tanner-curley",
+    "date": "2026-09-28",
+    "system": "ghin",
+    "index": 5.9,
+    "homeClub": "EClub San Francisco",
+    "rounds": 2,
+    "avgDifferential": 17.8,
+    "note": "His real GHIN index (the 5.7 was an estimate). Two rounds in 90 days: a 93 in September (19.4 differential) and an 88 in August (16.1). Form well above his index, cooling after the June run."
+  },
+  {
+    "player": "tom-brunskill",
+    "date": "2026-09-28",
+    "index": 14.0,
+    "low": 14.0,
+    "rounds": 4,
+    "avgDifferential": 14.7,
+    "note": "Down from 14.1: lifetime-low territory. August 14.8, 17.8; July 12.1, 13.9."
+  },
+  {
+    "player": "scott-benesh",
+    "date": "2026-09-28",
+    "index": 3.5,
+    "low": 2.6,
+    "homeClub": "Shady Oaks CC",
+    "rounds": 4,
+    "avgDifferential": 5.0,
+    "note": "Up from 3.3. September 6.5, 6.0; August 3.2; July 4.3. Now playing out of Shady Oaks CC."
+  },
+  {
+    "player": "steve-urwin",
+    "date": "2026-09-28",
+    "system": "ga",
+    "index": 18.0,
+    "homeClub": "Hawks Nest GC",
+    "rounds": 3,
+    "avgDifferential": 17.2,
+    "note": "GA Handicap app. Steady improvement: 18.9 → 18.8 → 18.6 → 18.0. Differentials 15.3 (28 Sep, Cumberland CGC), 18.2 (31 Aug, Cumberland CGC), 18.1 (1 Aug, Hawks Nest GC). Form at or slightly better than his index."
   }
 ]

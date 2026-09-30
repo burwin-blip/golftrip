@@ -11,7 +11,7 @@ const W = pr.weights;
 const pctW = (x) => Math.round(x * 100);
 
 const signed1 = (x) => (x > 0 ? `+${x}` : `${x}`);
-const asOf = pr.dataAsOf ? longDate(pr.dataAsOf) : null;
+const asOf = pr.checkInAsOf ? longDate(pr.checkInAsOf) : null;
 
 // Sparkline geometry — plots the INDEX VALUE literally: higher index sits higher
 // on the chart, so a falling handicap (improving) draws a line going DOWN, the
