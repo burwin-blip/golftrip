@@ -1,44 +1,49 @@
 ---
-// MATCH CENTRE — the 2027 lineup board (the "Match Centre" tab on the upcoming
-// tournament page). Each round renders as a card of match slots, with the
-// player pool underneath. Lineups are live data (Redis, via /api/lineups), so
-// the server renders the empty board (every slot "TBD") and the script fills it
-// from the last saved lineups.
-//
-// Editing is admin-only, with the SAME key mechanism as /rsvp/admin: open the
-// page with  #admin=<RSVP_ADMIN_KEY>  and the key is checked server-side (the
-// x-admin-key header → isAdminKey). Then: tap a slot → pick a player from the
-// sheet (phones), or drag a pool card onto a slot (desktop). Save posts the
-// whole board; a save that raced another device is refused (409), never merged.
-//
-// Tale of the Tape: once a match has players on both sides it gets an
-// expandable panel — built in the browser from data precomputed in
-// src/lib/matchcentre.js with the rules in src/lib/matchcentre-shared.js.
-import { matchCentreData } from '../lib/matchcentre.js';
+// MATCH CENTRE — one component for both kinds of edition:
+//   live    (2027): lineups are live data (Redis, via /api/lineups). The server
+//                   renders the empty board and the script fills it. Editing is
+//                   admin-only, the SAME key mechanism as /rsvp/admin: open the
+//                   page with #admin=<RSVP_ADMIN_KEY>. Phones: tap a card slot →
+//                   pick from the sheet. Desktop: drag a pool card onto a slot.
+//                   A save that raced another device is refused (409).
+//   archive (2026): a READ-ONLY view over the existing data (pairings, results)
+//                   from archiveMatchCentreData(); nothing is written.
+// Each match is a fight card: big player cards per side, a big V between them.
+// Completed matches get the result, the points, a W on the winners and a link
+// into the tournament's Matches tab (its existing detail + scorecard).
+// Tale of the Tape: a punchy verdict + one or two nuggets up front; everything
+// else behind "Full tale of the tape". Built in the browser from data prepared
+// in src/lib/matchcentre.js, with the rules in src/lib/matchcentre-shared.js.
 import { weekday, dayMonth, rating1 } from '../lib/format.js';
 
-const { tid } = Astro.props;
-const data = matchCentreData(tid);
+const { data } = Astro.props;
 const s = data?.schedule;
-const HCP_LABEL = { gross: 'Gross — no strokes', 'full-course': 'Full course handicap', 'full-difference': 'Full difference (lower man off 0)' };
+const archive = data?.mode === 'archive';
+const HCP_LABEL = archive
+  ? { gross: 'Gross — no strokes', 'full-course': 'Playing handicap on the card', 'full-difference': 'Difference (lower man off 0)' }
+  : { gross: 'Gross — no strokes', 'full-course': 'Full course handicap', 'full-difference': 'Full difference (lower man off 0)' };
+const sideStyle = (side) => (s?.teams?.[side]?.color ? `--mc-c:${s.teams[side].color}` : '');
+const dateLine = (r) => `${weekday(r.date)} ${dayMonth(r.date)}${r.session ? ` · ${r.session}` : ''}`;
 ---
 {data && (
-  <div class="mc" id="mc" data-state="loading">
+  <div class:list={['mc', { 'mc--archive': archive }]} id="mc" data-state="loading" data-mode={data.mode}>
     <div class="wrap">
       <div class="mc-head">
         <div>
-          <p class="eyebrow gold">Lineups · head-to-heads · strokes</p>
+          <p class="eyebrow gold">{archive ? 'Every match, fight-card style' : 'Lineups · head-to-heads · strokes'}</p>
           <h2 class="mc-title">Match Centre</h2>
           <p class="muted mc-sub">
-            {s.rounds.length} rounds · {s.rounds.reduce((n, r) => n + r.matchCount, 0)} matches · <b>{s.pointsAvailable}</b> points · <b>{s.toWin}</b> to win outright.
-            Teams are drafted live on arrival night; until then the sides are <b>{s.teams.A.label}</b> and <b>{s.teams.B.label}</b>.
+            {s.rounds.length} rounds · {s.rounds.reduce((n, r) => n + r.matchCount, 0)} matches · <b>{s.pointsAvailable}</b> points{archive ? '.' : <Fragment> · <b>{s.toWin}</b> to win outright.</Fragment>}
+            {archive
+              ? <Fragment> Each card shows the result and the points; the Tale of the Tape is the read as it stood <b>before</b> the trip.</Fragment>
+              : <Fragment> Teams are drafted live on arrival night; until then the sides are <b>{s.teams.A.label}</b> and <b>{s.teams.B.label}</b>.</Fragment>}
           </p>
         </div>
-        <p class="mc-status" id="mc-status" role="status">Loading the latest lineups…</p>
+        <p class="mc-status" id="mc-status" role="status">{archive ? '' : 'Loading the latest lineups…'}</p>
       </div>
 
       <nav class="mc-jumps" aria-label="Jump to a round">
-        {s.rounds.map((r) => <a href={`#mc-r${r.number}`} data-mc-jump={r.number}>R{r.number}<span> · {weekday(r.date, 'short')}</span></a>)}
+        {s.rounds.map((r) => <a href={`#mc-r${r.number}`}>R{r.number}<span> · {weekday(r.date, 'short')}</span></a>)}
       </nav>
 
       {s.rounds.map((r) => (
@@ -46,84 +51,105 @@ const HCP_LABEL = { gross: 'Gross — no strokes', 'full-course': 'Full course h
           <header class="mc-round__head">
             <div class="mc-round__title">
               <span class="mc-round__no">Round {r.number}</span>
-              <h3>{r.format}{r.sideSize > 1 && r.format.indexOf('v') === -1 ? ` · ${r.sideSize}v${r.sideSize}` : ''}</h3>
-              <p class="mc-round__when">{`${weekday(r.date)} ${dayMonth(r.date)}${r.session ? ` · ${r.session}` : ''}`} · <a href={`/courses/${r.course.slug}`}>{r.course.name}</a></p>
+              <h3>{r.format}{r.sideSize > 1 && !/\dv\d/.test(r.format) ? ` · ${r.sideSize}v${r.sideSize}` : ''}</h3>
+              <p class="mc-round__when">{dateLine(r)} · {r.course.slug ? <a href={`/courses/${r.course.slug}`}>{r.course.name}</a> : r.course.name}</p>
             </div>
             <dl class="mc-round__facts">
               <div><dt>Holes</dt><dd>{r.holes}</dd></div>
               <div><dt>Matches</dt><dd>{r.matchCount}</dd></div>
               <div><dt>Points</dt><dd>{r.pointsPerMatch} each · {r.points}</dd></div>
-              <div><dt>Tees</dt><dd>{r.course.tee.name} · {rating1(r.course.tee.rating)}/{r.course.tee.slope}</dd></div>
+              {r.course.tee?.rating != null && <div><dt>Tees</dt><dd>{r.course.tee.name} · {rating1(r.course.tee.rating)}/{r.course.tee.slope}</dd></div>}
               <div><dt>Handicap</dt><dd>{HCP_LABEL[r.handicap]}</dd></div>
             </dl>
             {r.formatChange && <p class="mc-round__note">{r.formatChange}</p>}
           </header>
 
-          <div class="mc-matches" data-matches={r.number}>
-            {r.matches.map((m) => (
-              <article class:list={['mc-match', { 'mc-match--champ': m.championship }]} data-match={m.number}>
-                <div class="mc-match__head">
-                  <span>Match {m.number}</span>
-                  {m.championship && <span class="mc-champ">♛ Championship Match</span>}
-                </div>
-                <div class="mc-match__sides">
-                  {['A', 'B'].map((side, si) => (
-                    <>
-                      {si === 1 && <span class="mc-v" aria-hidden="true">v</span>}
-                      <div class={`mc-side mc-side--${side.toLowerCase()}`}>
-                        <span class="mc-side__label">{s.teams[side].label}</span>
-                        {Array.from({ length: r.sideSize }, (_, i) => (
-                          <button type="button" class="mc-slot is-empty" disabled data-round={r.number} data-match={m.number} data-side={side} data-slot={i}>
-                            <span class="mc-slot__tbd">TBD</span>
-                          </button>
-                        ))}
-                      </div>
-                    </>
-                  ))}
-                </div>
-                <div class="mc-tape-wrap"></div>
-              </article>
-            ))}
+          <div class="mc-matches">
+            {r.matches.map((m) => {
+              const res = archive ? data.results[`${r.number}-${m.number}`] : null;
+              return (
+                <article class:list={['mc-match', { 'mc-match--champ': m.championship, 'mc-match--done': !!res }]} data-match={m.number} data-size={r.sideSize}>
+                  <div class="mc-match__head">
+                    <span class="mc-match__no">Match {m.number}</span>
+                    {m.championship && <span class="mc-champ">♛ Championship Match</span>}
+                    {res && (res.halved
+                      ? <span class="mc-result mc-result--halved">Halved · AS</span>
+                      : <span class="mc-result" style={sideStyle(res.winnerSide)}>{s.teams[res.winnerSide].label} win {res.margin}</span>)}
+                  </div>
+                  <div class="mc-match__sides">
+                    {['A', 'B'].map((side, si) => (
+                      <>
+                        {si === 1 && <span class="mc-v" aria-hidden="true">V</span>}
+                        <div class:list={['mc-side', `mc-side--${side.toLowerCase()}`, res && !res.halved && (res.winnerSide === side ? 'is-won' : 'is-lost')]} style={sideStyle(side)}>
+                          <div class="mc-side__band">
+                            {s.teams[side].logo && <img class="mc-side__logo" src={s.teams[side].logo} alt="" width="22" height="22" />}
+                            <span class="mc-side__label">{s.teams[side].label}</span>
+                            {res && !res.halved && res.winnerSide === side && <span class="mc-w" title="Winners">W</span>}
+                            {res && <span class="mc-side__pts">{res.points[side] === 0.5 ? '½' : res.points[side] % 1 ? `${Math.floor(res.points[side])}½` : res.points[side]} pt{res.points[side] === 1 ? '' : 's'}</span>}
+                          </div>
+                          <div class="mc-side__cards">
+                            {Array.from({ length: r.sideSize }, (_, i) => (
+                              <button type="button" class="mc-slot is-empty" disabled data-round={r.number} data-match={m.number} data-side={side} data-slot={i}>
+                                <span class="mc-pc__photo mc-pc__photo--tbd"><span>TBD</span></span>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </>
+                    ))}
+                  </div>
+                  <div class="mc-tape-wrap"></div>
+                  {res && <a class="mc-link" href={`#round-${res.jumpRound}`} data-jump data-round={res.jumpRound}>Match &amp; scorecard <span aria-hidden="true">→</span></a>}
+                </article>
+              );
+            })}
           </div>
 
-          <div class="mc-pool" data-pool={r.number}>
-            <p class="mc-pool__label">Player pool <span class="faint">· {data.players.length} players</span></p>
-            <div class="mc-pool__cards">
-              {data.players.map((p) => (
-                <div class="mc-card" data-player={p.id} data-round={r.number}>
-                  {p.avatar ? <img class="mc-av" src={p.avatar} alt="" loading="lazy" style={p.avatarSquare ? 'object-position:center' : ''} /> : <span class="mc-av mc-av--init">{p.initials}</span>}
-                  <span class="mc-card__name">{p.name}</span>
-                  <span class="mc-card__meta">{p.index != null ? p.index : '—'}{p.rookie ? ' · R' : ''}</span>
-                </div>
-              ))}
+          {!archive && (
+            <div class="mc-pool" data-pool={r.number}>
+              <p class="mc-pool__label">Player pool <span class="faint">· {data.players.length} players</span></p>
+              <div class="mc-pool__cards">
+                {data.players.map((p) => (
+                  <div class="mc-card" data-player={p.id} data-round={r.number}>
+                    {p.avatar ? <img class="mc-av" src={p.avatar} alt="" loading="lazy" style={p.avatarSquare ? 'object-position:center' : ''} /> : <span class="mc-av mc-av--init">{p.initials}</span>}
+                    <span class="mc-card__name">{p.name}</span>
+                    <span class="mc-card__meta">{p.index != null ? p.index : '—'}{p.rookie ? ' · R' : ''}</span>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </section>
       ))}
 
-      <p class="mc-foot faint">Strokes use each round's course, our tees, rating and slope, and each player's current index (official GHIN check-in, else the RSVP handicap). Course handicap = index × slope / 113 + (rating − par). Records are from the match archive; form is from the Power Rankings. The projection is a rough guide, not a prediction.</p>
+      <p class="mc-foot faint">{archive
+        ? 'Pairings and results are from the 2026 match record. The Tale of the Tape uses only what was known before the trip: the handicap each player took to St George and the playing handicaps set on the cards. The projection is a rough guide, not a prediction.'
+        : "Strokes use each round's course, our tees, rating and slope, and each player's current index (official GHIN check-in, else the RSVP handicap). Course handicap = index × slope / 113 + (rating − par). Records are from the match archive; form is from the Power Rankings. The projection is a rough guide, not a prediction."}</p>
     </div>
 
-    <!-- admin: save bar + the tap-to-assign sheet -->
-    <div class="mc-bar" id="mc-bar" hidden>
-      <span class="mc-bar__state" id="mc-bar-state">Editing lineups</span>
-      <button type="button" class="mc-btn mc-btn--ghost" id="mc-undo" hidden>Discard changes</button>
-      <button type="button" class="mc-btn" id="mc-save" disabled>Save</button>
-    </div>
-    <div class="mc-sheet" id="mc-sheet" hidden>
-      <div class="mc-sheet__back" data-close></div>
-      <div class="mc-sheet__panel" role="dialog" aria-modal="true" aria-labelledby="mc-sheet-title">
-        <div class="mc-sheet__head">
-          <h4 id="mc-sheet-title">Pick a player</h4>
-          <button type="button" class="mc-sheet__x" data-close aria-label="Close">✕</button>
+    {!archive && (
+      <Fragment>
+        <div class="mc-bar" id="mc-bar" hidden>
+          <span class="mc-bar__state" id="mc-bar-state">Editing lineups</span>
+          <button type="button" class="mc-btn mc-btn--ghost" id="mc-undo" hidden>Discard changes</button>
+          <button type="button" class="mc-btn" id="mc-save" disabled>Save</button>
         </div>
-        <div class="mc-sheet__list" id="mc-sheet-list"></div>
-        <div class="mc-sheet__foot">
-          <button type="button" class="mc-btn mc-btn--ghost" id="mc-clear">Clear slot</button>
-          <button type="button" class="mc-btn mc-btn--ghost" data-close>Cancel</button>
+        <div class="mc-sheet" id="mc-sheet" hidden>
+          <div class="mc-sheet__back" data-close></div>
+          <div class="mc-sheet__panel" role="dialog" aria-modal="true" aria-labelledby="mc-sheet-title">
+            <div class="mc-sheet__head">
+              <h4 id="mc-sheet-title">Pick a player</h4>
+              <button type="button" class="mc-sheet__x" data-close aria-label="Close">✕</button>
+            </div>
+            <div class="mc-sheet__list" id="mc-sheet-list"></div>
+            <div class="mc-sheet__foot">
+              <button type="button" class="mc-btn mc-btn--ghost" id="mc-clear">Clear slot</button>
+              <button type="button" class="mc-btn mc-btn--ghost" data-close>Cancel</button>
+            </div>
+          </div>
         </div>
-      </div>
-    </div>
+      </Fragment>
+    )}
 
     <script type="application/json" id="mc-data" set:html={JSON.stringify(data)} />
   </div>
@@ -131,19 +157,20 @@ const HCP_LABEL = { gross: 'Gross — no strokes', 'full-course': 'Full course h
 
 <style is:global>
   .mc { padding-bottom: 6rem; }
+  .mc--archive { padding-bottom: 2rem; }
   .mc-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: .8rem 2rem; margin-bottom: 1.2rem; }
   .mc-title { font-size: clamp(1.7rem, 1.3rem + 1.8vw, 2.4rem); margin-top: .2rem; }
-  .mc-sub { margin-top: .5rem; max-width: 62ch; font-size: .95rem; }
+  .mc-sub { margin-top: .5rem; max-width: 64ch; font-size: .95rem; }
   .mc-status { font-size: .8rem; font-weight: 700; color: var(--faint); }
-  .mc-status.is-admin { color: var(--terra-ink); }
-  .mc-status.is-error { color: var(--terra-ink); }
+  .mc-status:empty { display: none; }
+  .mc-status.is-admin, .mc-status.is-error { color: var(--terra-ink); }
 
   .mc-jumps { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: 1.4rem; }
   .mc-jumps a { padding: .35rem .75rem; border-radius: 999px; font-size: .78rem; font-weight: 800; color: var(--navy-ink); background: var(--paper); box-shadow: inset 0 0 0 1px var(--line-strong); }
   .mc-jumps a span { font-weight: 600; color: var(--faint); }
 
   .mc-round { background: var(--panel); border-radius: var(--r); box-shadow: var(--shadow); padding: clamp(1rem, 3vw, 1.6rem); margin-bottom: 1.4rem; scroll-margin-top: 140px; }
-  .mc-round__head { display: grid; gap: .8rem; margin-bottom: 1.1rem; }
+  .mc-round__head { display: grid; gap: .8rem; margin-bottom: 1.2rem; }
   .mc-round__no { font-size: .68rem; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; color: var(--terra-ink); }
   .mc-round__title h3 { font-size: clamp(1.25rem, 1.05rem + .9vw, 1.6rem); margin-top: .15rem; }
   .mc-round__when { color: var(--muted); font-size: .88rem; margin-top: .3rem; }
@@ -154,32 +181,58 @@ const HCP_LABEL = { gross: 'Gross — no strokes', 'full-course': 'Full course h
   .mc-round__facts dd { margin: 0; font-size: .86rem; font-weight: 700; }
   .mc-round__note { font-size: .82rem; color: var(--gold); background: var(--gold-soft); border-radius: var(--r-xs); padding: .5rem .7rem; }
 
-  .mc-matches { display: grid; gap: .8rem; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); align-items: start; }
-  .mc-match { background: var(--paper); border-radius: var(--r-sm); box-shadow: inset 0 0 0 1px var(--line); padding: .75rem; min-width: 0; }
+  /* ---- the fight card ---- */
+  .mc-matches { display: grid; gap: 1.1rem; }
+  .mc-match { background: var(--paper); border-radius: var(--r); box-shadow: inset 0 0 0 1px var(--line); padding: clamp(.8rem, 2.5vw, 1.2rem); min-width: 0; }
   .mc-match--champ { box-shadow: inset 0 0 0 2px var(--gold-bright); }
-  .mc-match__head { display: flex; justify-content: space-between; align-items: center; gap: .5rem; font-size: .72rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--faint); margin-bottom: .55rem; }
-  .mc-champ { color: var(--gold); letter-spacing: .04em; }
-  .mc-match__sides { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: .5rem; align-items: start; }
-  .mc-v { align-self: center; font-family: var(--serif); font-style: italic; color: var(--faint); }
-  .mc-side { display: grid; gap: .35rem; min-width: 0; }
-  .mc-side__label { font-size: .62rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--mc-c); }
-  .mc-side--a { --mc-c: var(--navy-ink); }
-  .mc-side--b { --mc-c: var(--terra-ink); text-align: right; }
-  .mc-slot { display: flex; align-items: center; gap: .45rem; min-height: 44px; width: 100%; padding: .3rem .45rem; border: 0; border-radius: var(--r-xs); background: #fff; box-shadow: inset 0 0 0 1px var(--line); text-align: left; font-size: .86rem; font-weight: 700; color: var(--text); min-width: 0; }
-  .mc-side--b .mc-slot { flex-direction: row-reverse; text-align: right; }
+  .mc-match__head { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem .7rem; margin-bottom: .8rem; }
+  .mc-match__no { font-size: .72rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--faint); }
+  .mc-champ { font-size: .74rem; font-weight: 800; color: var(--gold); }
+  .mc-result { margin-left: auto; padding: .3rem .75rem; border-radius: 999px; background: var(--mc-c, var(--navy-ink)); color: #fff; font-weight: 800; font-size: .8rem; }
+  .mc-result--halved { background: var(--gold-soft); color: var(--gold); }
+  .mc-match__sides { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: clamp(.6rem, 2vw, 1.2rem); align-items: center; }
+  .mc-v { display: grid; place-items: center; width: clamp(46px, 7vw, 64px); height: clamp(46px, 7vw, 64px); border-radius: 50%; background: var(--navy-ink); color: #fff;
+    font-family: var(--serif); font-style: italic; font-weight: 700; font-size: clamp(1.5rem, 1.2rem + 1.4vw, 2.2rem); box-shadow: 0 8px 20px -10px rgba(12,27,44,.6); }
+  .mc-side { --mc-c: var(--navy-ink); min-width: 0; display: grid; gap: .5rem; transition: opacity .2s var(--ease), filter .2s var(--ease); }
+  .mc-side--b { --mc-c: var(--terra-ink); }
+  .mc-side__band { display: flex; align-items: center; gap: .45rem; padding-bottom: .4rem; border-bottom: 3px solid var(--mc-c); min-width: 0; }
+  .mc-side__logo { width: 22px; height: 22px; object-fit: contain; flex: none; }
+  .mc-side__label { font-size: .72rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--mc-c); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mc-w { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--mc-c); color: #fff; font-size: .7rem; font-weight: 900; flex: none; }
+  .mc-side__pts { margin-left: auto; font-size: .76rem; font-weight: 800; color: var(--mc-c); white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .mc-side.is-lost { opacity: .58; filter: grayscale(.45); }
+  .mc-side__cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .6rem; }
+  .mc-match[data-size="1"] .mc-side__cards { grid-template-columns: minmax(0, 220px); justify-content: center; }
+
+  .mc-slot { display: flex; flex-direction: column; width: 100%; padding: 0; border: 0; border-radius: var(--r-sm); overflow: hidden; background: #fff; box-shadow: var(--shadow); text-align: left; color: var(--text); min-width: 0; }
   .mc-slot:disabled { cursor: default; }
-  .mc-slot.is-empty { background: transparent; box-shadow: inset 0 0 0 1.5px var(--line-strong); }
-  .mc-slot__tbd { color: var(--faint); font-weight: 700; letter-spacing: .06em; font-size: .78rem; }
-  .mc-slot__name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
-  .mc-slot__idx { margin-left: auto; font-size: .72rem; color: var(--faint); font-variant-numeric: tabular-nums; }
-  .mc-side--b .mc-slot__idx { margin-left: 0; margin-right: auto; }
-  /* 2v2 on a phone: four slots to a card — the name matters more than the index
-     (which is in the pool, the picker and the Tale of the Tape) */
-  @media (max-width: 480px) { .mc-slot__idx { display: none; } }
+  .mc-side.is-won .mc-slot { box-shadow: 0 0 0 2.5px var(--mc-c), var(--shadow); }
+  .mc-pc__photo { display: block; position: relative; width: 100%; aspect-ratio: 4 / 5; background: linear-gradient(180deg, #DE9660 0%, #EFC095 55%, #F9E4C6 100%); }
+  .mc-pc__photo img { width: 100%; height: 100%; object-fit: cover; object-position: center 28%; }
+  .mc-pc__init { position: absolute; inset: 0; display: grid; place-items: center; font-family: var(--serif); font-weight: 600; font-size: clamp(1.6rem, 1.2rem + 2vw, 2.6rem); color: #17293F; }
+  .mc-pc__photo--tbd { background: transparent; box-shadow: inset 0 0 0 2px var(--line-strong); border-radius: var(--r-sm); }
+  .mc-pc__photo--tbd span { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .25rem; font-weight: 800; letter-spacing: .1em; color: var(--faint); font-size: .85rem; }
+  .mc-slot.is-empty { background: transparent; box-shadow: none; }
+  .mc-pc__body { display: grid; gap: .1rem; padding: .5rem .6rem .55rem; border-top: 3px solid var(--mc-c); }
+  .mc-pc__name { font-family: var(--serif); font-weight: 600; font-size: clamp(.95rem, .85rem + .4vw, 1.1rem); line-height: 1.15; overflow-wrap: anywhere; }
+  .mc-pc__meta { font-size: .72rem; font-weight: 700; color: var(--faint); font-variant-numeric: tabular-nums; }
   .mc.is-admin .mc-slot { cursor: pointer; }
-  .mc.is-admin .mc-slot.is-empty { box-shadow: inset 0 0 0 1.5px var(--mc-c); border-style: dashed; }
-  .mc-slot.is-selected { box-shadow: inset 0 0 0 2.5px var(--terra) !important; }
-  .mc-slot.is-over { background: var(--terra-soft); }
+  .mc.is-admin .mc-slot.is-empty .mc-pc__photo--tbd { box-shadow: inset 0 0 0 2px var(--mc-c); }
+  .mc.is-admin .mc-slot.is-empty .mc-pc__photo--tbd span::after { content: 'Tap to pick'; font-size: .66rem; font-weight: 700; letter-spacing: .02em; color: var(--mc-c); }
+  .mc-slot.is-selected { box-shadow: 0 0 0 3px var(--terra), var(--shadow) !important; }
+  .mc-slot.is-over { outline: 3px dashed var(--terra); outline-offset: 2px; }
+  .mc-link { display: inline-block; margin-top: .8rem; font-size: .82rem; font-weight: 800; color: var(--navy-ink); text-decoration: underline; text-decoration-color: var(--line-strong); text-underline-offset: 3px; }
+
+  /* phones: 2v2 / 4v4 sides stack with the V between; singles stay face to face */
+  @media (max-width: 640px) {
+    .mc-match:not([data-size="1"]) .mc-match__sides { grid-template-columns: 1fr; }
+    .mc-match:not([data-size="1"]) .mc-v { justify-self: center; width: 44px; height: 44px; font-size: 1.4rem; }
+    .mc-match[data-size="1"] .mc-match__sides { gap: .45rem; }
+    /* singles face to face: no room for the team name, the crest (or colour) carries it */
+    .mc-match[data-size="1"] .mc-side__label { display: none; }
+    .mc-match[data-size="1"] .mc-side__logo { width: 20px; height: 20px; }
+  }
+
   .mc-av { width: 28px; height: 28px; flex: none; border-radius: 50%; object-fit: cover; object-position: center 26%; background: var(--panel-2); }
   .mc-av--init { display: grid; place-items: center; background: linear-gradient(180deg, #DE9660, #F9E4C6); color: #17293F; font-family: var(--serif); font-weight: 600; font-size: .72rem; }
 
@@ -192,26 +245,30 @@ const HCP_LABEL = { gross: 'Gross — no strokes', 'full-course': 'Full course h
   .mc-card.is-placed { opacity: .45; }
   .mc-card.is-placed::after { content: attr(data-where); font-size: .7rem; font-weight: 800; color: var(--terra-ink); }
   .mc.is-admin .mc-card { cursor: grab; }
-  .mc.is-admin .mc-card:active { cursor: grabbing; }
   .mc.is-admin .mc-card.is-armed { box-shadow: inset 0 0 0 2.5px var(--terra); opacity: 1; }
   .mc:not(.is-admin) .mc-pool { display: none; }
 
-  /* tale of the tape */
-  .mc-tape { margin-top: .65rem; border-top: 1px solid var(--line); padding-top: .5rem; }
-  .mc-tape > summary { cursor: pointer; list-style: none; font-size: .74rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--terra-ink); display: flex; align-items: center; gap: .4rem; }
-  .mc-tape > summary::-webkit-details-marker { display: none; }
-  .mc-tape > summary::before { content: '›'; font-size: 1rem; transition: transform .2s var(--ease); }
-  .mc-tape[open] > summary::before { transform: rotate(90deg); }
-  .mc-tape__proj { margin-top: .5rem; padding: .55rem .7rem; border-radius: var(--r-xs); background: var(--navy-ink); color: var(--navy-text); font-size: .84rem; }
-  .mc-tape__proj b { color: #fff; }
+  /* ---- tale of the tape: verdict + nuggets, the rest behind an expander ---- */
+  .mc-tape { margin-top: .9rem; }
+  .mc-verdict { display: flex; flex-wrap: wrap; align-items: baseline; gap: .2rem .6rem; padding: .65rem .85rem; border-radius: var(--r-sm); background: var(--navy-ink); color: var(--navy-text); }
+  .mc-verdict__k { font-size: .6rem; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: var(--terra-bright); width: 100%; }
+  .mc-verdict__v { font-family: var(--serif); font-weight: 700; font-size: clamp(1.1rem, 1rem + .6vw, 1.35rem); color: #fff; }
+  .mc-verdict__tag { font-size: .8rem; opacity: .85; }
+  .mc-nuggets { list-style: none; padding: 0; margin: .55rem 0 0; display: grid; gap: .3rem; font-size: .86rem; }
+  .mc-nuggets li { padding-left: 1rem; position: relative; }
+  .mc-nuggets li::before { content: ''; position: absolute; left: 0; top: .55em; width: 6px; height: 6px; border-radius: 50%; background: var(--terra); }
+  .mc-full { margin-top: .6rem; border-top: 1px solid var(--line); padding-top: .5rem; }
+  .mc-full > summary { cursor: pointer; list-style: none; font-size: .74rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--terra-ink); display: flex; align-items: center; gap: .4rem; }
+  .mc-full > summary::-webkit-details-marker { display: none; }
+  .mc-full > summary::before { content: '›'; font-size: 1rem; transition: transform .2s var(--ease); }
+  .mc-full[open] > summary::before { transform: rotate(90deg); }
   .mc-tape__sec { margin-top: .7rem; }
   .mc-tape__sec h5 { font-family: var(--sans); font-size: .62rem; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: var(--faint); margin-bottom: .3rem; }
   .mc-tape__sec ul { list-style: none; padding: 0; display: grid; gap: .25rem; font-size: .84rem; }
-  .mc-tape__sec li b { font-weight: 700; }
   .mc-tape__sec .faint { font-size: .78rem; }
   .mc-tape__holes { display: block; font-size: .74rem; color: var(--muted); margin-top: .1rem; overflow-wrap: anywhere; }
 
-  /* admin bar + sheet */
+  /* ---- admin bar + sheet ---- */
   .mc-bar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 60; display: flex; align-items: center; justify-content: flex-end; gap: .6rem; padding: .7rem var(--gutter) calc(.7rem + env(safe-area-inset-bottom)); background: color-mix(in srgb, var(--cream) 92%, transparent); backdrop-filter: blur(12px); border-top: 1px solid var(--line); }
   .mc-bar[hidden] { display: none; }
   .mc-bar__state { margin-right: auto; font-size: .8rem; font-weight: 700; color: var(--muted); }
@@ -236,8 +293,7 @@ const HCP_LABEL = { gross: 'Gross — no strokes', 'full-course': 'Full course h
   @media (min-width: 900px) {
     .mc-sheet { align-items: center; } .mc-sheet__panel { border-radius: var(--r); }
     /* desktop admin: each round's pool rides along the bottom of the screen (above
-       the save bar) while you scroll that round, so a card can be dragged onto any
-       slot, even Match 8 of the singles. Phones use the tap-to-pick sheet instead. */
+       the save bar) so a card can be dragged onto any slot. Phones use the sheet. */
     .mc.is-admin .mc-pool { position: sticky; bottom: 68px; z-index: 5; margin-inline: calc(-1 * clamp(1rem, 3vw, 1.6rem)); margin-bottom: calc(-1 * clamp(1rem, 3vw, 1.6rem));
       padding: .7rem clamp(1rem, 3vw, 1.6rem) .9rem; border-top: 1px solid var(--line); border-radius: 0 0 var(--r) var(--r);
       background: color-mix(in srgb, var(--panel) 94%, transparent); backdrop-filter: blur(8px); box-shadow: 0 -12px 24px -18px rgba(12,27,44,.35); }
@@ -250,6 +306,7 @@ const HCP_LABEL = { gross: 'Gross — no strokes', 'full-course': 'Full course h
   const root = document.getElementById('mc');
   if (root) {
     const DATA = JSON.parse(document.getElementById('mc-data').textContent);
+    const ARCHIVE = DATA.mode === 'archive';
     const S = DATA.schedule;
     const P = Object.fromEntries(DATA.players.map((p) => [p.id, p]));
     const roundBy = Object.fromEntries(S.rounds.map((r) => [String(r.number), r]));
@@ -259,7 +316,7 @@ const HCP_LABEL = { gross: 'Gross — no strokes', 'full-course': 'Full course h
     const status = $('#mc-status');
     const label = (side) => S.teams[side]?.label || `Team ${side}`;
 
-    // ---- admin key: #admin=<key> once, then this tab's sessionStorage ----
+    // ---- admin key (live only): #admin=<key> once, then this tab's sessionStorage ----
     const KEY_STORE = 'annual-mc-key';
     let key = null;
     const takeKeyFromHash = () => {
@@ -270,17 +327,17 @@ const HCP_LABEL = { gross: 'Gross — no strokes', 'full-course': 'Full course h
       history.replaceState(null, '', location.pathname + location.search + '#match-centre');   // don't leave the key in the address bar
       return true;
     };
-    if (!takeKeyFromHash()) { try { key = sessionStorage.getItem(KEY_STORE); } catch {} }
+    if (!ARCHIVE && !takeKeyFromHash()) { try { key = sessionStorage.getItem(KEY_STORE); } catch {} }
 
-    let saved = emptyLineups(DATA.tournamentId);   // last server copy
-    let doc = structuredClone(saved);              // working copy
+    let saved = ARCHIVE ? DATA.lineups : emptyLineups(DATA.tournamentId);
+    let doc = structuredClone(saved);
     let admin = false;
     const dirty = () => JSON.stringify({ r: doc.rounds, s: doc.rosters }) !== JSON.stringify({ r: saved.rounds, s: saved.rosters });
 
     // ---- lineup edits ----
     const rostered = () => (doc.rosters.A.length || doc.rosters.B.length);
     const allowed = (side, id) => !rostered() || doc.rosters[side].includes(id);
-    function getSlots(r, mNo) { return slotsFor(doc, roundBy[r], mNo); }
+    const getSlots = (r, mNo) => slotsFor(doc, roundBy[r], mNo);
     function setSlots(r, mNo, slots) {
       const rk = String(r), mk = String(mNo);
       doc.rounds[rk] ||= {};
@@ -288,21 +345,18 @@ const HCP_LABEL = { gross: 'Gross — no strokes', 'full-course': 'Full course h
       else { delete doc.rounds[rk][mk]; if (!Object.keys(doc.rounds[rk]).length) delete doc.rounds[rk]; }
     }
     function whereIs(r, id) {
-      const round = roundBy[r];
-      for (const mt of round.matches) {
+      for (const mt of roundBy[r].matches) {
         const sl = getSlots(r, mt.number);
         for (const side of ['A', 'B']) { const i = sl[side].indexOf(id); if (i >= 0) return { m: mt.number, side, i }; }
       }
       return null;
     }
-    // Put `id` in (r, m, side, i). A player can only be in one slot per round:
-    // if they're elsewhere they move, and whoever was in the target slot swaps
-    // into the slot they left (or goes back to the pool).
+    // A player can only be in one slot per round: if they're elsewhere they move,
+    // and whoever was in the target slot swaps into the slot they left.
     function assign(r, mNo, side, i, id) {
       if (id && !allowed(side, id)) { flash(`${P[id]?.name || 'That player'} isn't on ${label(side)}'s roster.`); return false; }
       const from = id ? whereIs(r, id) : null;
-      const target = getSlots(r, mNo);
-      const displaced = target[side][i];
+      const displaced = getSlots(r, mNo)[side][i];
       if (from) {
         const src = getSlots(r, from.m);
         src[from.side][from.i] = (displaced && allowed(from.side, displaced)) ? displaced : null;
@@ -316,16 +370,21 @@ const HCP_LABEL = { gross: 'Gross — no strokes', 'full-course': 'Full course h
     }
 
     // ---- rendering ----
+    const nameOf = (id) => P[id]?.name || DATA.names[id] || id;
+    const initialsOf = (id) => P[id]?.initials || nameOf(id).split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase();
     const av = (p, cls = 'mc-av') => p?.avatar
       ? `<img class="${cls}" src="${esc(p.avatar)}" alt="" style="${p.avatarSquare ? 'object-position:center' : ''}">`
       : `<span class="${cls} mc-av--init">${esc(p?.initials || '?')}</span>`;
-    const nameOf = (id) => P[id]?.name || DATA.names[id] || id;
-    // slots are narrow on a phone (2v2 is four to a card): "Chase H."
-    const shortName = (id) => { const w = nameOf(id).split(' '); return w.length > 1 ? `${w[0]} ${w[w.length - 1][0]}.` : w[0]; };
-    function slotHtml(id) {
-      if (!id) return `<span class="mc-slot__tbd">TBD</span>`;
+    function cardHtml(id, round) {
+      if (!id) return `<span class="mc-pc__photo mc-pc__photo--tbd"><span>TBD</span></span>`;
       const p = P[id];
-      return `${av(p || { initials: nameOf(id).split(' ').map((w) => w[0]).join('').slice(0, 2) })}<span class="mc-slot__name" title="${esc(nameOf(id))}">${esc(shortName(id))}${p ? '' : ' <span class="faint">(not in pool)</span>'}</span>${p?.index != null ? `<span class="mc-slot__idx">${p.index}</span>` : ''}`;
+      const photo = p?.portrait
+        ? `<img src="${esc(p.portrait)}" alt="" loading="lazy" decoding="async">`
+        : `<span class="mc-pc__init">${esc(initialsOf(id))}</span>`;
+      const hcp = ARCHIVE
+        ? (p?.courseHandicap?.[round.number] != null && round.handicap !== 'gross' ? `Played off ${p.courseHandicap[round.number]}` : p?.index != null ? `Hcp ${p.index}` : '')
+        : (p?.index != null ? `Index ${p.index}` : 'No index yet');
+      return `<span class="mc-pc__photo">${photo}</span><span class="mc-pc__body"><span class="mc-pc__name">${esc(nameOf(id))}</span><span class="mc-pc__meta">${esc(hcp)}${!ARCHIVE && p?.rookie ? ' · rookie' : ''}${!p ? ' · not in the pool' : ''}</span></span>`;
     }
     function renderRound(r) {
       const round = roundBy[r];
@@ -335,11 +394,11 @@ const HCP_LABEL = { gross: 'Gross — no strokes', 'full-course': 'Full course h
         for (const side of ['A', 'B']) {
           sl[side].forEach((id, i) => {
             const b = $(`.mc-slot[data-side="${side}"][data-slot="${i}"]`, card);
-            b.innerHTML = slotHtml(id);
+            b.innerHTML = cardHtml(id, round);
             b.classList.toggle('is-empty', !id);
             b.disabled = !admin;
             b.draggable = admin && !!id;
-            b.setAttribute('aria-label', `Match ${mt.number}, ${label(side)} slot ${i + 1}: ${id ? nameOf(id) : 'TBD'}`);
+            b.setAttribute('aria-label', `Match ${mt.number}, ${label(side)}: ${id ? nameOf(id) : 'TBD'}`);
           });
         }
         const wrap = $('.mc-tape-wrap', card);
@@ -347,8 +406,7 @@ const HCP_LABEL = { gross: 'Gross — no strokes', 'full-course': 'Full course h
         wrap.innerHTML = (sl.A.some(Boolean) && sl.B.some(Boolean)) ? tapeHtml(round, mt, sl) : '';
         if (open && $('details', wrap)) $('details', wrap).open = true;
       }
-      // pool: who's already placed this round
-      for (const c of $$(`.mc-pool[data-pool="${r}"] .mc-card`)) {
+      if (!ARCHIVE) for (const c of $$(`.mc-pool[data-pool="${r}"] .mc-card`)) {
         const w = whereIs(r, c.dataset.player);
         c.classList.toggle('is-placed', !!w);
         c.dataset.where = w ? `· M${w.m}` : '';
@@ -359,163 +417,191 @@ const HCP_LABEL = { gross: 'Gross — no strokes', 'full-course': 'Full course h
 
     // ---- Tale of the Tape ----
     const rec = (x) => `${x.w}–${x.h}–${x.l}`;
+    const h2hOf = (a, b) => { const [lo, hi] = [a, b].sort(); const h = DATA.h2h[`${lo}|${hi}`]; if (!h) return null; return a === lo ? { ...h, aw: h.aWins, bw: h.bWins } : { ...h, aw: h.bWins, bw: h.aWins }; };
+    const first = (id) => P[id]?.first || nameOf(id).split(' ')[0];
     function h2hLine(a, b) {
       const pa = P[a], pb = P[b];
-      if (!pa || !pb) return `<li>${esc(nameOf(a))} v ${esc(nameOf(b))}: <span class="faint">no data</span></li>`;
-      if (pa.rookie || pb.rookie) return `<li>${esc(pa.first)} v ${esc(pb.first)}: <span class="faint">No history yet — rookie</span></li>`;
-      const [lo, hi] = [a, b].sort();
-      const h = DATA.h2h[`${lo}|${hi}`];
+      if (!pa || !pb) return `<li>${esc(first(a))} v ${esc(first(b))}: <span class="faint">no data</span></li>`;
+      if (pa.rookie || pb.rookie) return `<li>${esc(pa.first)} v ${esc(pb.first)}: <span class="faint">No history yet — ${ARCHIVE ? 'first Annual' : 'rookie'}</span></li>`;
+      const h = h2hOf(a, b);
       if (!h) return `<li>${esc(pa.first)} v ${esc(pb.first)}: <span class="faint">never met</span></li>`;
-      const aw = a === lo ? h.aWins : h.bWins, bw = a === lo ? h.bWins : h.aWins;
-      return `<li><b>${esc(pa.first)} ${aw}–${h.halved}–${bw} ${esc(pb.first)}</b> <span class="faint">(${h.played} meeting${h.played === 1 ? '' : 's'}, W–H–L)</span></li>`;
+      return `<li><b>${esc(pa.first)} ${h.aw}–${h.halved}–${h.bw} ${esc(pb.first)}</b> <span class="faint">(${h.played} meeting${h.played === 1 ? '' : 's'}, W–H–L)</span></li>`;
     }
-    function formLine(p) {
+    function formLine(id) {
+      const p = P[id];
       if (!p) return '';
+      if (ARCHIVE) return `<li><b>${esc(p.first)}</b> — handicap ${p.index ?? '—'} going to St George</li>`;
       const rank = p.ranked && p.rank ? `#${p.rank} on the Power Rankings` : 'Not ranked yet';
-      const idx = p.index != null ? `index ${p.index}` : 'no index';
       const move = p.sinceLast == null || Math.abs(p.sinceLast) < 0.05 ? '' : p.sinceLast > 0 ? ` (▼${p.sinceLast} since last check-in)` : ` (▲${Math.abs(p.sinceLast)} since last check-in)`;
       const f = p.form == null ? '' : `<span class="faint"> · recent rounds ${Math.abs(p.form)} ${p.form >= 0 ? 'better' : 'worse'} than his number</span>`;
-      return `<li><b>${esc(p.first)}</b> — ${rank} · ${idx}${move}${f}</li>`;
+      return `<li><b>${esc(p.first)}</b> — ${rank} · index ${p.index ?? '—'}${move}${f}</li>`;
     }
-    function formatLine(p, round) {
+    function formatLine(id, round) {
+      const p = P[id];
       if (!p) return '';
-      if (p.rookie) return `<li><b>${esc(p.first)}</b> — <span class="faint">No history yet — rookie</span></li>`;
+      if (p.rookie) return `<li><b>${esc(p.first)}</b> — <span class="faint">No history yet — ${ARCHIVE ? 'first Annual' : 'rookie'}</span></li>`;
       const x = p.byFormat[round.formatKey];
       if (!x || !x.played) return `<li><b>${esc(p.first)}</b> — <span class="faint">hasn't played this format yet</span></li>`;
       return `<li><b>${esc(p.first)}</b> — ${rec(x)} <span class="faint">(${x.earned}/${x.available} pts)</span></li>`;
     }
+    // The one or two most interesting things about this match, best first.
+    function nuggets(round, mt, sl, strokes) {
+      const A = sl.A.filter(Boolean), B = sl.B.filter(Boolean), all = [...A, ...B];
+      const out = [];
+      if (mt.championship) out.push([5, 'Winner takes the individual title.']);
+      for (const a of A) for (const b of B) {
+        const h = h2hOf(a, b);
+        if (!h) continue;
+        const lead = h.aw > h.bw ? [a, b, h.aw, h.bw] : h.bw > h.aw ? [b, a, h.bw, h.aw] : null;
+        if (lead && h.played >= 2) out.push([4 + (lead[3] === 0 ? 0.5 : 0), `${first(lead[0])} leads ${first(lead[1])} ${lead[2]}–${h.halved}–${lead[3]} head to head.`]);
+        else if (!lead && h.played) out.push([2, `${first(a)} and ${first(b)} are level head to head (${h.aw}–${h.halved}–${h.bw}).`]);
+      }
+      const formed = all.filter((id) => P[id]?.form != null).sort((x, y) => P[y].form - P[x].form);
+      if (formed.length && P[formed[0]].form >= 0.5) out.push([4, `${first(formed[0])}'s in form: recent rounds ${P[formed[0]].form} under his number.`]);
+      const cold = formed[formed.length - 1];
+      if (cold && P[cold].form <= -3) out.push([2, `${first(cold)} has been scoring ${Math.abs(P[cold].form)} over his number lately.`]);
+      const got = strokes.perPlayer.filter((p) => p.strokes > 0).sort((x, y) => y.strokes - x.strokes)[0];
+      if (round.handicap === 'full-difference' && got && got.strokes >= 5) out.push([3, `${first(got.id)} gets ${got.strokes} strokes.`]);
+      for (const id of all) {
+        const x = P[id]?.byFormat?.[round.formatKey];
+        if (x && x.played >= 2 && x.w === x.played) out.push([3, `${first(id)} is ${rec(x)} in this format.`]);
+      }
+      if (!ARCHIVE) { const r = all.find((id) => P[id]?.rookie); if (r) out.push([2.5, `${first(r)}'s first Annual match.`]); }
+      if (ARCHIVE && !out.length) out.push([1, 'First Annual: nobody here had played each other before.']);
+      return out.sort((x, y) => y[0] - x[0]).slice(0, 2).map((x) => x[1]);
+    }
     function tapeHtml(round, mt, sl) {
-      const sideOf = (side) => sl[side].filter(Boolean).map((id) => {
-        const p = P[id];
-        return { id, name: nameOf(id), first: p?.first || nameOf(id), index: p?.index ?? null, form: p?.form ?? null,
-          courseHandicap: p?.courseHandicap?.[round.number] ?? null };
-      });
+      const sideOf = (side) => sl[side].filter(Boolean).map((id) => ({ id, name: nameOf(id), first: first(id),
+        index: P[id]?.index ?? null, form: P[id]?.form ?? null, courseHandicap: P[id]?.courseHandicap?.[round.number] ?? null }));
       const sides = { A: sideOf('A'), B: sideOf('B') };
       const everyone = [...sl.A, ...sl.B].filter(Boolean);
       const strokes = allocateStrokes(round, sides);
       const proj = projectMatch(round, sides);
-      const complete = sl.A.every(Boolean) && sl.B.every(Boolean);
-      const projText = proj.favoured
-        ? `Lean <b>${esc(label(proj.favoured))}</b> by about ${proj.margin} stroke${proj.margin === 1 ? '' : 's'}: ${esc(proj.basis)}.`
-        : `<b>Too close to call</b>: ${esc(proj.basis)}.`;
+      const tag = round.handicap === 'gross' ? 'lower handicaps, gross' : proj.missingForm.length && !proj.favoured ? 'not enough form to split them' : 'on form';
+      const verdict = proj.favoured
+        ? `<span class="mc-verdict__v">${esc(label(proj.favoured))} by ~${proj.margin}</span><span class="mc-verdict__tag">${esc(tag)}</span>`
+        : `<span class="mc-verdict__v">Toss-up</span><span class="mc-verdict__tag">${round.handicap === 'gross' ? 'too close on paper' : 'handicaps level it'}</span>`;
       const pairs = [];
       for (const a of sl.A.filter(Boolean)) for (const b of sl.B.filter(Boolean)) pairs.push(h2hLine(a, b));
+      const hcpWord = ARCHIVE ? 'played off' : 'course handicap';
       const strokeRows = round.handicap === 'gross'
-        ? everyone.map((id) => `<li><b>${esc(P[id]?.first || nameOf(id))}</b> — index ${P[id]?.index ?? '—'}</li>`).join('')
-        : strokes.perPlayer.map((p) => `<li><b>${esc(p.first)}</b> — course handicap ${p.courseHandicap ?? '—'}${p.strokes ? `, ${p.strokes > 0 ? '' : 'gives back '}${Math.abs(p.strokes)} stroke${Math.abs(p.strokes) === 1 ? '' : 's'}` : round.handicap === 'full-difference' && p.courseHandicap != null ? ', plays off 0' : ''}${p.holes.length ? `<span class="mc-tape__holes">on holes ${esc(strokeHolesText(p.holes))}</span>` : ''}</li>`).join('');
-      const fmtNote = round.formatKey && P[everyone.find((id) => P[id] && !P[id].rookie)]?.byFormat?.[round.formatKey]?.note;
-      return `<details class="mc-tape">
-        <summary>Tale of the Tape</summary>
-        <p class="mc-tape__proj">${projText}${proj.missingForm.length ? ` <span style="opacity:.8">(No recent form on file for ${esc(proj.missingForm.map((n) => n.split(' ')[0]).join(', '))}.)</span>` : ''}${complete ? '' : ' <span style="opacity:.8">(Not every slot is filled yet.)</span>'}</p>
-        <div class="mc-tape__sec"><h5>Head to head</h5><ul>${pairs.join('')}</ul></div>
-        <div class="mc-tape__sec"><h5>Current form</h5><ul>${everyone.map((id) => formLine(P[id])).join('') || '<li class="faint">—</li>'}</ul></div>
-        <div class="mc-tape__sec"><h5>Record in ${esc(round.format)}${fmtNote ? ` <span style="text-transform:none;letter-spacing:0">(${esc(fmtNote)})</span>` : ''}</h5><ul>${everyone.map((id) => formatLine(P[id], round)).join('')}</ul></div>
-        <div class="mc-tape__sec"><h5>Strokes · ${esc(round.course.name)}, ${esc(round.course.tee.name)} ${Number(round.course.tee.rating).toFixed(1)}/${round.course.tee.slope}</h5>
-          <p class="faint" style="font-size:.8rem;margin-bottom:.3rem">${esc(strokes.summary)}</p><ul>${strokeRows}</ul></div>
-      </details>`;
+        ? everyone.map((id) => `<li><b>${esc(first(id))}</b> — ${ARCHIVE ? 'handicap' : 'index'} ${P[id]?.index ?? '—'}</li>`).join('')
+        : strokes.perPlayer.map((p) => `<li><b>${esc(p.first)}</b> — ${p.courseHandicap == null ? `<span class="faint">${ARCHIVE ? 'not on the card' : 'no index yet'}</span>` : `${hcpWord} ${p.courseHandicap}`}${p.strokes ? `, ${p.strokes > 0 ? '' : 'gives back '}${Math.abs(p.strokes)} stroke${Math.abs(p.strokes) === 1 ? '' : 's'}` : round.handicap === 'full-difference' && p.courseHandicap != null ? ', plays off 0' : ''}${p.holes.length ? `<span class="mc-tape__holes">on holes ${esc(strokeHolesText(p.holes))}</span>` : ''}</li>`).join('');
+      const fmtNote = P[everyone.find((id) => P[id] && !P[id].rookie)]?.byFormat?.[round.formatKey]?.note;
+      const tee = round.course.tee;
+      const where = ARCHIVE ? `${round.course.name} · the card's playing handicaps` : `${round.course.name}, ${tee.name} ${Number(tee.rating).toFixed(1)}/${tee.slope}`;
+      const nug = nuggets(round, mt, sl, strokes);
+      return `<div class="mc-tape">
+        <div class="mc-verdict"><span class="mc-verdict__k">${ARCHIVE ? 'Tale of the Tape · the pre-trip read' : 'Tale of the Tape'}</span>${verdict}</div>
+        ${nug.length ? `<ul class="mc-nuggets">${nug.map((n) => `<li>${esc(n)}</li>`).join('')}</ul>` : ''}
+        <details class="mc-full"><summary>Full tale of the tape</summary>
+          <div class="mc-tape__sec"><h5>Head to head</h5><ul>${pairs.join('')}</ul></div>
+          <div class="mc-tape__sec"><h5>${ARCHIVE ? 'Going in' : 'Current form'}</h5><ul>${everyone.map(formLine).join('')}</ul></div>
+          <div class="mc-tape__sec"><h5>Record in ${esc(round.format)}${fmtNote ? ` <span style="text-transform:none;letter-spacing:0">(${esc(fmtNote)})</span>` : ''}</h5><ul>${everyone.map((id) => formatLine(id, round)).join('')}</ul></div>
+          <div class="mc-tape__sec"><h5>Strokes · ${esc(where)}</h5><p class="faint" style="font-size:.8rem;margin-bottom:.3rem">${esc(strokes.summary)}</p><ul>${strokeRows}</ul></div>
+          <p class="faint" style="font-size:.76rem;margin-top:.6rem">Projection: ${esc(proj.basis)}. A rough guide, not a prediction.</p>
+        </details>
+      </div>`;
     }
 
-    // ---- admin interactions ----
-    let selected = null;   // { r, m, side, i }
-    let armed = null;      // { r, id } — a pool card tapped first
-    function clearSel() { $$('.mc-slot.is-selected').forEach((b) => b.classList.remove('is-selected')); $$('.mc-card.is-armed').forEach((c) => c.classList.remove('is-armed')); selected = null; armed = null; }
-    root.addEventListener('click', (e) => {
-      if (!admin) return;
-      const slot = e.target.closest('.mc-slot');
-      const card = e.target.closest('.mc-card');
-      if (slot) {
-        const t = { r: slot.dataset.round, m: Number(slot.dataset.match), side: slot.dataset.side, i: Number(slot.dataset.slot) };
-        if (armed && armed.r === t.r) { const id = armed.id; clearSel(); assign(t.r, t.m, t.side, t.i, id); return; }
-        clearSel(); selected = t; slot.classList.add('is-selected'); openSheet(t);
-      } else if (card) {
-        const r = card.dataset.round, id = card.dataset.player;
-        if (selected && selected.r === r) { const t = selected; clearSel(); closeSheet(); assign(t.r, t.m, t.side, t.i, id); return; }
-        clearSel(); armed = { r, id }; card.classList.add('is-armed');
-        flash(`Now tap a slot in Round ${r} for ${P[id]?.first || 'that player'}.`);
-      }
-    });
-
-    // the bottom sheet (phones): pick a player for the selected slot
-    const sheet = $('#mc-sheet');
-    function openSheet(t) {
-      const round = roundBy[t.r];
-      const current = getSlots(t.r, t.m)[t.side][t.i];
-      $('#mc-sheet-title').textContent = `Round ${t.r} · Match ${t.m} · ${label(t.side)}`;
-      const rows = DATA.players.filter((p) => allowed(t.side, p.id)).map((p) => ({ p, w: whereIs(t.r, p.id) }));
-      const free = rows.filter((x) => !x.w), placed = rows.filter((x) => x.w);
-      const pick = ({ p, w }) => `<button type="button" class="mc-pick${p.id === current ? ' is-here' : ''}" data-pick="${esc(p.id)}">${av(p)}<span>${esc(p.name)}</span><span class="mc-pick__meta">${p.index != null ? `index ${p.index}` : 'no index'}${p.rookie ? ' · rookie' : ''}${w ? `<br>in Match ${w.m} · ${esc(label(w.side))}` : ''}</span></button>`;
-      $('#mc-sheet-list').innerHTML = (free.length ? `<p class="mc-pick__group">Available</p>${free.map(pick).join('')}` : '')
-        + (placed.length ? `<p class="mc-pick__group">Already placed this round (picking moves them)</p>${placed.map(pick).join('')}` : '')
-        + (!rows.length ? `<p class="faint" style="padding:.6rem">No players on ${esc(label(t.side))}'s roster.</p>` : '');
-      $('#mc-clear').disabled = !current;
-      sheet.hidden = false;
-      document.body.style.overflow = 'hidden';
-    }
-    function closeSheet() { sheet.hidden = true; document.body.style.overflow = ''; $$('.mc-slot.is-selected').forEach((b) => b.classList.remove('is-selected')); }
-    sheet.addEventListener('click', (e) => {
-      const b = e.target.closest('[data-pick]');
-      if (b && selected) { const t = selected; clearSel(); closeSheet(); assign(t.r, t.m, t.side, t.i, b.dataset.pick); return; }
-      if (e.target.closest('[data-close]')) { clearSel(); closeSheet(); }
-    });
-    $('#mc-clear').addEventListener('click', () => { if (!selected) return; const t = selected; clearSel(); closeSheet(); assign(t.r, t.m, t.side, t.i, null); });
-    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !sheet.hidden) { clearSel(); closeSheet(); } });
-
-    // drag and drop (desktop): pool card → slot, or slot → slot (swap)
-    let drag = null;
-    root.addEventListener('dragstart', (e) => {
-      if (!admin) return;
-      const card = e.target.closest('.mc-card'), slot = e.target.closest('.mc-slot');
-      if (card) drag = { r: card.dataset.round, id: card.dataset.player };
-      else if (slot) { const r = slot.dataset.round; const id = getSlots(r, Number(slot.dataset.match))[slot.dataset.side][Number(slot.dataset.slot)]; if (id) drag = { r, id }; }
-      if (drag) { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', drag.id); }
-    });
-    root.addEventListener('dragover', (e) => { const slot = e.target.closest('.mc-slot'); if (admin && drag && slot && slot.dataset.round === drag.r) { e.preventDefault(); slot.classList.add('is-over'); } });
-    root.addEventListener('dragleave', (e) => { e.target.closest?.('.mc-slot')?.classList.remove('is-over'); });
-    root.addEventListener('drop', (e) => {
-      const slot = e.target.closest('.mc-slot');
-      $$('.mc-slot.is-over').forEach((s) => s.classList.remove('is-over'));
-      if (!admin || !drag || !slot || slot.dataset.round !== drag.r) return;
-      e.preventDefault();
-      assign(drag.r, Number(slot.dataset.match), slot.dataset.side, Number(slot.dataset.slot), drag.id);
-      drag = null;
-    });
-    root.addEventListener('dragend', () => { drag = null; $$('.mc-slot.is-over').forEach((s) => s.classList.remove('is-over')); });
-
-    // ---- save ----
-    const bar = $('#mc-bar'), saveBtn = $('#mc-save'), undoBtn = $('#mc-undo'), barState = $('#mc-bar-state');
+    // ---- admin interactions (live only) ----
+    let selected = null, armed = null;
+    const clearSel = () => { $$('.mc-slot.is-selected').forEach((b) => b.classList.remove('is-selected')); $$('.mc-card.is-armed').forEach((c) => c.classList.remove('is-armed')); selected = null; armed = null; };
+    const sheet = $('#mc-sheet'), bar = $('#mc-bar'), saveBtn = $('#mc-save'), undoBtn = $('#mc-undo'), barState = $('#mc-bar-state');
     let flashTimer;
-    function flash(msg) { barState.textContent = msg; clearTimeout(flashTimer); flashTimer = setTimeout(refreshBar, 3200); }
+    const flash = (msg) => { if (!barState) return; barState.textContent = msg; clearTimeout(flashTimer); flashTimer = setTimeout(refreshBar, 3200); };
     function refreshBar() {
-      if (!admin) return;
+      if (!admin || !barState) return;
       const d = dirty();
       saveBtn.disabled = !d; undoBtn.hidden = !d;
       barState.classList.toggle('is-dirty', d);
       barState.textContent = d ? 'Unsaved changes' : saved.updatedAt ? `Saved · ${new Date(saved.updatedAt).toLocaleString(undefined, { weekday: 'short', hour: 'numeric', minute: '2-digit' })}` : 'Editing lineups · nothing saved yet';
     }
-    saveBtn.addEventListener('click', async () => {
-      saveBtn.disabled = true; saveBtn.textContent = 'Saving…';
-      try {
-        const res = await fetch('/api/lineups', { method: 'POST', headers: { 'content-type': 'application/json', 'x-admin-key': key },
-          body: JSON.stringify({ baseRev: saved.rev, rosters: doc.rosters, rounds: doc.rounds }) });
-        const body = await res.json().catch(() => ({}));
-        if (res.status === 409) { flash('Someone saved since you loaded. Discard your changes to see theirs, then redo yours.'); undoBtn.hidden = false; saved = body.lineups; }
-        else if (!res.ok || !body.ok) flash(`Didn't save: ${body.error || res.status}`);
-        else { saved = body.lineups; doc = structuredClone(saved); renderAll(); flash('Saved ✓'); }
-      } catch { flash('Couldn’t reach the server. Check your signal and tap Save again.'); }
-      saveBtn.textContent = 'Save'; refreshBar();
-    });
-    undoBtn.addEventListener('click', () => { doc = structuredClone(saved); clearSel(); renderAll(); refreshBar(); });
-    window.addEventListener('beforeunload', (e) => { if (admin && dirty()) { e.preventDefault(); e.returnValue = ''; } });
 
-    // ---- load ----
-    // Pasting the admin link into a tab that already has this page open is only a
-    // hash change (no reload), so pick the key up then too and reload the board.
-    window.addEventListener('hashchange', () => {
-      if (!takeKeyFromHash()) return;
-      document.querySelector('.tab[data-tab="match-centre"]')?.click();
-      load();
-    });
+    if (!ARCHIVE) {
+      root.addEventListener('click', (e) => {
+        if (!admin) return;
+        const slot = e.target.closest('.mc-slot');
+        const card = e.target.closest('.mc-card');
+        if (slot) {
+          const t = { r: slot.dataset.round, m: Number(slot.dataset.match), side: slot.dataset.side, i: Number(slot.dataset.slot) };
+          if (armed && armed.r === t.r) { const id = armed.id; clearSel(); assign(t.r, t.m, t.side, t.i, id); return; }
+          clearSel(); selected = t; slot.classList.add('is-selected'); openSheet(t);
+        } else if (card) {
+          const r = card.dataset.round, id = card.dataset.player;
+          if (selected && selected.r === r) { const t = selected; clearSel(); closeSheet(); assign(t.r, t.m, t.side, t.i, id); return; }
+          clearSel(); armed = { r, id }; card.classList.add('is-armed');
+          flash(`Now tap a slot in Round ${r} for ${P[id]?.first || 'that player'}.`);
+        }
+      });
+      function openSheet(t) {
+        const current = getSlots(t.r, t.m)[t.side][t.i];
+        $('#mc-sheet-title').textContent = `Round ${t.r} · Match ${t.m} · ${label(t.side)}`;
+        const rows = DATA.players.filter((p) => allowed(t.side, p.id)).map((p) => ({ p, w: whereIs(t.r, p.id) }));
+        const free = rows.filter((x) => !x.w), placed = rows.filter((x) => x.w);
+        const pick = ({ p, w }) => `<button type="button" class="mc-pick${p.id === current ? ' is-here' : ''}" data-pick="${esc(p.id)}">${av(p)}<span>${esc(p.name)}</span><span class="mc-pick__meta">${p.index != null ? `index ${p.index}` : 'no index'}${p.rookie ? ' · rookie' : ''}${w ? `<br>in Match ${w.m} · ${esc(label(w.side))}` : ''}</span></button>`;
+        $('#mc-sheet-list').innerHTML = (free.length ? `<p class="mc-pick__group">Available</p>${free.map(pick).join('')}` : '')
+          + (placed.length ? `<p class="mc-pick__group">Already placed this round (picking moves them)</p>${placed.map(pick).join('')}` : '')
+          + (!rows.length ? `<p class="faint" style="padding:.6rem">No players on ${esc(label(t.side))}'s roster.</p>` : '');
+        $('#mc-clear').disabled = !current;
+        sheet.hidden = false;
+        document.body.style.overflow = 'hidden';
+      }
+      function closeSheet() { sheet.hidden = true; document.body.style.overflow = ''; $$('.mc-slot.is-selected').forEach((b) => b.classList.remove('is-selected')); }
+      sheet.addEventListener('click', (e) => {
+        const b = e.target.closest('[data-pick]');
+        if (b && selected) { const t = selected; clearSel(); closeSheet(); assign(t.r, t.m, t.side, t.i, b.dataset.pick); return; }
+        if (e.target.closest('[data-close]')) { clearSel(); closeSheet(); }
+      });
+      $('#mc-clear').addEventListener('click', () => { if (!selected) return; const t = selected; clearSel(); closeSheet(); assign(t.r, t.m, t.side, t.i, null); });
+      document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !sheet.hidden) { clearSel(); closeSheet(); } });
+
+      // drag and drop (desktop): pool card → slot, or slot → slot (swap)
+      let drag = null;
+      root.addEventListener('dragstart', (e) => {
+        if (!admin) return;
+        const card = e.target.closest('.mc-card'), slot = e.target.closest('.mc-slot');
+        if (card) drag = { r: card.dataset.round, id: card.dataset.player };
+        else if (slot) { const r = slot.dataset.round; const id = getSlots(r, Number(slot.dataset.match))[slot.dataset.side][Number(slot.dataset.slot)]; if (id) drag = { r, id }; }
+        if (drag) { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', drag.id); }
+      });
+      root.addEventListener('dragover', (e) => { const slot = e.target.closest('.mc-slot'); if (admin && drag && slot && slot.dataset.round === drag.r) { e.preventDefault(); slot.classList.add('is-over'); } });
+      root.addEventListener('dragleave', (e) => { e.target.closest?.('.mc-slot')?.classList.remove('is-over'); });
+      root.addEventListener('drop', (e) => {
+        const slot = e.target.closest('.mc-slot');
+        $$('.mc-slot.is-over').forEach((s) => s.classList.remove('is-over'));
+        if (!admin || !drag || !slot || slot.dataset.round !== drag.r) return;
+        e.preventDefault();
+        assign(drag.r, Number(slot.dataset.match), slot.dataset.side, Number(slot.dataset.slot), drag.id);
+        drag = null;
+      });
+      root.addEventListener('dragend', () => { drag = null; $$('.mc-slot.is-over').forEach((s) => s.classList.remove('is-over')); });
+
+      saveBtn.addEventListener('click', async () => {
+        saveBtn.disabled = true; saveBtn.textContent = 'Saving…';
+        try {
+          const res = await fetch('/api/lineups', { method: 'POST', headers: { 'content-type': 'application/json', 'x-admin-key': key },
+            body: JSON.stringify({ baseRev: saved.rev, rosters: doc.rosters, rounds: doc.rounds }) });
+          const body = await res.json().catch(() => ({}));
+          if (res.status === 409) { flash('Someone saved since you loaded. Discard your changes to see theirs, then redo yours.'); undoBtn.hidden = false; saved = body.lineups; }
+          else if (!res.ok || !body.ok) flash(`Didn't save: ${body.error || res.status}`);
+          else { saved = body.lineups; doc = structuredClone(saved); renderAll(); flash('Saved ✓'); }
+        } catch { flash('Couldn’t reach the server. Check your signal and tap Save again.'); }
+        saveBtn.textContent = 'Save'; refreshBar();
+      });
+      undoBtn.addEventListener('click', () => { doc = structuredClone(saved); clearSel(); renderAll(); refreshBar(); });
+      window.addEventListener('beforeunload', (e) => { if (admin && dirty()) { e.preventDefault(); e.returnValue = ''; } });
+      // pasting the admin link into a tab that already has this page open is only
+      // a hash change (no reload): pick the key up then too
+      window.addEventListener('hashchange', () => {
+        if (!takeKeyFromHash()) return;
+        document.querySelector('.tab[data-tab="match-centre"]')?.click();
+        load();
+      });
+    }
+
     async function load() {
+      if (ARCHIVE) { root.dataset.state = 'ready'; renderAll(); return; }
       try {
         const res = await fetch('/api/lineups', { cache: 'no-store', headers: key ? { 'x-admin-key': key } : {} });
         const body = await res.json();
@@ -526,11 +612,11 @@ const HCP_LABEL = { gross: 'Gross — no strokes', 'full-course': 'Full course h
         root.classList.toggle('is-admin', admin);
         bar.hidden = !admin;
         status.classList.toggle('is-admin', admin);
-        status.textContent = admin ? 'Admin · tap a slot to pick a player, or drag a card onto it'
+        status.textContent = admin ? 'Admin · tap a card slot to pick a player, or drag a card onto it'
           : key ? 'That admin key didn’t work — showing the saved lineups.'
           : saved.updatedAt ? `Lineups as saved ${new Date(saved.updatedAt).toLocaleString(undefined, { weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })}` : 'No lineups set yet — every slot is TBD.';
         root.dataset.state = 'ready';
-      } catch (err) {
+      } catch {
         status.classList.add('is-error');
         status.textContent = 'Couldn’t load the lineups right now — showing the empty board.';
         root.dataset.state = 'error';

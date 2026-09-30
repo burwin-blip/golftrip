@@ -27,15 +27,17 @@ export function courseHandicap(index, tee) {
  */
 export function strokeHoles(strokes, holes) {
   if (!strokes || !holes?.length) return [];
-  const count = holes.length;
-  const out = [];
-  for (const h of holes) {
-    let n = 0;
-    if (strokes > 0) n = Math.floor(strokes / count) + (h.si <= strokes % count ? 1 : 0);
-    else n = -(Math.floor(-strokes / count) + (h.si > count - (-strokes % count) ? 1 : 0));
-    if (n) out.push({ hole: h.hole, si: h.si, n });
+  // Strokes go to holes in stroke-index order (hardest first), wrapping round for
+  // a second stroke; strokes given back (a plus handicap) start from the easiest.
+  // Ranking rather than comparing to 1–18 means a 9-hole round whose card carries
+  // the 18-hole stroke indexes (2026's Shamble) allocates correctly too.
+  const order = [...holes].sort((a, b) => (strokes > 0 ? a.si - b.si : b.si - a.si));
+  const n = new Map();
+  for (let k = 0; k < Math.abs(strokes); k++) {
+    const h = order[k % order.length];
+    n.set(h.hole, (n.get(h.hole) || 0) + (strokes > 0 ? 1 : -1));
   }
-  return out;
+  return holes.filter((h) => n.has(h.hole)).map((h) => ({ hole: h.hole, si: h.si, n: n.get(h.hole) }));
 }
 
 /** "3, 5, 9 (2), 11" — holes that carry strokes, doubles marked. */

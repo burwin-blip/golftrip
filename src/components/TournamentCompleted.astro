@@ -3,6 +3,8 @@ import Scorebug from './Scorebug.astro';
 import MatchRow from './MatchRow.astro';
 import MatchSummary from './MatchSummary.astro';
 import HoleScorecard from './HoleScorecard.astro';
+import MatchCentre from './MatchCentre.astro';
+import { archiveMatchCentreData } from '../lib/matchcentre.js';
 import TeamLogo from './TeamLogo.astro';
 import PhotoGallery from './PhotoGallery.astro';
 import { teamById, playerById, getCourse, matchesForTournament, teamRoster } from '../lib/data.js';
@@ -115,9 +117,12 @@ const insights = [
 
 const outc = (rec) => rec ? (rec.w ? 'w' : rec.h ? 'h' : 'l') : null;
 
+// Match Centre: every match of this edition as a fight card — a read-only view
+// over the existing match data (see archiveMatchCentreData in src/lib/matchcentre.js).
+const matchCentre = archiveMatchCentreData(t.id);
 const TABS = [
   ['overview', 'Overview'], ['teams', 'Teams'], ['draft', 'Draft'],
-  ['matches', 'Matches'], ['stats', 'Stats'], ['awards', 'Awards'], ['moments', 'Moments'],
+  ['matches', 'Matches'], ...(matchCentre ? [['match-centre', 'Match Centre']] : []), ['stats', 'Stats'], ['awards', 'Awards'], ['moments', 'Moments'],
   ...(photos.length ? [['photos', 'Photos']] : []),
 ];
 ---
@@ -330,6 +335,13 @@ const TABS = [
   </section>
 
   <!-- STATS -->
+  <!-- MATCH CENTRE — the fight-card view of every match (read-only; the Matches tab above is the record) -->
+  {matchCentre && (
+    <section class="tabpanel section" data-panel="match-centre">
+      <MatchCentre data={matchCentre} />
+    </section>
+  )}
+
   <section class="tabpanel section" data-panel="stats">
     <div class="wrap">
       <div class="section-head"><div><p class="eyebrow">Individual</p><h2>Points leaderboard</h2></div></div>
@@ -704,6 +716,8 @@ const TABS = [
     const panels = [...root.querySelectorAll('.tabpanel')];
     function activate(id, push) {
       tabs.forEach((t) => t.classList.toggle('active', t.dataset.tab === id));
+      const on = tabs.find((t) => t.dataset.tab === id);
+      if (on && on.parentElement.scrollWidth > on.parentElement.clientWidth) on.parentElement.scrollLeft = on.offsetLeft - 12;   // phones: keep the active tab in view
       panels.forEach((p) => p.classList.toggle('active', p.dataset.panel === id));
       if (push && history.replaceState) history.replaceState(null, '', '#' + id);
     }

@@ -625,6 +625,39 @@ drag a pool card onto a slot; in admin mode the round's pool sticks to the botto
 of the screen so every slot is in reach. Unfilled slots show "TBD". Unsaved
 changes warn before leaving.
 
+### Match Centre v3 — fight cards, a short tape, and the 2026 archive (Sept 2026)
+- **One component, two modes** (`MatchCentre.astro`, takes `data`): `live`
+  (`matchCentreData(tid)`, 2027, lineups from Redis, admin editing) and `archive`
+  (`archiveMatchCentreData(tid)`, a completed edition, read-only). Both builders
+  return the same shape (`schedule`, `players`, `h2h`, plus `lineups` + `results`
+  for the archive), so the board, cards and tape are the same code for both years.
+- **Fight cards:** each match is a poster: a side's players as big 4:5 photo cards
+  (the profile portrait; initials on the sunset gradient if no photo), a big **V**
+  between the sides. Phones stack 2v2 / 4v4 sides with the V between; singles stay
+  face to face (the crest stands in for the team name there). Admin tap-to-pick and
+  drag-and-drop work on the big cards; empty slots read "TBD / Tap to pick".
+- **Tale of the Tape, summarised:** a short verdict banner ("Team B by ~0.5 · on
+  form" / "Toss-up · handicaps level it") + the one or two best **nuggets**
+  (Championship stakes, a lopsided head-to-head, a player in form, a big stroke gap,
+  an unbeaten format record, a rookie's debut). Everything else sits behind **"Full
+  tale of the tape"**.
+- **St George 2026 Match Centre tab** (after Matches in `TournamentCompleted.astro`):
+  all 18 matches as completed fight cards, Woodpeckers left / Silver Spoons right in
+  their real colours and crests (side A is the Woodpeckers in every 2026 match; the
+  builder throws if an edition mixes sides). Each shows the result chip ("Woodpeckers
+  win 3&2" / "Halved · AS"), points per side, a **W** on the winners and the losing
+  side dimmed, and **"Match & scorecard →"**, which reuses the page's existing
+  `[data-jump]` round jump into the Matches tab (no per-match anchors were added; the
+  Matches tab is untouched). Its tape uses only **pre-trip** facts: the handicap each
+  player took to St George (roster), the playing handicaps set on the cards, and
+  "No history yet — first Annual". No form, records or head-to-heads, so 2026 results
+  never leak into their own preview. Strokes come from the cards' stroke indexes;
+  `strokeHoles()` allocates by stroke-index ORDER, so 9-hole rounds carrying 18-hole
+  SIs (the 2026 Shamble) are right. Michael v Anthony (the Championship Match) has no
+  playing handicaps on the card, so it says so.
+- **Verified:** the 2026 Match Centre was cross-checked against the rendered Matches
+  tab: 18/18 same pairings, results and points, totals 16.5–13.5.
+
 ## Power Rankings & GHIN check-ins (`data/handicap_snapshots.json`)
 
 A living form guide between trips, driven by GHIN handicap check-ins the owner

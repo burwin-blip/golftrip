@@ -4,6 +4,7 @@ import PlayerAvatar from './PlayerAvatar.astro';
 import TripCountdown from './TripCountdown.astro';
 import TripHub from './TripHub.astro';
 import MatchCentre from './MatchCentre.astro';
+import { matchCentreData } from '../lib/matchcentre.js';
 import { scheduleFor } from '../lib/schedule.js';
 import { draftPoolFor } from '../lib/stats.js';
 import { tripFor } from '../lib/data.js';
@@ -179,7 +180,7 @@ const JUMPS = trip ? [
   <!-- MATCH CENTRE — lineups (admin-edited, stored in Redis) + Tale of the Tape -->
   {hasSchedule && (
     <section class="tabpanel section" data-panel="match-centre">
-      <MatchCentre tid={t.id} />
+      <MatchCentre data={matchCentreData(t.id)} />
     </section>
   )}
 </div>
