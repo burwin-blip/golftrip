@@ -21,3 +21,6 @@ npm-debug.log*
 data/rsvp.generated.json
 .rsvp-local/
 .vercel/
+
+# Match Centre — local dev lineups store (Redis in production)
+.lineups-local/

@@ -64,10 +64,11 @@ Tanner Curley aren't in the workbook) and loses their `invitedFor`. Diff
    the owner for the 2027 RSVP — this replaces the old "static, no backend" rule.)
    Every page is prerendered at build time (`output: 'hybrid'` with
    `@astrojs/vercel`; pages never opt out of prerendering). The ONLY server code is
-   the two RSVP routes in `src/pages/api/` (`rsvp.js`, `rsvp-admin.js`), backed by
-   one free Upstash Redis database. Don't add other API routes, server-rendered
-   pages, a CMS, auth, or any other backend without the owner amending this rule
-   again.
+   the two RSVP routes in `src/pages/api/` (`rsvp.js`, `rsvp-admin.js`) plus
+   **`lineups.js`** (the Match Centre, added by the owner, September 2026), all
+   backed by one free Upstash Redis database. Don't add other API routes,
+   server-rendered pages, a CMS, auth, or any other backend without the owner
+   amending this rule again.
 
 6. **After ANY build-config change, verify the DEPLOYED site renders styled before
    calling the job done.** (Owner's rule.) "Build-config" = `astro.config.mjs`, the
@@ -565,6 +566,64 @@ uses for "what's next".
 ### Adding 2028
 Drop in `data/trip-2028.json` with its own `tournamentId`, import it in
 `data.js` and add it to the `trips` array. No component changes.
+
+## Match Centre (2027) — the lineup board (`data/schedule_2027.json`)
+
+A **Match Centre** tab on the upcoming tournament page (after Draft Guide; it only
+appears when the edition has a schedule). The global `/matches` page stays the
+all-time archive and is untouched.
+
+**The schedule** (`data/schedule_2027.json`, read by `src/lib/schedule.js`, which
+validates it at build time and computes every total): 5 rounds, 22 matches, **38
+points, 19.5 to win**. R1 Fri 26 Mar AM, 2v2 Scramble, **9 holes**, Terra Lago South,
+4×1pt · R2 Fri PM, 2v2 Best Ball, Terra Lago North, 4×2 · R3 Sat AM, 4v4 Scramble,
+18 holes, Mountain View, 2×1 · R4 Sat PM, 2v2 **Combined Stableford** (partners'
+points ADDED; new for 2027, 2026 was Team Average Stableford), Firecliff, 4×2 ·
+R5 Sun, Singles, Classic Club, 8×2, **Match 8 = the Championship Match**. Round
+dates must match the rota; courses come from `trip-2027.json` by `courseSlug`.
+Teams are drafted live Thursday night, so both sides are `Team A` / `Team B` with
+`teamId: null` until the draft.
+
+**Handicap allowances (owner's decision):** scrambles **gross** (no strokes, as 2026
+R1); Best Ball + Combined Stableford **100% course handicap** each; Singles **100%
+of the difference**. Course handicap = `round(index × slope/113 + (rating − par))`
+from each round's course and our tees. Stroke holes come from **`tee.holes`** in
+`trip-2027.json`: `[{hole, par, si, yards}]` for our tees on all five courses, read
+from the official scorecards (`tee.holesSource` / `holesNote` name the card), and
+checked: 18 holes, SI 1–18 once each, par and yardage totals match.
+
+**Code:** `src/lib/matchcentre-shared.js` holds the pure rules, used by the build,
+the API and the browser: `courseHandicap`, `strokeHoles`, `allocateStrokes`,
+`projectMatch` (gross: index gap scaled to the holes + form; net: form only, and
+only when both sides have form on file) and `validateLineups`.
+`src/lib/matchcentre.js` precomputes per-player tape data from the existing stats
+(power-ranking rank, index and form; career record per format, where Combined
+Stableford uses 2026's Team Average Stableford as its precedent; head-to-head for
+every pair; course handicap per round). `MatchCentre.astro` renders the board and
+builds each Tale of the Tape in the browser. Rookies show "No history yet — rookie".
+
+**Lineups** live in Redis, **`lineups:2027`** (hash field `doc`), via
+`src/lib/lineup-store.js` (own small client, same env vars as the RSVP store;
+locally `.lineups-local/store.json`, gitignored) and **`/api/lineups`**: GET is
+public (who's playing whom isn't private); POST is admin-only with the **same key
+mechanism as `/rsvp/admin`** (`x-admin-key` checked by the RSVP API's own
+`isAdminKey()`, reused, not modified). Document shape: `{ version, tournamentId,
+rev, updatedAt, rosters: {A:[ids], B:[ids]}, rounds: { "<round>": { "<match>":
+{A:[id|null…], B:[…]} } } }`. Every save names the `rev` it was based on; a stale
+save gets a **409**, so a phone and a laptop can't overwrite each other. Filling
+`rosters` after the draft restricts each side to its own players (server and
+page). **Later phases** (Squabbit scorecard uploads, team points, pairing ideas)
+should add sibling keys/fields keyed by the same round/match numbers and match ids
+(`duel-in-the-desert-2027-r<N>-m<M>`), not change this document.
+
+**Admin link:** `/tournaments/duel-in-the-desert-2027#admin=<RSVP_ADMIN_KEY>`. The
+page reads the key, strips it from the address bar, keeps it in that tab's
+sessionStorage, and asks the server (`{admin:true}`). It works when pasted into an
+already-open page too (a hash change). **Phones:** tap a slot → pick from the
+bottom sheet (picking someone already placed that round moves them). **Desktop:**
+drag a pool card onto a slot; in admin mode the round's pool sticks to the bottom
+of the screen so every slot is in reach. Unfilled slots show "TBD". Unsaved
+changes warn before leaving.
 
 ## Power Rankings & GHIN check-ins (`data/handicap_snapshots.json`)
 
@@ -1094,7 +1153,8 @@ scripts/test-rsvp.mjs       RSVP API checks (67 on the file store / 61 on fake R
 scripts/fake-upstash.mjs    in-memory Upstash REST stand-in, for testing the Redis path
 scripts/check-styles.mjs    does a deployed/served site render styled? (core principle 6)
 src/lib/rsvp-*.js     RSVP: shared answer lists, the store, the API logic
-src/pages/api/        rsvp.js + rsvp-admin.js — the ONLY server routes
+src/lib/schedule.js, matchcentre*.js, lineup-store.js  the 2027 Match Centre
+src/pages/api/        rsvp.js + rsvp-admin.js + lineups.js — the ONLY server routes
 src/pages/rsvp/       index.astro (the permanent /rsvp) + admin.astro
 src/lib/data.js       loads JSON, builds id lookups (+ holesForMatch)
 src/lib/stats.js      ALL derived statistics (build-time), incl. the hole-stat block

@@ -3,6 +3,8 @@ import TeamLogo from './TeamLogo.astro';
 import PlayerAvatar from './PlayerAvatar.astro';
 import TripCountdown from './TripCountdown.astro';
 import TripHub from './TripHub.astro';
+import MatchCentre from './MatchCentre.astro';
+import { scheduleFor } from '../lib/schedule.js';
 import { draftPoolFor } from '../lib/stats.js';
 import { tripFor } from '../lib/data.js';
 import { dateRange, num, pctText } from '../lib/format.js';
@@ -25,7 +27,10 @@ const flyer = t.flyer || {};
 // still land on the programme — see the id on .up-trip.)
 const trip = tripFor(t.id);
 
-const TABS = [['overview', 'Overview'], ['pool', 'Draft Pool'], ['guide', 'Draft Guide']];
+// Match Centre (lineups + Tale of the Tape) appears once the edition has a
+// match schedule (data/schedule_<year>.json).
+const hasSchedule = !!scheduleFor(t.id);
+const TABS = [['overview', 'Overview'], ['pool', 'Draft Pool'], ['guide', 'Draft Guide'], ...(hasSchedule ? [['match-centre', 'Match Centre']] : [])];
 // Jump links for the long Overview — only to sections that actually render
 // (same guards as TripHub).
 const JUMPS = trip ? [
@@ -171,6 +176,12 @@ const JUMPS = trip ? [
       </div>
     </div>
   </section>
+  <!-- MATCH CENTRE — lineups (admin-edited, stored in Redis) + Tale of the Tape -->
+  {hasSchedule && (
+    <section class="tabpanel section" data-panel="match-centre">
+      <MatchCentre tid={t.id} />
+    </section>
+  )}
 </div>
 
 <noscript><style>.tabpanel{display:block!important}.tabbar{display:none}</style></noscript>
@@ -268,6 +279,8 @@ const JUMPS = trip ? [
       const panels = [...root.querySelectorAll('.tabpanel')];
       const activate = (id, push) => {
         tabs.forEach((t) => t.classList.toggle('active', t.dataset.tab === id));
+        const on = tabs.find((t) => t.dataset.tab === id);
+        if (on && on.parentElement.scrollWidth > on.parentElement.clientWidth) on.parentElement.scrollLeft = on.offsetLeft - 12;   // phones: bring it into view
         panels.forEach((p) => p.classList.toggle('active', p.dataset.panel === id));
         if (push && history.replaceState) history.replaceState(null, '', '#' + id);
       };
@@ -280,7 +293,9 @@ const JUMPS = trip ? [
       // fix as the completed view's round jumps; offset = scroll-margin-top).
       const toSection = (id) => {
         const go = () => { const el = document.getElementById(id); if (el) el.scrollIntoView({ behavior: 'instant', block: 'start' }); };
-        activate('overview', false);
+        // open whichever tab holds the section (the Overview's programme, or a
+        // Match Centre round like #mc-r2)
+        activate(document.getElementById(id)?.closest('[data-panel]')?.dataset.panel || 'overview', false);
         go();
         [40, 120, 260, 450].forEach((ms) => setTimeout(go, ms));
       };
@@ -293,6 +308,7 @@ const JUMPS = trip ? [
         });
       });
       if (hash && tabs.some((t) => t.dataset.tab === hash)) activate(hash, false);
+      else if (hash.startsWith('admin=') && tabs.some((t) => t.dataset.tab === 'match-centre')) activate('match-centre', false);   // the Match Centre admin link: MatchCentre.astro reads the key
       else if (hash && document.getElementById(hash)) toSection(hash);
     }
     // Lightbox: the flyer and every accommodation photo carry data-full.

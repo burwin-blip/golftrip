@@ -1,0 +1,89 @@
+{
+  "tournamentId": "duel-in-the-desert-2027",
+  "note": "The 2027 match schedule. Rounds, formats, courses, match counts and point values only — lineups live in Redis (lineups:2027), results come later. Course details (tees, rating, slope) are read from data/trip-2027.json by courseSlug; totals are computed in src/lib, never typed here.",
+  "teams": {
+    "A": { "teamId": null, "label": "Team A" },
+    "B": { "teamId": null, "label": "Team B" },
+    "draftNote": "Teams are drafted live on the night of Thursday 25 March. Until then both sides are placeholders; after the draft set each side's teamId (a team id in tournaments.json) and the lineup board restricts cards to their own side."
+  },
+  "handicapRules": {
+    "gross": "No strokes: team gross score (as 2026's Round 1 scramble).",
+    "full-course": "100% course handicap for every player, from this round's course, our tees, rating and slope.",
+    "full-difference": "100% of the difference in course handicaps: the lower player plays off 0."
+  },
+  "rounds": [
+    {
+      "id": "duel-in-the-desert-2027-r1",
+      "number": 1,
+      "date": "2027-03-26",
+      "session": "morning",
+      "courseSlug": "terra-lago-south",
+      "format": "Scramble",
+      "formatKey": "scramble",
+      "sideSize": 2,
+      "holes": 9,
+      "matchCount": 4,
+      "pointsPerMatch": 1,
+      "handicap": "gross"
+    },
+    {
+      "id": "duel-in-the-desert-2027-r2",
+      "number": 2,
+      "date": "2027-03-26",
+      "session": "afternoon",
+      "courseSlug": "terra-lago-north",
+      "format": "Best Ball Match Play (NET)",
+      "formatKey": "best-ball",
+      "sideSize": 2,
+      "holes": 18,
+      "matchCount": 4,
+      "pointsPerMatch": 2,
+      "handicap": "full-course"
+    },
+    {
+      "id": "duel-in-the-desert-2027-r3",
+      "number": 3,
+      "date": "2027-03-27",
+      "session": "morning",
+      "courseSlug": "desert-willow-mountain-view",
+      "format": "4v4 Scramble",
+      "formatKey": "scramble",
+      "sideSize": 4,
+      "holes": 18,
+      "matchCount": 2,
+      "pointsPerMatch": 1,
+      "handicap": "gross"
+    },
+    {
+      "id": "duel-in-the-desert-2027-r4",
+      "number": 4,
+      "date": "2027-03-27",
+      "session": "afternoon",
+      "courseSlug": "desert-willow-firecliff",
+      "format": "Combined Stableford",
+      "formatKey": "combined-stableford",
+      "formatChange": "New for 2027: the two partners' individual Stableford points are ADDED together and the higher combined total wins the match. (2026 used Team Average Stableford.)",
+      "sideSize": 2,
+      "holes": 18,
+      "matchCount": 4,
+      "pointsPerMatch": 2,
+      "handicap": "full-course"
+    },
+    {
+      "id": "duel-in-the-desert-2027-r5",
+      "number": 5,
+      "date": "2027-03-28",
+      "session": null,
+      "courseSlug": "classic-club",
+      "format": "Singles Match Play",
+      "formatKey": "singles",
+      "sideSize": 1,
+      "holes": 18,
+      "matchCount": 8,
+      "pointsPerMatch": 2,
+      "handicap": "full-difference",
+      "championshipMatch": 8,
+      "championshipNote": "Match 8 is the Championship Match: the individual title, worth 2 points like the other singles."
+    }
+  ]
+}
