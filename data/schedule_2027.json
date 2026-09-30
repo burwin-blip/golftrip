@@ -4,7 +4,7 @@
   "teams": {
     "A": { "teamId": null, "label": "Team A" },
     "B": { "teamId": null, "label": "Team B" },
-    "draftNote": "Teams are drafted live on the night of Thursday 25 March. Until then both sides are placeholders; after the draft set each side's teamId (a team id in tournaments.json) and the lineup board restricts cards to their own side."
+    "draftNote": "Teams are drafted live on the night of Thursday 25 March in the Draft Room. Until then both sides are placeholders; FINALISE on /draft/commish fills in each side's team (name, colour, roster) at build time from data/draft.generated.json, and writes the rosters that restrict the lineup board. Nothing to edit here."
   },
   "handicapRules": {
     "gross": "No strokes: team gross score (as 2026's Round 1 scramble).",

@@ -339,6 +339,24 @@ const validTournamentIds = new Set(tournaments.map((t) => t.id));
 const trips = [validateTrip(rawTrip2027, 'trip-2027.json', validTournamentIds)];
 
 /** The trip planner for a tournament, or null when there isn't one. */
+// ---------------------------------------------------------------------------
+// DRAFT RESULT (data/draft.generated.json) — written by scripts/pull-draft.mjs
+// from the finalised REAL draft (never the mock). Optional, like the RSVPs: no
+// file or no finalised draft → null, and the 2027 page keeps "Teams TBA".
+// ---------------------------------------------------------------------------
+const draftFiles = import.meta.glob('../../data/draft.generated.json', { eager: true, import: 'default' });
+const draftResult = (() => {
+  const d = Object.values(draftFiles)[0];
+  if (!d?.teams) return null;
+  const known = new Set(players.map((p) => p.id));
+  for (const s of ['A', 'B']) for (const id of d.teams[s].playerIds) {
+    if (!known.has(id)) throw new Error(`data/draft.generated.json: team ${s} lists "${id}", who isn't a player on the site.`);
+  }
+  return d;
+})();
+/** The finalised draft for an edition: { teams: { A, B }, finalisedAt, pickNo } or null. */
+export const draftResultFor = (tid) => (draftResult && draftResult.tournamentId === tid ? draftResult : null);
+
 export const tripFor = (tid) => trips.find((t) => t.tournamentId === tid) ?? null;
 
 export { players, tournaments, matches, drafts, moments, awards, holeScores, photos, handicapSnapshots, allHandicapSnapshots, trips };

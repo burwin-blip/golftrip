@@ -6,7 +6,10 @@
 // Totals (matches, points, "to win") are computed here — never typed.
 // ---------------------------------------------------------------------------
 import raw from '../../data/schedule_2027.json';
-import { tripFor } from './data.js';
+import { tripFor, draftResultFor } from './data.js';
+
+/** A team's monogram: the first letter of its name, skipping a leading "Team" / "The". */
+export const monogram = (name) => (String(name || '').replace(/^(team|the)\s+/i, '').trim()[0] || '?').toUpperCase();
 
 const FORMAT_KEYS = new Set(['scramble', 'best-ball', 'combined-stableford', 'singles']);
 const HANDICAP_RULES = new Set(['gross', 'full-course', 'full-difference']);
@@ -50,7 +53,14 @@ function build(s) {
   const pointsAvailable = rounds.reduce((n, r) => n + r.points, 0);
   return {
     tournamentId: s.tournamentId,
-    teams: { A: { ...s.teams?.A }, B: { ...s.teams?.B } },
+    // After the draft is finalised, Team A / B become the drafted teams.
+    teams: Object.fromEntries(['A', 'B'].map((side) => {
+      const d = draftResultFor(s.tournamentId)?.teams?.[side];
+      return [side, d
+        ? { ...s.teams?.[side], teamId: d.id, label: d.name, color: d.color, captainId: d.captainId, playerIds: d.playerIds, monogram: monogram(d.name) }
+        : { ...s.teams?.[side] }];
+    })),
+    drafted: Boolean(draftResultFor(s.tournamentId)),
     handicapRules: s.handicapRules || {},
     rounds,
     fieldSize: rounds[0]?.players ?? 0,

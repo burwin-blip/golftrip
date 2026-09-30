@@ -24,3 +24,7 @@ data/rsvp.generated.json
 
 # Match Centre — local dev lineups store (Redis in production)
 .lineups-local/
+
+# Draft Room — local dev store + the build's public slice of a finalised draft
+.draft-local/
+data/draft.generated.json

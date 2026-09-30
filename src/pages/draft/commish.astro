@@ -1,0 +1,469 @@
+---
+// THE COMMISSIONER'S CONSOLE — /draft/commish#<admin-key>. The same key as
+// /rsvp/admin (RSVP_ADMIN_KEY, checked server-side by the RSVP API's own
+// isAdminKey). Setup (who's in, the captains, who picks first), the captain
+// links, START / PAUSE / RESUME / UNDO / RESET, MOCK mode for rehearsals, and
+// FINALISE, which writes the rosters the way the RSVP sync does (Redis + the
+// deploy hook).
+import Base from '../../layouts/Base.astro';
+import { draftRoomData } from '../../lib/draft-data.js';
+const data = draftRoomData();
+---
+<Base title="Commissioner" description="The Annual 2027 draft — commissioner." bare>
+  <div class="cm" id="cm">
+    <div class="cm-mockbar" id="cm-mockbar" hidden>MOCK MODE · a rehearsal: every screen shows “MOCK DRAFT” and finalise writes nothing</div>
+    <div class="cm-locked" id="cm-locked" hidden>
+      <h1>Commissioner</h1>
+      <p>Paste your admin key (the one for /rsvp/admin).</p>
+      <form id="cm-keyform" class="cm-keyform"><input id="cm-key" type="password" autocomplete="off" placeholder="Admin key" aria-label="Admin key" /><button type="submit">Open</button></form>
+      <p class="cm-err" id="cm-lockerr" role="alert"></p>
+    </div>
+
+    <div id="cm-app" hidden>
+      <header class="cm-top">
+        <div><p class="cm-k">The Annual · 2027 draft</p><h1>Commissioner</h1></div>
+        <div class="cm-mode" role="group" aria-label="Draft mode">
+          <button type="button" data-mode="real">Real draft</button>
+          <button type="button" data-mode="mock">Mock draft</button>
+        </div>
+        <a class="cm-boardlink" href="/draft/board" target="_blank" rel="noopener">Open the board ↗</a>
+        <span class="cm-conn" id="cm-conn" title="Connection"></span>
+      </header>
+      <p class="cm-err cm-banner" id="cm-err" role="alert"></p>
+
+      <section class="cm-live">
+        <div class="cm-now" id="cm-now"></div>
+        <div class="cm-ctl">
+          <button type="button" class="cm-btn cm-btn--go" id="cm-start">START</button>
+          <button type="button" class="cm-btn" id="cm-pause">PAUSE</button>
+          <button type="button" class="cm-btn cm-btn--go" id="cm-resume">RESUME</button>
+          <button type="button" class="cm-btn cm-btn--warn" id="cm-undo">UNDO last pick</button>
+        </div>
+        <p class="cm-note" id="cm-startnote"></p>
+      </section>
+
+      <div class="cm-grid">
+        <section class="cm-card" id="cm-setup">
+          <h2>Setup</h2>
+          <p class="cm-note" id="cm-setuplock" hidden>Setup is locked while a draft is on. RESET to change it.</p>
+          <div class="cm-count" id="cm-count"></div>
+          <div class="cm-players" id="cm-players"></div>
+          <div class="cm-caps">
+            <label>Captain A <select id="cm-capA"></select></label>
+            <label>Captain B <select id="cm-capB"></select></label>
+          </div>
+          <div class="cm-first">
+            <span>First pick</span>
+            <label><input type="radio" name="cm-first" value="A" checked> <span id="cm-firstA">A</span></label>
+            <label><input type="radio" name="cm-first" value="B"> <span id="cm-firstB">B</span></label>
+            <button type="button" class="cm-small" id="cm-coin">Flip a coin</button>
+            <span class="cm-coinres" id="cm-coinres"></span>
+          </div>
+          <div class="cm-row"><button type="button" class="cm-btn" id="cm-save">Save setup</button><span class="cm-note" id="cm-dirty"></span></div>
+        </section>
+
+        <section class="cm-card">
+          <h2>Captain links</h2>
+          <p class="cm-note">Send each captain their own link. It only works for this draft (<span id="cm-linkmode"></span>). Regenerating a link kills the old one.</p>
+          <div id="cm-links"></div>
+          <button type="button" class="cm-small" id="cm-genboth">Generate both links</button>
+          <h2 style="margin-top:1.4rem">Picks</h2>
+          <ol class="cm-picks" id="cm-picks"></ol>
+        </section>
+      </div>
+
+      <section class="cm-card cm-final" id="cm-final" hidden>
+        <h2>Finalise</h2>
+        <p class="cm-note" id="cm-finalnote"></p>
+        <div class="cm-teams" id="cm-teams"></div>
+        <button type="button" class="cm-btn cm-btn--go" id="cm-finalise">FINALISE</button>
+        <div class="cm-result" id="cm-result"></div>
+      </section>
+
+      <section class="cm-card cm-reset">
+        <h2>Reset</h2>
+        <p class="cm-note">Wipes every pick (the setup is kept). Type RESET to confirm.</p>
+        <div class="cm-row">
+          <input id="cm-resetword" autocomplete="off" placeholder="Type RESET" aria-label="Type RESET to confirm" />
+          <label class="cm-unfin" id="cm-unfinwrap" hidden><input type="checkbox" id="cm-unfin"> I understand the rosters already written stay until the next finalise</label>
+          <button type="button" class="cm-btn cm-btn--warn" id="cm-reset" disabled>RESET</button>
+        </div>
+      </section>
+    </div>
+  </div>
+  <script type="application/json" id="cm-data" set:html={JSON.stringify(data)} />
+</Base>
+
+<style is:global>
+  html:has(.cm), body:has(.cm) { background: #F3F5F7 !important; }
+  .cm { --a: #E06A2E; --b: #4A8FD1; min-height: 100vh; color: #17293F; padding-bottom: 4rem; }
+  .cm-mockbar { position: sticky; top: 0; z-index: 30; background: repeating-linear-gradient(-45deg, #E06A2E 0 14px, #C95A22 14px 28px); color: #fff; text-align: center; font-weight: 900; letter-spacing: .1em; font-size: .78rem; padding: .45rem 1rem; }
+  .cm-locked { max-width: 420px; margin: 16vh auto 0; text-align: center; padding: 0 1rem; }
+  .cm-keyform { display: flex; gap: .5rem; margin-top: 1rem; }
+  .cm-keyform input, .cm-row input { flex: 1; min-width: 0; font: inherit; font-size: 16px; padding: .55rem .9rem; border-radius: 999px; border: 1.5px solid #CBD3DB; background: #fff; }
+  .cm-keyform button { border: 0; border-radius: 999px; padding: .55rem 1.2rem; font: inherit; font-weight: 800; background: #17293F; color: #fff; }
+  .cm-err { color: #A73820; font-weight: 700; margin: .6rem 0 0; }
+  .cm-err:empty { display: none; }
+  .cm-banner { margin: 0; padding: .7rem clamp(1rem, 3vw, 2rem); background: #FBE9E4; }
+  .cm-top { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; padding: 1rem clamp(1rem, 3vw, 2rem); background: #0C1B2C; color: #fff; }
+  .cm-top h1 { color: #fff; margin: 0; font-size: 1.6rem; }
+  .cm-k { margin: 0; font-size: .65rem; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; color: #FCD79A; }
+  .cm-mode { display: inline-flex; margin-left: auto; background: rgba(255,255,255,.1); border-radius: 999px; padding: 3px; }
+  .cm-mode button { border: 0; background: none; color: #fff; font: inherit; font-weight: 800; font-size: .8rem; padding: .4rem .9rem; border-radius: 999px; cursor: pointer; }
+  .cm-mode button.is-on[data-mode="real"] { background: #3FB67B; }
+  .cm-mode button.is-on[data-mode="mock"] { background: #E06A2E; }
+  .cm-boardlink { color: #FCD79A; font-weight: 700; font-size: .85rem; }
+  .cm-conn { width: 11px; height: 11px; border-radius: 50%; background: #3FB67B; }
+  .cm-conn.is-bad { background: #E0492E; }
+  .cm-live { display: flex; align-items: center; gap: 1.2rem; flex-wrap: wrap; padding: 1rem clamp(1rem, 3vw, 2rem); background: #fff; border-bottom: 1px solid #DDE3E8; position: sticky; top: 0; z-index: 20; }
+  .cm:has(.cm-mockbar:not([hidden])) .cm-live { top: 2rem; }
+  .cm-now { flex: 1; min-width: 240px; }
+  .cm-now .t { font-size: .75rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: #6b7a86; }
+  .cm-now .c { font-size: 2.2rem; font-weight: 900; font-variant-numeric: tabular-nums; line-height: 1; }
+  .cm-now .c.is-over { color: #D0342C; }
+  .cm-ctl { display: flex; gap: .5rem; flex-wrap: wrap; }
+  .cm-btn { border: 0; border-radius: 10px; padding: .7rem 1.1rem; font: inherit; font-weight: 900; letter-spacing: .06em; background: #17293F; color: #fff; cursor: pointer; }
+  .cm-btn--go { background: #1F7A4D; }
+  .cm-btn--warn { background: #A73820; }
+  .cm-btn:disabled { background: #C5CDD5; cursor: not-allowed; }
+  .cm-btn[hidden] { display: none; }
+  .cm-small { border: 1.5px solid #CBD3DB; background: #fff; border-radius: 999px; padding: .3rem .8rem; font: inherit; font-size: .8rem; font-weight: 700; cursor: pointer; color: #17293F; }
+  .cm-note { font-size: .82rem; color: #6b7a86; margin: .3rem 0; }
+  .cm-note:empty { display: none; }
+  .cm-grid { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 1.2rem; padding: 1.2rem clamp(1rem, 3vw, 2rem) 0; }
+  .cm-card { background: #fff; border-radius: 14px; padding: 1.1rem 1.2rem 1.3rem; box-shadow: 0 6px 22px -16px rgba(0,0,0,.4); }
+  .cm-final, .cm-reset { margin: 1.2rem clamp(1rem, 3vw, 2rem) 0; }
+  .cm-card h2 { font-size: 1.25rem; margin: 0 0 .5rem; }
+  .cm-count { font-weight: 800; padding: .55rem .8rem; border-radius: 10px; margin: .4rem 0 .8rem; background: #E6F4EC; color: #1F7A4D; }
+  .cm-count.is-warn { background: #FFF3D6; color: #8A5A00; }
+  .cm-count.is-bad { background: #FBE9E4; color: #A73820; }
+  .cm-players h3 { font-size: .72rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: #6b7a86; margin: .8rem 0 .3rem; }
+  .cm-players .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: .3rem .8rem; }
+  .cm-players label { display: flex; align-items: center; gap: .45rem; font-size: .88rem; font-weight: 600; padding: .2rem 0; }
+  .cm-players input { width: 18px; height: 18px; }
+  .cm-players small { color: #6b7a86; font-weight: 500; }
+  .cm-caps { display: flex; gap: 1rem; flex-wrap: wrap; margin: 1rem 0 .6rem; }
+  .cm-caps label { display: grid; gap: .2rem; font-size: .78rem; font-weight: 800; }
+  .cm-caps select { font: inherit; font-size: 16px; padding: .4rem .5rem; border-radius: 8px; border: 1.5px solid #CBD3DB; min-width: 200px; }
+  .cm-first { display: flex; align-items: center; gap: .8rem; flex-wrap: wrap; font-size: .88rem; font-weight: 700; margin-bottom: .8rem; }
+  .cm-coinres { font-weight: 800; color: #1F7A4D; }
+  .cm-row { display: flex; gap: .7rem; align-items: center; flex-wrap: wrap; }
+  .cm-link { display: grid; gap: .3rem; padding: .6rem 0; border-bottom: 1px solid #EEF1F4; }
+  .cm-link b { font-size: .9rem; }
+  .cm-link code { font-size: .72rem; word-break: break-all; background: #F3F5F7; padding: .35rem .5rem; border-radius: 6px; }
+  .cm-link .cm-row { gap: .4rem; }
+  .cm-picks { margin: 0; padding-left: 1.6rem; display: grid; gap: .25rem; font-size: .88rem; }
+  .cm-picks li::marker { font-weight: 800; color: #6b7a86; }
+  .cm-picks .sd { display: inline-block; width: 1.3rem; text-align: center; font-size: .65rem; font-weight: 900; color: #fff; border-radius: 4px; margin-right: .35rem; }
+  .cm-picks .tm { color: #6b7a86; font-size: .75rem; font-variant-numeric: tabular-nums; }
+  .cm-picks .tm.is-over { color: #D0342C; font-weight: 700; }
+  .cm-picks .todo { color: #A9B4BE; }
+  .cm-teams { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem; margin: .6rem 0 1rem; }
+  .cm-team { display: grid; gap: .5rem; }
+  .cm-team input[type=text] { font: inherit; font-size: 16px; padding: .5rem .8rem; border-radius: 10px; border: 1.5px solid #CBD3DB; }
+  .cm-team .sw { display: flex; gap: .4rem; flex-wrap: wrap; }
+  .cm-team .sw label { position: relative; cursor: pointer; }
+  .cm-team .sw input { position: absolute; opacity: 0; }
+  .cm-team .sw span { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; color: #fff; font-weight: 900; font-size: .8rem; box-shadow: inset 0 0 0 3px rgba(255,255,255,.25); }
+  .cm-team .sw input:checked + span { box-shadow: 0 0 0 3px #fff, 0 0 0 5px #17293F; }
+  .cm-team .sw input:disabled + span { opacity: .25; cursor: not-allowed; }
+  .cm-team .roster { font-size: .8rem; color: #6b7a86; }
+  .cm-result { margin-top: 1rem; font-size: .9rem; }
+  .cm-result:empty { display: none; }
+  .cm-result .ok { padding: .8rem 1rem; border-radius: 10px; background: #E6F4EC; color: #17293F; }
+  .cm-unfin { font-size: .8rem; font-weight: 600; display: flex; gap: .4rem; align-items: center; }
+  @media (max-width: 860px) { .cm-grid, .cm-teams { grid-template-columns: 1fr; } .cm-mode { margin-left: 0; } .cm-live { position: static; } }
+</style>
+
+<script>
+  import { phaseAt, rosters, clockText, picksFor } from '../../lib/draft-shared.js';
+  import { startPolling, keyFromHash, esc } from '../../lib/draft-client.js';
+
+  const DATA = JSON.parse(document.getElementById('cm-data').textContent);
+  const P = Object.fromEntries(DATA.players.map((p) => [p.id, p]));
+  const $ = (id) => document.getElementById(id);
+  const root = $('cm');
+  const KEY_STORE = 'annual-draft-admin';
+  let key = keyFromHash(KEY_STORE);
+
+  let st = null, doc = null, now = () => Date.now(), poll = null;
+  let form = null, dirty = false, lastSetupSig = '', lastFinalSig = '', lastLinks = '', busy = false;
+  const name = (id) => P[id]?.name || id;
+  const surname = (id) => P[id]?.last || id;
+  const teamName = (s) => doc?.teams?.[s]?.name || (doc?.captains?.[s] ? `Team ${surname(doc.captains[s])}` : `Team ${s}`);
+  const err = (m) => { $('cm-err').textContent = m || ''; };
+
+  // ---- the API ----
+  async function act(action, extra = {}) {
+    if (busy) return null;
+    busy = true; err('');
+    try {
+      const res = await fetch('/api/draft-admin', { method: 'POST', headers: { 'content-type': 'application/json', 'x-admin-key': key }, body: JSON.stringify({ action, ...extra }) });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok || !body.ok) { err(body.error || `That didn’t work (${res.status}).`); return null; }
+      poll.refresh(body);
+      return body;
+    } catch { err('Couldn’t reach the server. Check the wifi and try again.'); return null; }
+    finally { busy = false; render(); }
+  }
+
+  // ---- setup form (local until "Save setup") ----
+  function formFromDoc() {
+    const participants = doc.participants.length ? [...doc.participants] : DATA.players.filter((p) => p.group === 'confirmed').map((p) => p.id);
+    return { participants, captains: { ...doc.captains }, firstPick: doc.firstPick || 'A' };
+  }
+  function countLine(n) {
+    if (n % 2 || n < 4) return { cls: 'is-bad', text: `${n} players — START needs an even number (4 or more), captains included.` };
+    const per = picksFor(n) / 2;
+    return n === 16 ? { cls: '', text: `16 players — ${per} picks per captain. ✓` } : { cls: 'is-warn', text: `${n} players — ${per} picks per captain (the draft is designed for 16).` };
+  }
+  function renderSetup() {
+    const locked = doc.status !== 'setup';
+    const sig = JSON.stringify([doc.participants, doc.captains, doc.firstPick, doc.status, doc.mode]);
+    if (!dirty && sig !== lastSetupSig) { form = formFromDoc(); lastSetupSig = sig; drawSetup(locked); }
+    else if (!form) { form = formFromDoc(); drawSetup(locked); }
+    $('cm-setuplock').hidden = !locked;
+    const c = countLine(form.participants.length);
+    $('cm-count').className = `cm-count ${c.cls}`;
+    $('cm-count').textContent = c.text;
+    $('cm-dirty').textContent = dirty ? 'Unsaved changes' : '';
+    $('cm-save').disabled = locked || !dirty;
+  }
+  function drawSetup(locked) {
+    const groups = [['confirmed', 'RSVP’d YES'], ['maybe', 'Maybe'], ['waiting', 'No reply yet'], [null, 'Everyone else']];
+    $('cm-players').innerHTML = groups.map(([g, label]) => {
+      const list = DATA.players.filter((p) => p.group === g);
+      if (!list.length) return '';
+      return `<h3>${label}</h3><div class="grid">${list.map((p) => `<label><input type="checkbox" value="${esc(p.id)}" ${form.participants.includes(p.id) ? 'checked' : ''} ${locked ? 'disabled' : ''}> ${esc(p.name)} ${p.rookie ? '<small>rookie</small>' : ''}</label>`).join('')}</div>`;
+    }).join('');
+    drawCaptains(locked);
+    document.querySelectorAll('input[name="cm-first"]').forEach((r) => { r.checked = r.value === form.firstPick; r.disabled = locked; });
+    $('cm-coin').disabled = locked;
+  }
+  function drawCaptains(locked) {
+    for (const s of ['A', 'B']) {
+      const sel = $(`cm-cap${s}`);
+      sel.innerHTML = `<option value="">— choose —</option>` + form.participants.map((id) => `<option value="${esc(id)}" ${form.captains[s] === id ? 'selected' : ''}>${esc(name(id))}</option>`).join('');
+      sel.disabled = locked;
+      $(`cm-first${s}`).textContent = form.captains[s] ? `Team ${surname(form.captains[s])}` : `Captain ${s}`;
+    }
+  }
+  const touch = () => { dirty = true; render(); };
+  $('cm-players').addEventListener('change', (e) => {
+    const id = e.target.value;
+    form.participants = e.target.checked ? [...new Set([...form.participants, id])] : form.participants.filter((x) => x !== id);
+    for (const s of ['A', 'B']) if (!form.participants.includes(form.captains[s])) form.captains[s] = null;
+    drawCaptains(false); touch();
+  });
+  for (const s of ['A', 'B']) $(`cm-cap${s}`).addEventListener('change', (e) => { form.captains[s] = e.target.value || null; drawCaptains(false); touch(); });
+  document.querySelectorAll('input[name="cm-first"]').forEach((r) => r.addEventListener('change', () => { form.firstPick = r.value; touch(); }));
+  $('cm-coin').addEventListener('click', () => {
+    const s = crypto.getRandomValues(new Uint8Array(1))[0] % 2 ? 'A' : 'B';
+    form.firstPick = s;
+    document.querySelectorAll('input[name="cm-first"]').forEach((r) => { r.checked = r.value === s; });
+    $('cm-coinres').textContent = `${form.captains[s] ? `Team ${surname(form.captains[s])}` : `Captain ${s}`} picks first`;
+    touch();
+  });
+  $('cm-save').addEventListener('click', async () => {
+    const out = await act('setup', form);
+    if (out) { dirty = false; lastSetupSig = ''; render(); }
+  });
+
+  // ---- captain links ----
+  function renderLinks() {
+    $('cm-linkmode').textContent = st.mode === 'mock' ? 'the MOCK draft' : 'the REAL draft';
+    const sig = JSON.stringify([st.keys, doc.captains, st.mode]);
+    if (sig === lastLinks) return;
+    lastLinks = sig;
+    $('cm-links').innerHTML = ['A', 'B'].map((s) => {
+      const k = st.keys?.[s];
+      const url = k ? `${location.origin}/draft/captain#${k}` : null;
+      return `<div class="cm-link"><b>${esc(doc.captains[s] ? `${name(doc.captains[s])} · Team ${surname(doc.captains[s])}` : `Captain ${s}`)}</b>
+        ${url ? `<code>${esc(url)}</code>` : '<span class="cm-note">No link yet.</span>'}
+        <div class="cm-row">${url ? `<button type="button" class="cm-small" data-copy="${esc(url)}">Copy link</button>` : ''}<button type="button" class="cm-small" data-regen="${s}">${url ? 'Regenerate' : 'Generate'}</button></div></div>`;
+    }).join('');
+    $('cm-genboth').hidden = Boolean(st.keys?.A && st.keys?.B);
+  }
+  $('cm-links').addEventListener('click', async (e) => {
+    const c = e.target.closest('[data-copy]');
+    if (c) { try { await navigator.clipboard.writeText(c.dataset.copy); c.textContent = 'Copied ✓'; } catch { c.textContent = 'Select the link above and copy it'; } setTimeout(() => { c.textContent = 'Copy link'; }, 2000); return; }
+    const g = e.target.closest('[data-regen]');
+    if (g) {
+      if (g.textContent === 'Regenerate' && !g.dataset.armed) { g.dataset.armed = '1'; g.textContent = 'Tap again: the old link stops working'; return; }
+      await act('keys', { side: g.dataset.regen });
+    }
+  });
+  $('cm-genboth').addEventListener('click', () => act('keys', {}));
+
+  // ---- live status + controls ----
+  function renderLive(ph) {
+    let t = '', c = '', over = false;
+    const who = ph.side ? teamName(ph.side) : '';
+    switch (ph.phase) {
+      case 'setup': t = 'Not started'; break;
+      case 'waiting': t = `Next up: ${who} · pick ${ph.pickNo} of ${ph.total}`; c = clockText(ph.remainingMs); break;
+      case 'clock': t = `On the clock: ${who} · pick ${ph.pickNo} of ${ph.total}`; c = clockText(ph.remainingMs); break;
+      case 'overtime': t = `OVERTIME: ${who} · pick ${ph.pickNo} of ${ph.total}`; c = clockText(ph.overMs, true); over = true; break;
+      case 'pick-is-in': t = `The pick is in: ${teamName(ph.reveal.side)} took ${name(ph.reveal.playerId)} (board reveals in ${ph.countdown})`; break;
+      case 'slam': t = `Revealed: ${name(ph.reveal.playerId)} to ${teamName(ph.reveal.side)}`; break;
+      case 'paused': t = `PAUSED${ph.pickNo ? ` · ${who} on the clock, pick ${ph.pickNo} of ${ph.total}` : ''}`; c = ph.pickNo ? (ph.overMs ? clockText(ph.overMs, true) : clockText(ph.remainingMs)) : ''; over = !!ph.overMs; break;
+      case 'complete': t = `All ${ph.total} picks are in. Finalise below.`; break;
+      case 'finalised': t = st.mode === 'mock' ? 'Finalised (mock)' : 'Finalised. The teams are set.'; break;
+    }
+    $('cm-now').innerHTML = `<div class="t">${esc(t)}</div>${c ? `<div class="c${over ? ' is-over' : ''}">${esc(c)}</div>` : ''}`;
+    const s = doc.status;
+    $('cm-start').hidden = s !== 'setup';
+    $('cm-pause').hidden = s !== 'running';
+    $('cm-resume').hidden = s !== 'paused';
+    $('cm-undo').hidden = !['running', 'paused', 'complete'].includes(s);
+    $('cm-undo').disabled = !doc.picks.length || busy;
+    const n = doc.participants.length;
+    const problems = [];
+    if (s === 'setup') {
+      if (dirty) problems.push('save the setup first');
+      if (n < 4 || n % 2) problems.push('an even number of players');
+      if (!doc.captains.A || !doc.captains.B) problems.push('both captains');
+      if (!st.keys?.A || !st.keys?.B) problems.push('the captain links');
+    }
+    $('cm-start').disabled = busy || problems.length > 0;
+    const last = doc.picks[doc.picks.length - 1];
+    $('cm-startnote').textContent = s === 'setup' && problems.length ? `START needs: ${problems.join(', ')}.` :
+      ['running', 'paused', 'complete'].includes(s) && last ? `UNDO would put ${name(last.playerId)} (pick ${last.n}) back in the pool and pause, with ${teamName(last.side)} back on a fresh ${clockText(doc.pickMs)} clock on RESUME.` : '';
+  }
+
+  function renderPicks(ph) {
+    $('cm-picks').innerHTML = doc.order.map((s, i) => {
+      const p = doc.picks.find((x) => x.n === i + 1);
+      const col = `var(--${s.toLowerCase()})`;
+      if (!p) return `<li class="todo"><span class="sd" style="background:${col}">${s}</span>${ph.pickNo === i + 1 ? `<b style="color:#17293F">${esc(teamName(s))} on the clock</b>` : esc(teamName(s))}</li>`;
+      const over = p.clockMs > doc.pickMs;
+      return `<li><span class="sd" style="background:${col}">${s}</span><b>${esc(name(p.playerId))}</b> <span class="tm${over ? ' is-over' : ''}">${over ? `overtime +${clockText(p.clockMs - doc.pickMs)}` : clockText(p.clockMs)}</span></li>`;
+    }).join('') || '<li class="todo">The order appears when the draft starts.</li>';
+  }
+
+  // ---- finalise ----
+  function renderFinal() {
+    const show = ['complete', 'finalised'].includes(doc.status);
+    $('cm-final').hidden = !show;
+    if (!show) { lastFinalSig = ''; return; }
+    const done = doc.status === 'finalised';
+    $('cm-finalnote').textContent = done
+      ? (st.mode === 'mock' ? 'Mock finalised: the board shows the final screen. Nothing outside the mock was written; RESET to go again.' : 'Finalised. The rosters are on the Match Centre and the site is rebuilding with the real teams.')
+      : st.mode === 'mock'
+        ? 'MOCK: a dry run. You’ll see exactly what would be written, and nothing outside the mock draft changes.'
+        : 'Writes the rosters to the Match Centre (Team A/B become these teams, and each side can only field its own players), then rebuilds the site so the 2027 page shows the real teams.';
+    const sig = JSON.stringify([doc.status, doc.captains, doc.picks.length, doc.teams]);
+    if (sig === lastFinalSig) return;
+    lastFinalSig = sig;
+    const r = rosters(doc);
+    const defaults = { A: DATA.colours[0].id, B: DATA.colours[2].id };
+    $('cm-teams').innerHTML = ['A', 'B'].map((s) => {
+      const cur = doc.teams?.[s];
+      return `<div class="cm-team"><b>Side ${s} · captain ${esc(name(doc.captains[s]))}</b>
+        <input type="text" maxlength="40" id="cm-tn-${s}" placeholder="Team ${esc(surname(doc.captains[s]))}" value="${esc(cur?.name || '')}" ${done ? 'disabled' : ''} aria-label="Team ${s} name">
+        <div class="sw">${DATA.colours.map((c) => `<label title="${esc(c.name)}"><input type="radio" name="cm-col-${s}" value="${c.id}" ${(cur?.colorId || defaults[s]) === c.id ? 'checked' : ''} ${done ? 'disabled' : ''}><span style="background:${c.hex}">${esc(((cur?.name || '') || surname(doc.captains[s])).replace(/^Team\s+/i, '').slice(0, 1).toUpperCase())}</span></label>`).join('')}</div>
+        <span class="roster">${r[s].map((id) => esc(name(id))).join(', ')}</span></div>`;
+    }).join('');
+    $('cm-finalise').hidden = done;
+    syncSwatches();
+  }
+  // the two teams can't share a colour: grey out the other side's choice
+  function syncSwatches() {
+    const val = (s) => document.querySelector(`input[name="cm-col-${s}"]:checked`)?.value;
+    for (const s of ['A', 'B']) {
+      const o = val(s === 'A' ? 'B' : 'A');
+      document.querySelectorAll(`input[name="cm-col-${s}"]`).forEach((i) => { if (doc.status !== 'finalised') i.disabled = i.value === o; });
+    }
+  }
+  $('cm-teams').addEventListener('change', syncSwatches);
+  $('cm-teams').addEventListener('input', (e) => {   // the monogram follows the name as you type
+    const m = e.target.id?.match(/^cm-tn-([AB])$/);
+    if (!m) return;
+    const letter = (e.target.value.trim() || surname(doc.captains[m[1]])).replace(/^Team\s+/i, '').slice(0, 1).toUpperCase();
+    document.querySelectorAll(`input[name="cm-col-${m[1]}"] + span`).forEach((sp) => { sp.textContent = letter; });
+  });
+  $('cm-finalise').addEventListener('click', async () => {
+    const teams = {};
+    for (const s of ['A', 'B']) teams[s] = { name: $(`cm-tn-${s}`).value, color: document.querySelector(`input[name="cm-col-${s}"]:checked`)?.value };
+    const b = $('cm-finalise');
+    if (st.mode === 'real' && !b.dataset.armed) { b.dataset.armed = '1'; b.textContent = 'TAP AGAIN TO FINALISE'; setTimeout(() => { delete b.dataset.armed; b.textContent = 'FINALISE'; }, 5000); return; }
+    const out = await act('finalise', { teams });
+    delete b.dataset.armed; b.textContent = 'FINALISE';
+    if (!out) return;
+    const t = out.rehearsal ? out.wouldWrite.teams : out.draft.teams;
+    const line = (s) => `<b>${esc(t[s].name)}</b> (${esc(t[s].colorId)}, id ${esc(t[s].id)}): ${t[s].playerIds.map((id) => esc(name(id))).join(', ')}`;
+    const cleared = out.rehearsal ? out.wouldWrite.clearedSlots : out.clearedSlots.length;
+    const clearedList = out.rehearsal ? '' : out.clearedSlots.map((c) => `<li>Round ${esc(c.round)} match ${esc(c.match)}: ${esc(c.name)} removed from side ${c.side}</li>`).join('');
+    $('cm-result').innerHTML = `<div class="ok">${out.rehearsal ? '<b>MOCK — nothing was written.</b> A real finalise would write:' : '<b>Finalised.</b>'}<br>${line('A')}<br>${line('B')}<br>
+      Match Centre slots ${out.rehearsal ? 'that would be ' : ''}cleared: ${cleared}${clearedList ? `<ul>${clearedList}</ul>` : ''}
+      ${out.rehearsal ? '' : `<br>Site rebuild: ${esc({ triggered: 'started (about 2 minutes)', 'no-hook': 'no deploy hook set up — redeploy by hand' }[out.rebuild] || out.rebuild)}`}</div>`;
+  });
+
+  // ---- mode + reset ----
+  document.querySelectorAll('[data-mode]').forEach((b) => b.addEventListener('click', async () => {
+    if (b.dataset.mode === st.mode) return;
+    if (st.mode === 'real' && ['running', 'paused'].includes(doc.status) && !b.dataset.armed) { b.dataset.armed = '1'; b.textContent = 'Tap again: the real draft is live'; return; }
+    delete b.dataset.armed; b.textContent = b.dataset.mode === 'real' ? 'Real draft' : 'Mock draft';
+    dirty = false; lastSetupSig = ''; lastLinks = ''; lastFinalSig = ''; $('cm-result').innerHTML = '';
+    await act('mode', { mode: b.dataset.mode });
+  }));
+  const resetReady = () => { $('cm-reset').disabled = $('cm-resetword').value.trim().toUpperCase() !== 'RESET' || (!$('cm-unfinwrap').hidden && !$('cm-unfin').checked); };
+  $('cm-resetword').addEventListener('input', resetReady);
+  $('cm-unfin').addEventListener('change', resetReady);
+  $('cm-reset').addEventListener('click', async () => {
+    const out = await act('reset', { confirm: $('cm-resetword').value, unfinalise: $('cm-unfin').checked });
+    if (out) { $('cm-resetword').value = ''; $('cm-unfin').checked = false; $('cm-result').innerHTML = ''; lastFinalSig = ''; resetReady(); }
+  });
+
+  $('cm-start').addEventListener('click', () => act('start'));
+  $('cm-pause').addEventListener('click', () => act('pause'));
+  $('cm-resume').addEventListener('click', () => act('resume'));
+  $('cm-undo').addEventListener('click', async () => {
+    const b = $('cm-undo');
+    if (!b.dataset.armed) { b.dataset.armed = '1'; b.textContent = 'Tap again to UNDO'; setTimeout(() => { delete b.dataset.armed; b.textContent = 'UNDO last pick'; }, 4000); return; }
+    delete b.dataset.armed; b.textContent = 'UNDO last pick';
+    const out = await act('undo');
+    if (out?.undone) err('');
+  });
+
+  function render() {
+    if (!doc) return;
+    const ph = phaseAt(doc, now());
+    $('cm-mockbar').hidden = st.mode !== 'mock';
+    document.querySelectorAll('[data-mode]').forEach((b) => b.classList.toggle('is-on', b.dataset.mode === st.mode));
+    for (const s of ['A', 'B']) if (doc.teams?.[s]?.color) root.style.setProperty(`--${s.toLowerCase()}`, doc.teams[s].color);
+    $('cm-unfinwrap').hidden = !(doc.status === 'finalised' && st.mode === 'real');
+    resetReady();
+    renderLive(ph);
+    renderSetup();
+    renderLinks();
+    renderPicks(ph);
+    renderFinal();
+  }
+
+  function begin() {
+    $('cm-locked').hidden = true;
+    poll = startPolling('/api/draft-admin', {
+      headers: { 'x-admin-key': key },
+      every: 1500,
+      onData: (body, clock) => { st = body; doc = body.draft; now = clock; $('cm-app').hidden = false; render(); },
+      onStatus: (s) => {
+        $('cm-conn').classList.toggle('is-bad', s !== 'live');
+        if (s.startsWith('error:') && !doc) {
+          poll.stop(); try { sessionStorage.removeItem(KEY_STORE); } catch {}
+          $('cm-locked').hidden = false; $('cm-lockerr').textContent = s.slice(6);
+        }
+      },
+    });
+    if (!ticking) ticking = setInterval(render, 250);
+  }
+  let ticking = null;
+  $('cm-keyform').addEventListener('submit', (e) => {
+    e.preventDefault();
+    key = $('cm-key').value.trim();
+    if (!key) return;
+    try { sessionStorage.setItem(KEY_STORE, key); } catch {}
+    begin();
+  });
+  if (key) begin(); else $('cm-locked').hidden = false;
+</script>

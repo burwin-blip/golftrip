@@ -1,0 +1,163 @@
+---
+// THE BIG BOARD — /draft/board. Public but unlisted (noindex like every page;
+// not linked from the site). For the TV and the livestream: dark, full-screen,
+// theatrical. Polls /api/draft every second; every stage (clock, overtime, the
+// reveal) is timed from the server's timestamps, so a refreshed or reconnected
+// board lands exactly where things stand — including mid-reveal.
+import Base from '../../layouts/Base.astro';
+import { draftRoomData } from '../../lib/draft-data.js';
+const data = draftRoomData();
+---
+<Base title="Draft Board" description="The Annual 2027 draft — live." bare>
+  <div class="db" id="db" data-phase="setup">
+    <div class="db-mock" id="db-mock" hidden aria-hidden="true"><span>MOCK DRAFT</span></div>
+    <header class="db-top">
+      <div class="db-brand">THE ANNUAL <b>·</b> 2027 DRAFT <span class="db-mocktag" id="db-mocktag" hidden>MOCK</span></div>
+      <ol class="db-order" id="db-order" aria-label="Pick order"></ol>
+      <span class="db-conn" id="db-conn" title="Connection"></span>
+    </header>
+    <main class="db-main">
+      <section class="db-team" data-side="A"><h2 class="db-team__name" id="db-name-A">Team A</h2><div class="db-roster" id="db-roster-A"></div></section>
+      <section class="db-stage" id="db-stage" aria-live="polite"></section>
+      <section class="db-team" data-side="B"><h2 class="db-team__name" id="db-name-B">Team B</h2><div class="db-roster" id="db-roster-B"></div></section>
+    </main>
+  </div>
+  <script type="application/json" id="db-data" set:html={JSON.stringify(data)} />
+</Base>
+
+<style is:global>
+  html:has(.db), body:has(.db) { background: #07111D !important; }
+  .db { --a: #E06A2E; --b: #4A8FD1; min-height: 100vh; min-height: 100dvh; color: #E7ECF2; background: radial-gradient(120% 80% at 50% 0%, #17293F 0%, #0B1726 55%, #07111D 100%); display: flex; flex-direction: column; overflow: hidden; position: relative; }
+  .db-top { display: flex; align-items: center; gap: 1.2rem; padding: 1rem 2vw .6rem; }
+  .db-brand { font-weight: 900; letter-spacing: .22em; font-size: clamp(.8rem, .6rem + .5vw, 1.1rem); white-space: nowrap; color: #FCD79A; }
+  .db-brand b { color: #E06A2E; }
+  .db-mocktag { margin-left: .6rem; padding: .15rem .55rem; border-radius: 99px; background: #E06A2E; color: #fff; letter-spacing: .12em; }
+  .db-order { list-style: none; margin: 0; padding: 0; display: flex; gap: .35rem; flex: 1; overflow: hidden; justify-content: center; }
+  .db-order li { flex: 0 1 auto; min-width: 0; padding: .3rem .55rem; border-radius: 8px; font-size: clamp(.62rem, .5rem + .35vw, .85rem); font-weight: 800; background: rgba(255,255,255,.06); box-shadow: inset 0 -3px 0 var(--c); color: rgba(231,236,242,.55); white-space: nowrap; text-overflow: ellipsis; overflow: hidden; }
+  .db-order li.is-done { color: #E7ECF2; background: rgba(255,255,255,.1); }
+  .db-order li.is-now { background: var(--c); color: #fff; box-shadow: 0 0 0 2px #fff, 0 0 22px var(--c); animation: db-pulse 1.4s ease-in-out infinite; }
+  .db-conn { width: 12px; height: 12px; border-radius: 50%; background: #3FB67B; flex: none; }
+  .db-conn.is-bad { background: #E0492E; animation: db-flash .6s steps(2) infinite; }
+  .db-main { flex: 1; display: grid; grid-template-columns: minmax(0, 1fr) minmax(320px, 1.15fr) minmax(0, 1fr); gap: 2vw; padding: 1vh 2vw 2vh; min-height: 0; }
+  .db-team { display: flex; flex-direction: column; min-height: 0; }
+  .db-team__name { font-family: var(--serif); font-size: clamp(1.4rem, 1rem + 1.6vw, 2.6rem); color: #fff; margin-bottom: .8rem; padding-bottom: .4rem; border-bottom: 5px solid var(--c); }
+  .db-team[data-side="A"] { --c: var(--a); } .db-team[data-side="B"] { --c: var(--b); }
+  .db-roster { display: grid; grid-template-columns: repeat(var(--cols, 4), minmax(0, 1fr)); gap: .8vw; align-content: start; }
+  .db-roster .dc { --dc-c: var(--c); }
+  .db-roster .dc__name { font-size: clamp(.7rem, .45rem + .6vw, 1.05rem); }
+  .db-roster .dc__meta { font-size: clamp(.55rem, .4rem + .35vw, .72rem); }
+  .db-roster .dc.is-slam { animation: db-slam .7s cubic-bezier(.2, 1.6, .4, 1) both; }
+  .db-stage { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 1.2vh; min-width: 0; }
+  .db-k { font-weight: 900; letter-spacing: .3em; text-transform: uppercase; font-size: clamp(.8rem, .5rem + .9vw, 1.5rem); color: #FCD79A; }
+  .db-who { font-family: var(--serif); font-weight: 700; font-size: clamp(1.8rem, 1rem + 2.8vw, 4.2rem); line-height: 1; color: #fff; }
+  .db-who span { color: var(--c); }
+  .db-clock { font-weight: 900; font-variant-numeric: tabular-nums; font-size: clamp(5rem, 2rem + 11vw, 15rem); line-height: .9; letter-spacing: -.03em; color: #fff; text-shadow: 0 10px 40px rgba(0,0,0,.5); }
+  .db-clock.is-low { color: #FCD79A; }
+  .db-sub { font-size: clamp(.8rem, .6rem + .5vw, 1.1rem); color: rgba(231,236,242,.7); font-weight: 700; letter-spacing: .08em; }
+  .db[data-phase="overtime"] .db-k { color: #FF4B3A; animation: db-flash .8s steps(2) infinite; font-size: clamp(1.4rem, .8rem + 2.4vw, 3.4rem); }
+  .db[data-phase="overtime"] .db-clock { color: #FF4B3A; }
+  .db[data-phase="overtime"] { background: radial-gradient(120% 80% at 50% 0%, #3A1414 0%, #1A0B0F 60%, #07111D 100%); }
+  .db-isin { font-family: var(--serif); font-weight: 800; font-size: clamp(2.4rem, 1.2rem + 5vw, 7rem); line-height: .95; color: #fff; text-transform: uppercase; letter-spacing: -.01em; }
+  .db-count { font-weight: 900; font-size: clamp(6rem, 3rem + 12vw, 18rem); line-height: .9; color: var(--c); font-variant-numeric: tabular-nums; animation: db-tick 1s ease-out infinite; }
+  .db-reveal { width: min(80%, 360px); animation: db-slam .8s cubic-bezier(.2, 1.6, .4, 1) both; }
+  .db-reveal .dc { --dc-c: var(--c); box-shadow: 0 0 0 4px var(--c), 0 30px 80px -20px rgba(0,0,0,.8); }
+  .db-reveal .dc__name { font-size: clamp(1.4rem, 1rem + 1.4vw, 2.4rem); }
+  .db-reveal .dc__meta { font-size: clamp(.8rem, .6rem + .5vw, 1.1rem); }
+  .db-big { font-family: var(--serif); font-weight: 800; font-size: clamp(2.6rem, 1.4rem + 5vw, 7rem); color: #fff; line-height: .95; }
+  .db-mock { position: fixed; inset: 0; z-index: 50; pointer-events: none; display: grid; place-items: center; }
+  .db-mock span { transform: rotate(-24deg); font-weight: 900; font-size: 14vw; letter-spacing: .08em; color: rgba(224,106,46,.09); white-space: nowrap; border: .6vw solid rgba(224,106,46,.09); padding: 0 3vw; }
+  @keyframes db-pulse { 50% { box-shadow: 0 0 0 2px #fff, 0 0 38px var(--c); } }
+  @keyframes db-flash { 50% { opacity: .35; } }
+  @keyframes db-tick { from { transform: scale(1.25); opacity: .6; } to { transform: scale(1); opacity: 1; } }
+  @keyframes db-slam { from { transform: scale(2.6) rotate(-6deg); opacity: 0; } 60% { transform: scale(.94) rotate(1deg); opacity: 1; } to { transform: scale(1) rotate(0); } }
+  @media (max-width: 900px) { .db-main { grid-template-columns: 1fr; } .db-stage { order: -1; padding: 2vh 0; } .db-roster { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+</style>
+
+<script>
+  import { phaseAt, rosters, clockText } from '../../lib/draft-shared.js';
+  import { startPolling, cardHtml, esc, CARD_CSS } from '../../lib/draft-client.js';
+
+  const DATA = JSON.parse(document.getElementById('db-data').textContent);
+  const P = Object.fromEntries(DATA.players.map((p) => [p.id, p]));
+  document.head.insertAdjacentHTML('beforeend', `<style>${CARD_CSS}</style>`);
+  const $ = (id) => document.getElementById(id);
+  const root = $('db');
+  let doc = null, now = () => Date.now(), lastShown = null, lastRosters = null, slammed = new Set();
+
+  const surname = (id) => (P[id]?.last || id);
+  const teamName = (s) => doc?.teams?.[s]?.name || (doc?.captains?.[s] ? `Team ${surname(doc.captains[s])}` : `Team ${s}`);
+
+  function render() {
+    if (!doc) return;
+    const t = now();
+    const ph = phaseAt(doc, t);
+    root.dataset.phase = ph.phase;
+    const mock = doc.mode === 'mock';
+    $('db-mock').hidden = !mock; $('db-mocktag').hidden = !mock;
+    // team colours: the finalised ones, else the stage defaults
+    for (const s of ['A', 'B']) if (doc.teams?.[s]?.color) root.style.setProperty(s === 'A' ? '--a' : '--b', doc.teams[s].color);
+
+    // never show a pick before its reveal: while "THE PICK IS IN" runs, it's hidden
+    const hidden = ph.phase === 'pick-is-in' ? ph.reveal.pickNo : null;
+    const visible = { ...doc, picks: doc.picks.filter((p) => p.n !== hidden) };
+    const r = rosters(visible);
+    const per = { A: 1 + doc.order.filter((x) => x === 'A').length, B: 1 + doc.order.filter((x) => x === 'B').length };
+    // redraw the rosters only when they change, so a card's slam plays once
+    const rosterSig = JSON.stringify([r, per, ph.phase === 'slam' ? ph.reveal?.playerId : null, doc.teams]);
+    const rostersChanged = rosterSig !== lastRosters;
+    lastRosters = rosterSig;
+    for (const s of ['A', 'B']) {
+      if (!rostersChanged) break;
+      $(`db-name-${s}`).textContent = teamName(s);
+      const cells = [];
+      for (let i = 0; i < Math.max(per[s], r[s].length, 1); i++) {
+        const id = r[s][i];
+        const isCap = id && id === doc.captains[s];
+        cells.push(cardHtml(id ? P[id] || { name: id, initials: '?' } : null, { size: 'sm', badge: isCap ? '<span class="dc__cap">C</span>' : '' }).replace('class="dc ', `class="dc ${id && !slammed.has(id) && ph.phase === 'slam' && ph.reveal?.playerId === id ? 'is-slam ' : ''}`));
+      }
+      // up to 9 a side → 3 across (bigger cards that fill the TV); more → 4 across
+      $(`db-roster-${s}`).style.setProperty('--cols', cells.length <= 9 ? 3 : 4);
+      $(`db-roster-${s}`).innerHTML = cells.join('');
+    }
+    if (ph.phase === 'slam' && ph.reveal) setTimeout(() => slammed.add(ph.reveal.playerId), 700);
+    else if (ph.phase !== 'slam') for (const p of doc.picks) slammed.add(p.playerId);
+
+    // pick order strip
+    $('db-order').innerHTML = doc.order.map((s, i) => {
+      const made = visible.picks.find((p) => p.n === i + 1);
+      const cls = made ? 'is-done' : ph.pickNo === i + 1 && ['clock', 'overtime', 'waiting', 'paused'].includes(ph.phase) ? 'is-now' : '';
+      return `<li class="${cls}" style="--c:var(--${s.toLowerCase()})">${i + 1}${made ? ` · ${esc(surname(made.playerId))}` : ''}</li>`;
+    }).join('');
+
+    // centre stage
+    const side = ph.side || ph.reveal?.side;
+    $('db-stage').style.setProperty('--c', `var(--${(side || 'a').toLowerCase()})`);
+    const captain = side ? doc.captains[side] : null;
+    let html = '';
+    switch (ph.phase) {
+      case 'setup': html = `<p class="db-k">Draft night</p><p class="db-big">The Annual<br>2027</p><p class="db-sub">Starting soon</p>`; break;
+      case 'waiting':
+      case 'clock': {
+        const low = ph.remainingMs <= 20_000;
+        html = `<p class="db-k">On the clock · pick ${ph.pickNo} of ${ph.total}</p><p class="db-who"><span>${esc(teamName(side))}</span></p>
+          <p class="db-clock${low ? ' is-low' : ''}">${clockText(ph.remainingMs)}</p><p class="db-sub">${esc(P[captain]?.name || '')} is picking</p>`; break;
+      }
+      case 'overtime': html = `<p class="db-k">Overtime</p><p class="db-who"><span>${esc(teamName(side))}</span></p><p class="db-clock">${clockText(ph.overMs, true)}</p><p class="db-sub">${esc(P[captain]?.name || '')} is still picking · pick ${ph.pickNo} of ${ph.total}</p>`; break;
+      case 'pick-is-in': html = `<p class="db-k">${esc(teamName(side))} · pick ${ph.reveal.pickNo}</p><p class="db-isin">The pick<br>is in</p><p class="db-count" key="${ph.countdown}">${ph.countdown}</p>`; break;
+      case 'slam': html = `<p class="db-k">${esc(teamName(side))} · pick ${ph.reveal.pickNo} of ${ph.total}</p><div class="db-reveal">${cardHtml(P[ph.reveal.playerId] || { name: ph.reveal.playerId, initials: '?' }, { size: 'lg' })}</div>`; break;
+      case 'paused': html = `<p class="db-k">Paused</p><p class="db-big">Stand by</p>${ph.pickNo ? `<p class="db-sub">${esc(teamName(ph.side))} on the clock · ${ph.overMs ? clockText(ph.overMs, true) + ' over' : clockText(ph.remainingMs) + ' left'}</p>` : ''}`; break;
+      case 'complete': html = `<p class="db-k">The draft is done</p><p class="db-big">${esc(teamName('A'))}<br><span style="font-size:.45em;color:#FCD79A">v</span><br>${esc(teamName('B'))}</p>`; break;
+      case 'finalised': html = `<p class="db-k">Final</p><p class="db-big">${esc(teamName('A'))}<br><span style="font-size:.45em;color:#FCD79A">v</span><br>${esc(teamName('B'))}</p><p class="db-sub">See you on the first tee</p>`; break;
+    }
+    // only rebuild the stage when it changes (keeps the animations from restarting every tick)
+    const sig = `${ph.phase}|${ph.pickNo}|${ph.countdown}|${ph.reveal?.pickNo}|${Math.floor((ph.remainingMs ?? ph.overMs ?? 0) / 1000)}|${doc.rev}`;
+    if (sig !== lastShown) { $('db-stage').innerHTML = html; lastShown = sig; }
+  }
+
+  const poll = startPolling('/api/draft', {
+    every: 1000,
+    onData: (body, clock) => { doc = body.draft; now = clock; render(); },
+    onStatus: (st) => $('db-conn').classList.toggle('is-bad', st !== 'live'),
+  });
+  setInterval(render, 200);
+</script>

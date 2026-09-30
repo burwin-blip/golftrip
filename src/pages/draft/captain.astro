@@ -1,0 +1,357 @@
+---
+// THE CAPTAIN'S CONSOLE — /draft/captain#<captain-key>. One secret link per
+// captain, generated on the commissioner console (the key lives only in Redis;
+// the page strips it from the address bar and keeps it in this tab). Laptop-first,
+// usable on a phone: the clock, both rosters, and the pool as scouting cards with
+// a shortlist and sorting. Picking is two steps (tap a card, then LOCK IT IN) and
+// a lock is final: only the commissioner can undo it.
+import Base from '../../layouts/Base.astro';
+import { draftRoomData } from '../../lib/draft-data.js';
+const data = draftRoomData();
+---
+<Base title="Captain's console" description="The Annual 2027 draft — captain's console." bare>
+  <div class="cc" id="cc" data-phase="setup">
+    <div class="cc-mockbar" id="cc-mockbar" hidden>MOCK DRAFT · a rehearsal, nothing counts</div>
+    <div class="cc-locked" id="cc-locked" hidden>
+      <h1>Captain’s console</h1>
+      <p id="cc-lockmsg">Open this page from the link the commissioner sent you.</p>
+    </div>
+
+    <div id="cc-app" hidden>
+      <header class="cc-top">
+        <div class="cc-team"><span class="cc-dot" id="cc-dot"></span><div><p class="cc-k">Captain’s console</p><h1 id="cc-teamname">Team</h1></div></div>
+        <div class="cc-status" id="cc-status"></div>
+        <span class="cc-conn" id="cc-conn" title="Connection"></span>
+      </header>
+
+      <div class="cc-body">
+        <section class="cc-poolsec">
+          <div class="cc-tools">
+            <h2>The pool <span id="cc-left"></span></h2>
+            <div class="cc-seg" role="group" aria-label="Show">
+              <button type="button" data-filter="all" class="is-on">All</button>
+              <button type="button" data-filter="short">★ Shortlist</button>
+              <button type="button" data-filter="rookies">Rookies</button>
+            </div>
+            <label class="cc-sort">Sort <select id="cc-sort">
+              <option value="rank">Power ranking</option>
+              <option value="index">Index (low first)</option>
+              <option value="pts">2026 points %</option>
+              <option value="name">Name</option>
+            </select></label>
+          </div>
+          <div class="cc-pool" id="cc-pool"></div>
+          <p class="cc-empty" id="cc-empty" hidden></p>
+        </section>
+
+        <aside class="cc-side">
+          <div class="cc-roster" data-side="A"><h3 id="cc-rn-A">Team A</h3><ol id="cc-r-A"></ol></div>
+          <div class="cc-roster" data-side="B"><h3 id="cc-rn-B">Team B</h3><ol id="cc-r-B"></ol></div>
+          <p class="cc-order" id="cc-order"></p>
+        </aside>
+      </div>
+
+      <div class="cc-lockbar" id="cc-lockbar">
+        <span class="cc-sel" id="cc-sel">Tap a player to select them</span>
+        <button type="button" class="cc-lockbtn" id="cc-lockbtn" disabled>LOCK IT IN</button>
+        <p class="cc-msg" id="cc-msg" role="alert"></p>
+      </div>
+    </div>
+  </div>
+  <script type="application/json" id="cc-data" set:html={JSON.stringify(data)} />
+</Base>
+
+<style is:global>
+  html:has(.cc), body:has(.cc) { background: #EEF1F4 !important; }
+  .cc { --me: #E06A2E; --a: #E06A2E; --b: #4A8FD1; min-height: 100vh; color: #17293F; padding-bottom: 7rem; }
+  .cc-mockbar { position: sticky; top: 0; z-index: 30; background: repeating-linear-gradient(-45deg, #E06A2E 0 14px, #C95A22 14px 28px); color: #fff; text-align: center; font-weight: 900; letter-spacing: .16em; font-size: .75rem; padding: .35rem; }
+  .cc-locked { max-width: 440px; margin: 18vh auto 0; text-align: center; padding: 0 1rem; }
+  .cc-locked h1 { font-size: 2rem; margin-bottom: .6rem; }
+  .cc-top { display: flex; align-items: center; gap: 1rem; padding: .9rem clamp(1rem, 3vw, 2rem); background: #0C1B2C; color: #fff; position: sticky; top: 0; z-index: 20; flex-wrap: wrap; }
+  .cc:has(.cc-mockbar:not([hidden])) .cc-top { top: 1.6rem; }
+  .cc-team { display: flex; align-items: center; gap: .7rem; min-width: 0; }
+  .cc-dot { width: 16px; height: 44px; border-radius: 6px; background: var(--me); flex: none; }
+  .cc-k { font-size: .65rem; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; color: #FCD79A; margin: 0; }
+  .cc-team h1 { font-size: clamp(1.2rem, 1rem + 1vw, 1.7rem); color: #fff; margin: 0; line-height: 1.1; }
+  .cc-status { flex: 1; display: flex; align-items: center; justify-content: flex-end; gap: .8rem; min-width: 220px; text-align: right; }
+  .cc-status .t { font-weight: 800; font-size: .85rem; letter-spacing: .06em; text-transform: uppercase; color: rgba(255,255,255,.8); }
+  .cc-status .c { font-weight: 900; font-size: clamp(1.8rem, 1.2rem + 2vw, 2.8rem); font-variant-numeric: tabular-nums; line-height: 1; }
+  .cc[data-me="1"] .cc-top { background: var(--me); }
+  .cc[data-me="1"] .cc-status .t { color: #fff; }
+  .cc[data-phase="overtime"] .cc-status .c { color: #FF6B5A; }
+  .cc[data-phase="overtime"][data-me="1"] .cc-top { background: #B3261E; }
+  .cc[data-phase="overtime"][data-me="1"] .cc-status .c { color: #fff; animation: cc-flash .8s steps(2) infinite; }
+  .cc-conn { width: 11px; height: 11px; border-radius: 50%; background: #3FB67B; flex: none; }
+  .cc-conn.is-bad { background: #E0492E; animation: cc-flash .6s steps(2) infinite; }
+  .cc-body { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 1.5rem; padding: 1.2rem clamp(1rem, 3vw, 2rem); align-items: start; }
+  .cc-tools { display: flex; align-items: center; gap: .8rem; flex-wrap: wrap; margin-bottom: 1rem; }
+  .cc-tools h2 { font-size: 1.4rem; margin: 0 auto 0 0; }
+  .cc-tools h2 span { font-family: var(--sans, inherit); font-size: .8rem; color: #6b7a86; font-weight: 700; }
+  .cc-seg { display: inline-flex; background: #fff; border-radius: 999px; padding: 3px; box-shadow: inset 0 0 0 1px #D5DCE3; }
+  .cc-seg button { border: 0; background: none; font: inherit; font-size: .8rem; font-weight: 700; padding: .35rem .75rem; border-radius: 999px; cursor: pointer; color: #17293F; }
+  .cc-seg button.is-on { background: #17293F; color: #fff; }
+  .cc-sort { font-size: .8rem; font-weight: 700; display: inline-flex; align-items: center; gap: .4rem; }
+  .cc-sort select { font: inherit; font-size: 16px; padding: .3rem .5rem; border-radius: 8px; border: 1px solid #D5DCE3; background: #fff; }
+  .cc-pool { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 1rem; }
+  .cc-card { position: relative; cursor: pointer; border-radius: 14px; outline: none; transition: transform .12s; }
+  .cc-card:hover { transform: translateY(-2px); }
+  .cc-card:focus-visible .dc { box-shadow: 0 0 0 3px #17293F; }
+  .cc-card.is-sel .dc { box-shadow: 0 0 0 4px var(--me), 0 16px 34px -14px rgba(0,0,0,.6); }
+  .cc-card.is-sel::after { content: 'SELECTED'; position: absolute; top: 8px; left: 50%; transform: translateX(-50%); background: var(--me); color: #fff; font-size: .62rem; font-weight: 900; letter-spacing: .14em; padding: .2rem .55rem; border-radius: 99px; z-index: 3; }
+  .cc-star { position: absolute; top: 6px; right: 6px; z-index: 3; width: 34px; height: 34px; border-radius: 50%; border: 0; background: rgba(12,27,44,.55); color: #fff; font-size: 1.05rem; cursor: pointer; line-height: 1; }
+  .cc-star.is-on { background: #C9A227; }
+  .cc-stats { display: flex; flex-wrap: wrap; gap: .25rem .6rem; font-size: .72rem; font-weight: 700; color: #17293F; margin-top: .2rem; }
+  .cc-stats b { font-variant-numeric: tabular-nums; }
+  .cc-fmts { display: grid; gap: .05rem; font-size: .68rem; color: #6b7a86; margin-top: .25rem; font-variant-numeric: tabular-nums; }
+  .cc-fmts span b { color: #17293F; font-weight: 700; }
+  .cc-head { font-size: .68rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--terra-ink, #A73820); margin-top: .15rem; }
+  .cc-empty { color: #6b7a86; font-weight: 600; padding: 2rem 0; text-align: center; }
+  .cc-side { position: sticky; top: 6rem; display: grid; gap: 1rem; }
+  .cc-roster { background: #fff; border-radius: 14px; padding: .8rem 1rem 1rem; box-shadow: 0 6px 20px -14px rgba(0,0,0,.4); border-top: 5px solid var(--c); }
+  .cc-roster[data-side="A"] { --c: var(--a); } .cc-roster[data-side="B"] { --c: var(--b); }
+  .cc-roster h3 { font-size: 1.05rem; margin: 0 0 .5rem; }
+  .cc-roster ol { list-style: none; margin: 0; padding: 0; display: grid; gap: .3rem; }
+  .cc-roster li { display: flex; align-items: center; gap: .5rem; font-size: .85rem; font-weight: 600; min-height: 30px; }
+  .cc-roster li.is-empty { color: #A9B4BE; font-weight: 500; }
+  .cc-av { width: 30px; height: 30px; border-radius: 50%; overflow: hidden; flex: none; background: linear-gradient(180deg, #DE9660, #F9E4C6); display: grid; place-items: center; font-size: .65rem; font-weight: 800; }
+  .cc-av img { width: 100%; height: 100%; object-fit: cover; object-position: center 26%; }
+  .cc-av.is-sq img { object-position: center; }
+  .cc-roster .cap { margin-left: auto; font-size: .6rem; font-weight: 900; background: var(--c); color: #fff; border-radius: 99px; padding: .1rem .45rem; }
+  .cc-order { font-size: .75rem; color: #6b7a86; margin: 0; line-height: 1.5; }
+  .cc-lockbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 25; display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; padding: .8rem clamp(1rem, 3vw, 2rem) calc(.8rem + env(safe-area-inset-bottom)); background: #fff; box-shadow: 0 -10px 30px -12px rgba(0,0,0,.3); }
+  .cc-sel { flex: 1; min-width: 0; font-weight: 700; font-size: .95rem; }
+  .cc-lockbtn { border: 0; border-radius: 999px; padding: .9rem 2rem; font: inherit; font-weight: 900; letter-spacing: .12em; font-size: 1rem; background: var(--me); color: #fff; cursor: pointer; box-shadow: 0 8px 20px -8px var(--me); }
+  .cc-lockbtn:disabled { background: #C5CDD5; box-shadow: none; cursor: not-allowed; }
+  .cc-lockbtn.is-armed { animation: cc-pulse 1.2s ease-in-out infinite; }
+  .cc-msg { flex-basis: 100%; margin: 0; font-size: .85rem; font-weight: 700; color: #A73820; min-height: 0; }
+  .cc-msg:empty { display: none; }
+  .cc-msg.is-good { color: #1F7A4D; }
+  @keyframes cc-flash { 50% { opacity: .4; } }
+  @keyframes cc-pulse { 50% { transform: scale(1.04); } }
+  @media (max-width: 860px) {
+    .cc-body { grid-template-columns: 1fr; }
+    .cc-side { position: static; order: -1; grid-template-columns: 1fr 1fr; }
+    .cc-order { grid-column: 1 / -1; }
+    .cc-pool { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .7rem; }
+    .cc-status { min-width: 0; justify-content: space-between; flex-basis: 100%; text-align: left; }
+    .cc-lockbtn { flex: 1; padding: .9rem 1rem; }
+    .cc-sel { flex-basis: 100%; }
+  }
+  @media (max-width: 600px) {
+    .cc-top { gap: .4rem .8rem; padding: .6rem 1rem; }
+    .cc-k { display: none; }
+    .cc-dot { width: 10px; height: 28px; }
+    .cc-team h1 { font-size: 1.15rem; }
+    .cc-status { gap: .6rem; }
+    .cc-status .t { font-size: .68rem; }
+    .cc-status .c { font-size: 1.7rem; }
+    .cc-conn { position: absolute; top: .7rem; right: 1rem; }
+    .cc:has(.cc-mockbar:not([hidden])) .cc-top { top: 1.5rem; }
+    .cc-mockbar { font-size: .62rem; letter-spacing: .08em; }
+    .cc-lockbar { gap: .5rem; padding-top: .6rem; }
+    .cc-sel { font-size: .82rem; }
+    .cc-lockbtn { padding: .75rem 1rem; }
+    .cc-msg { font-size: .78rem; }
+  }
+  @media (max-width: 420px) { .cc-roster { padding: .6rem .6rem .8rem; } .cc-roster li { font-size: .75rem; } .cc-av { width: 24px; height: 24px; } }
+</style>
+
+<script>
+  import { phaseAt, rosters, available, clockText } from '../../lib/draft-shared.js';
+  import { startPolling, keyFromHash, cardHtml, esc, CARD_CSS } from '../../lib/draft-client.js';
+
+  const DATA = JSON.parse(document.getElementById('cc-data').textContent);
+  const P = Object.fromEntries(DATA.players.map((p) => [p.id, p]));
+  document.head.insertAdjacentHTML('beforeend', `<style>${CARD_CSS}</style>`);
+  const $ = (id) => document.getElementById(id);
+  const root = $('cc');
+  const key = keyFromHash('annual-draft-captain');
+
+  let doc = null, side = null, now = () => Date.now();
+  let selected = null, filter = 'all', sort = 'rank', sending = false, lastPool = '', lastRosters = '', lastPickNo = null;
+  const SHORT = 'annual-draft-shortlist';
+  let shortlist = new Set();
+  try { shortlist = new Set(JSON.parse(localStorage.getItem(SHORT) || '[]')); } catch {}
+  const saveShort = () => { try { localStorage.setItem(SHORT, JSON.stringify([...shortlist])); } catch {} };
+
+  const surname = (id) => P[id]?.last || id;
+  const teamName = (s) => doc?.teams?.[s]?.name || (doc?.captains?.[s] ? `Team ${surname(doc.captains[s])}` : `Team ${s}`);
+  const other = (s) => (s === 'A' ? 'B' : 'A');
+  const msg = (text, good = false) => { $('cc-msg').textContent = text || ''; $('cc-msg').classList.toggle('is-good', good); };
+
+  if (!key) { $('cc-locked').hidden = false; }
+
+  function statsHtml(p) {
+    const bits = [];
+    if (p.pointsPct != null) bits.push(`<span>Pts <b>${p.pointsPct}%</b></span>`);
+    if (p.record) bits.push(`<span>Record <b>${p.record.w}-${p.record.h}-${p.record.l}</b></span>`);
+    const fmts = p.formats.map((f) => `<span>${esc(f.label)} <b>${f.w}-${f.h}-${f.l}</b></span>`).join('');
+    return `${p.headline ? `<span class="cc-head">${esc(p.headline)}</span>` : ''}<span class="cc-stats">${bits.join('') || '<span>No Annual record yet</span>'}</span>${fmts ? `<span class="cc-fmts">${fmts}</span>` : ''}`;
+  }
+
+  function sorted(ids) {
+    const list = ids.map((id) => P[id] || { id, name: id, last: id, formats: [], initials: '?' });
+    const by = {
+      rank: (a, b) => (a.rank ?? 99) - (b.rank ?? 99),
+      index: (a, b) => (a.index ?? 99) - (b.index ?? 99),
+      pts: (a, b) => (b.pointsPct ?? -1) - (a.pointsPct ?? -1),
+      name: () => 0,
+    }[sort];
+    return list.sort((a, b) => by(a, b) || a.name.localeCompare(b.name));
+  }
+
+  function renderPool(ph) {
+    // The pick being revealed stays in the pool until the board shows it (no spoilers).
+    const hidden = ph.phase === 'pick-is-in' ? ph.reveal.playerId : null;
+    let ids = doc.status === 'setup' ? doc.participants.filter((id) => id !== doc.captains.A && id !== doc.captains.B) : available(doc);
+    if (hidden && !ids.includes(hidden)) ids = [...ids, hidden];
+    if (selected && !ids.includes(selected)) selected = null;
+    const shown = sorted(ids).filter((p) => filter === 'all' || (filter === 'short' ? shortlist.has(p.id) : p.rookie));
+    const sig = JSON.stringify([shown.map((p) => p.id), selected, [...shortlist], filter, sort]);
+    $('cc-left').textContent = `· ${ids.length} left`;
+    if (sig === lastPool) return;
+    lastPool = sig;
+    $('cc-pool').innerHTML = shown.map((p) => `<div class="cc-card${selected === p.id ? ' is-sel' : ''}" data-id="${esc(p.id)}" tabindex="0" role="button" aria-pressed="${selected === p.id}">
+      <button type="button" class="cc-star${shortlist.has(p.id) ? ' is-on' : ''}" data-star="${esc(p.id)}" aria-label="Shortlist ${esc(p.name)}">★</button>
+      ${cardHtml(p, { extra: statsHtml(p) })}</div>`).join('');
+    const empty = !shown.length;
+    $('cc-empty').hidden = !empty;
+    $('cc-empty').textContent = filter === 'short' ? 'Nobody on your shortlist yet. Tap ★ on a card to add them.' : filter === 'rookies' ? 'No rookies left in the pool.' : 'The pool is empty.';
+  }
+
+  function avatar(id) {
+    const p = P[id];
+    if (!p) return `<span class="cc-av">?</span>`;
+    const src = p.avatar || p.portrait;
+    return `<span class="cc-av${p.avatarSquare ? ' is-sq' : ''}">${src ? `<img src="${esc(src)}" alt="">` : esc(p.initials)}</span>`;
+  }
+
+  function renderRosters(ph) {
+    const hideN = ph.phase === 'pick-is-in' ? ph.reveal.pickNo : null;
+    const r = rosters({ ...doc, picks: doc.picks.filter((p) => p.n !== hideN) });
+    const per = { A: 1 + doc.order.filter((x) => x === 'A').length, B: 1 + doc.order.filter((x) => x === 'B').length };
+    const sig = JSON.stringify([r, per, doc.teams, doc.captains]);
+    if (sig === lastRosters) return;
+    lastRosters = sig;
+    for (const s of ['A', 'B']) {
+      $(`cc-rn-${s}`).textContent = teamName(s) + (s === side ? ' (you)' : '');
+      const n = doc.status === 'setup' ? Math.max(1, r[s].length) : per[s];
+      const rows = [];
+      for (let i = 0; i < n; i++) {
+        const id = r[s][i];
+        rows.push(id ? `<li>${avatar(id)}<span>${esc(P[id]?.name || id)}</span>${id === doc.captains[s] ? '<span class="cap">C</span>' : ''}</li>` : `<li class="is-empty">${avatar(null).replace('?', '')}<span>—</span></li>`);
+      }
+      $(`cc-r-${s}`).innerHTML = rows.join('');
+    }
+  }
+
+  function render() {
+    if (!doc || !side) return;
+    const ph = phaseAt(doc, now());
+    const mine = ph.side === side;
+    // a new pick on the clock clears the last message ("Locked in: …")
+    if (ph.pickNo && ph.pickNo !== lastPickNo) { if (lastPickNo !== null) msg(''); lastPickNo = ph.pickNo; }
+    root.dataset.phase = ph.phase;
+    root.dataset.me = mine && ['clock', 'overtime', 'waiting'].includes(ph.phase) ? '1' : '0';
+    $('cc-mockbar').hidden = doc.mode !== 'mock';
+    for (const s of ['A', 'B']) if (doc.teams?.[s]?.color) root.style.setProperty(`--${s.toLowerCase()}`, doc.teams[s].color);
+    root.style.setProperty('--me', `var(--${side.toLowerCase()})`);
+    $('cc-teamname').textContent = teamName(side);
+
+    let t = '', c = '';
+    switch (ph.phase) {
+      case 'setup': t = 'The draft hasn’t started'; break;
+      case 'waiting': t = mine ? 'You’re up next' : `${teamName(ph.side)} up next`; c = clockText(ph.remainingMs); break;
+      case 'clock': t = mine ? 'You’re on the clock' : `${teamName(ph.side)} is picking`; c = clockText(ph.remainingMs); break;
+      case 'overtime': t = mine ? 'Overtime — make your pick' : `${teamName(ph.side)} · overtime`; c = clockText(ph.overMs, true); break;
+      case 'pick-is-in': t = ph.reveal.side === side ? 'Your pick is in · revealing on the board' : `${teamName(ph.reveal.side)}’s pick is in`; c = String(ph.countdown); break;
+      case 'slam': t = `${teamName(ph.reveal.side)} take ${P[ph.reveal.playerId]?.name || ''}`; break;
+      case 'paused': t = 'Paused by the commissioner'; c = ph.pickNo ? (ph.overMs ? clockText(ph.overMs, true) : clockText(ph.remainingMs)) : ''; break;
+      case 'complete': t = 'The draft is done'; break;
+      case 'finalised': t = 'Final — the teams are set'; break;
+    }
+    const pickLine = ph.pickNo ? ` · pick ${ph.pickNo} of ${ph.total}` : '';
+    $('cc-status').innerHTML = `<span class="t">${esc(t)}${esc(['clock', 'overtime', 'waiting', 'paused'].includes(ph.phase) ? pickLine : '')}</span>${c ? `<span class="c">${esc(c)}</span>` : ''}`;
+
+    renderPool(ph);
+    renderRosters(ph);
+    // my upcoming picks
+    const minePicks = doc.order.map((s, i) => (s === side ? i + 1 : null)).filter(Boolean);
+    $('cc-order').textContent = doc.order.length ? `Your picks: ${minePicks.map((n) => (doc.picks.some((p) => p.n === n) ? `✓${n}` : n)).join(' · ')} (of ${doc.order.length})` : '';
+
+    const canLock = mine && ['clock', 'overtime'].includes(ph.phase) && !sending;
+    const btn = $('cc-lockbtn');
+    btn.disabled = !(canLock && selected);
+    btn.classList.toggle('is-armed', canLock && !!selected);
+    btn.textContent = sending ? 'LOCKING…' : 'LOCK IT IN';
+    $('cc-sel').innerHTML = selected
+      ? `Selected: <b>${esc(P[selected]?.name || selected)}</b>${canLock ? '' : ' <span style="color:#6b7a86;font-weight:600">· you can lock in when you’re on the clock</span>'}`
+      : (canLock ? '<b>You’re on the clock</b> — tap a player, then LOCK IT IN' : 'Tap a player to select them');
+  }
+
+  // ---- interactions ----
+  $('cc-pool').addEventListener('click', (e) => {
+    const star = e.target.closest('[data-star]');
+    if (star) {
+      const id = star.dataset.star;
+      shortlist.has(id) ? shortlist.delete(id) : shortlist.add(id);
+      saveShort(); render(); return;
+    }
+    const card = e.target.closest('.cc-card');
+    if (!card) return;
+    selected = selected === card.dataset.id ? null : card.dataset.id;
+    msg(''); render();
+  });
+  $('cc-pool').addEventListener('keydown', (e) => { if ((e.key === 'Enter' || e.key === ' ') && e.target.classList.contains('cc-card')) { e.preventDefault(); e.target.click(); } });
+  document.querySelectorAll('[data-filter]').forEach((b) => b.addEventListener('click', () => {
+    filter = b.dataset.filter;
+    document.querySelectorAll('[data-filter]').forEach((x) => x.classList.toggle('is-on', x === b));
+    render();
+  }));
+  $('cc-sort').addEventListener('change', (e) => { sort = e.target.value; render(); });
+
+  $('cc-lockbtn').addEventListener('click', async () => {
+    if (!selected || sending) return;
+    const ph = phaseAt(doc, now());
+    const playerId = selected, pickNo = ph.pickNo;
+    sending = true; msg(''); render();
+    // Retry a couple of times on a network drop: the server treats the same pick
+    // re-sent as a no-op, so a retry can never draft twice.
+    let res = null, body = null;
+    for (let i = 0; i < 3 && !res; i++) {
+      try {
+        res = await fetch('/api/draft-pick', { method: 'POST', headers: { 'content-type': 'application/json', 'x-captain-key': key }, body: JSON.stringify({ pickNo, playerId }) });
+        body = await res.json();
+      } catch { res = null; await new Promise((r) => setTimeout(r, 600)); }
+    }
+    sending = false;
+    if (!res) msg('Couldn’t reach the server — check the wifi and try again. (Pressing it again can’t double-draft.)');
+    else if (res.ok && body.ok) { selected = null; msg(`Locked in: ${P[playerId]?.name || playerId}.`, true); poll.refresh(body); }
+    else msg(body?.error || 'That didn’t go through.');
+    render();
+  });
+
+  let poll = null;
+  if (key) {
+    poll = startPolling('/api/draft', {
+      headers: { 'x-captain-key': key },
+      every: 1500,
+      onData: (body, clock) => {
+        doc = body.draft; side = body.side; now = clock;
+        $('cc-locked').hidden = true; $('cc-app').hidden = false;
+        render();
+      },
+      onStatus: (st) => {
+        $('cc-conn').classList.toggle('is-bad', st !== 'live');
+        if (st.startsWith('error:') && !doc) {
+          $('cc-locked').hidden = false;
+          $('cc-lockmsg').textContent = st.slice(6);
+        } else if (st.startsWith('error:')) {
+          // the link was regenerated or the mode switched under us
+          $('cc-app').hidden = true; $('cc-locked').hidden = false; $('cc-lockmsg').textContent = st.slice(6);
+        }
+      },
+    });
+    setInterval(render, 250);
+  }
+</script>

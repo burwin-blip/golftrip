@@ -5,9 +5,9 @@
   "private": true,
   "description": "The Annual \u2014 the official historical record of The Annual golf tournament.",
   "scripts": {
-    "dev": "node scripts/pull-rsvp.mjs && astro dev",
+    "dev": "node scripts/pull-rsvp.mjs && node scripts/pull-draft.mjs && astro dev",
     "start": "npm run dev",
-    "build": "node scripts/pull-rsvp.mjs && astro build && node scripts/set-function-runtime.mjs",
+    "build": "node scripts/pull-rsvp.mjs && node scripts/pull-draft.mjs && astro build && node scripts/set-function-runtime.mjs",
     "preview": "astro preview",
     "test:rsvp": "node scripts/test-rsvp.mjs"
   },

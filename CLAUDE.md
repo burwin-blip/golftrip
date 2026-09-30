@@ -65,8 +65,10 @@ Tanner Curley aren't in the workbook) and loses their `invitedFor`. Diff
    Every page is prerendered at build time (`output: 'hybrid'` with
    `@astrojs/vercel`; pages never opt out of prerendering). The ONLY server code is
    the two RSVP routes in `src/pages/api/` (`rsvp.js`, `rsvp-admin.js`) plus
-   **`lineups.js`** (the Match Centre, added by the owner, September 2026), all
-   backed by one free Upstash Redis database. Don't add other API routes,
+   **`lineups.js`** (the Match Centre, added by the owner, September 2026) and the
+   three **Draft Room** routes **`draft.js`, `draft-pick.js`, `draft-admin.js`**
+   (added by the owner for the 2027 draft night, September 2026), all backed by
+   one free Upstash Redis database. Don't add other API routes,
    server-rendered pages, a CMS, auth, or any other backend without the owner
    amending this rule again.
 
@@ -582,7 +584,8 @@ points ADDED; new for 2027, 2026 was Team Average Stableford), Firecliff, 4×2 �
 R5 Sun, Singles, Classic Club, 8×2, **Match 8 = the Championship Match**. Round
 dates must match the rota; courses come from `trip-2027.json` by `courseSlug`.
 Teams are drafted live Thursday night, so both sides are `Team A` / `Team B` with
-`teamId: null` until the draft.
+`teamId: null` until the draft; the Draft Room's FINALISE fills them in (see
+**Draft Room**).
 
 **Handicap allowances (owner's decision):** scrambles **gross** (no strokes, as 2026
 R1); Best Ball + Combined Stableford **100% course handicap** each; Singles **100%
@@ -657,6 +660,86 @@ changes warn before leaving.
   playing handicaps on the card, so it says so.
 - **Verified:** the 2026 Match Centre was cross-checked against the rendered Matches
   tab: 18/18 same pairings, results and points, totals 16.5–13.5.
+
+## Draft Room (2027 draft night) — `/draft/board`, `/draft/captain`, `/draft/commish`
+
+The live snake draft on Thursday 25 March 2027. Three screens, all prerendered
+shells that poll the API (every state change is server-side, in Redis):
+- **`/draft/board`** — the TV. Public but unlisted (noindex like every page). Dark
+  and theatrical: pick-order strip, both rosters as photo cards, and a centre stage
+  that shows the clock, **OVERTIME** (counts up in red, the screen turns red), then
+  on a lock **"THE PICK IS IN"** + a 5-second countdown, the card reveal and the
+  slam onto the roster (3s), then the next clock. Polls every 1s.
+- **`/draft/captain#<captain-key>`** — one secret link per captain. The clock, both
+  rosters, the pool as scouting cards (power ranking, index, points %, record,
+  per-format records, headline, rookie badge), sort (rank / index / pts / name),
+  All / ★ Shortlist (this browser's localStorage) / Rookies. Two-step pick: tap a
+  card, then **LOCK IT IN**. A lock is final; only the commissioner can undo.
+- **`/draft/commish#<RSVP_ADMIN_KEY>`** — the commissioner (same key as `/rsvp/admin`,
+  checked by the RSVP API's own `isAdminKey()`). Real / Mock toggle, setup (players
+  default to the RSVP YESes; captains; first pick + coin flip), captain links (copy /
+  regenerate — regenerating kills the old link), START / PAUSE / RESUME / UNDO (two
+  taps) / RESET (type RESET), the picks list with each pick's time, and FINALISE.
+
+**Rules (owner's decisions, Sept 2026):** captains are on their own teams
+automatically; snake order A,B,B,A… from whoever picks first; 2:00 a pick; **no
+auto-pick** (overtime just counts up). ~8s between picks (5s reveal + 3s slam).
+Designed for 16, but START takes **any even number ≥ 4** (captains included) so a
+late drop-out can't block the night; the console warns when it isn't 16 ("14
+players — 6 picks per captain") and the pick count follows. **UNDO** pauses, puts
+the last pick back in the pool, and that captain gets a fresh 2:00 on RESUME.
+**MOCK** mode is a separate document: every screen is watermarked "MOCK DRAFT",
+finalise shows the board's final screen and what *would* be written but writes
+nothing outside the mock, and RESET clears it (setup kept).
+
+**Code:** `src/lib/draft-shared.js` (pure rules used by the API and all three
+pages: `snakeOrder`, `phaseAt(doc, now)`, `rosters`, `available`, the colour
+palette), `draft-store.js` (Redis / local file, plus the write lock),
+`draft-api.js` (all server logic), `draft-data.js` (build-time scouting cards),
+`draft-client.js` (polling, server-clock offset, key-from-hash, card markup).
+**Timing is server-side only:** the document stores absolute server timestamps
+(`clock.startsAt`, `reveal.revealAt` / `doneAt`, set at lock time) and every GET
+carries `serverNow`; each screen derives the phase with `phaseAt()` after
+correcting for its own clock. There is no background job; PAUSE/RESUME shift the
+timestamps. So a refreshed or reconnected screen lands exactly where things stand,
+mid-reveal or mid-overtime included.
+
+**Redis keys (own namespace; RSVP keys untouched):** `draft:2027:real` and
+`draft:2027:mock` (hash: `state` = the document, `keys` = the two captain keys,
+never returned by the public GET), `draft:2027:config` (`mode`), and
+`draft:2027:lock` (SET NX PX 4000 around every write). Every write re-reads inside
+the lock, so a double submit can't double-draft: the same captain re-sending the
+same pick is a harmless `repeat`, anything else for a made pick is a 409. Locally
+(no Redis): `.draft-local/store.json` or `DRAFT_LOCAL_STORE=<path>`. A local run can
+shorten the clock with `DRAFT_PICK_SECONDS` (ignored on Vercel).
+
+**Finalise (real):** the commissioner names the teams (default "Team <captain's
+surname>", ≤ 40 chars) and picks two different colours from the preset palette
+(Canyon Red, Desert Gold, Oasis Teal, Twilight Plum, Sunset Orange, Slate — no
+2026 green/navy); teams get a **monogram** (first letter of the name, skipping
+"Team"/"The"), not a crest. Team ids are slugs of the names (`-2027` added on a
+clash with an existing id). It then: (1) writes `rosters` onto `lineups:2027` and
+clears any lineup slot that breaks them (listed back on the console); (2) saves the
+draft as finalised; (3) fires `RSVP_DEPLOY_HOOK_URL`. The build runs
+**`scripts/pull-draft.mjs`** (after pull-rsvp; same failure rule: Redis connected
+but unreachable → the build fails), which writes the finalised REAL draft to
+`data/draft.generated.json` (gitignored). `data.js` → `draftResultFor(tid)`;
+`schedule.js` turns Team A/B into the drafted teams (`teamId`, `label`, `color`,
+`captainId`, `playerIds`, `monogram`); the 2027 Overview scoreboard shows the teams
+and captains, the Draft Pool tab leads with both rosters (captain + pick numbers),
+and the Match Centre uses the names/colours/monograms and enforces the rosters. A
+finalised real draft needs an extra "I understand" tick to RESET (the rosters
+already written stay until the next finalise).
+
+**Testing (Sept 2026, before the first commit):** a full mock draft driven through
+all four screens in separate browsers (16 players: start → 14 picks with reveals →
+an overtime → refreshes mid-overtime and mid-reveal → a parallel double-submit →
+UNDO/RESUME → mock finalise), then a 14-player real draft with a real finalise
+(lineup conflict cleared, roster enforced, rebuild hook fired), on BOTH the file
+store and the fake Upstash server, plus the RSVP suites (67 / 61).
+`scripts/fake-upstash.mjs` base64-encodes replies like the real service (the
+client asks for it); without that, a lock token that happens to be valid base64
+came back garbled and the lock never released.
 
 ## Power Rankings & GHIN check-ins (`data/handicap_snapshots.json`)
 
@@ -1164,8 +1247,8 @@ careers, records, leaderboards, or the home page's "results". `allTournaments()`
 ## Commands
 
 ```
-npm run dev        # pulls RSVPs (local file store), then preview at http://localhost:4321
-npm run build      # pulls RSVPs, builds (.vercel/output/), pins the function runtime
+npm run dev        # pulls RSVPs + the finalised draft (local stores), then preview at http://localhost:4321
+npm run build      # pulls RSVPs + the draft, builds (.vercel/output/), pins the function runtime
 npm run test:rsvp  # RSVP API checks — see RSVP → Testing
 ```
 
@@ -1181,13 +1264,17 @@ scripts/gen_hole_scores.py  regenerates hole_scores.json (holds the raw hole rea
 scripts/gen_portraits.py    cuts the two album-sourced player portraits to 4:5
 scripts/verify_holes.mjs    reconciles the hole layer (54 checks)
 scripts/pull-rsvp.mjs       build step: RSVP store → data/rsvp.generated.json (public slice)
+scripts/pull-draft.mjs      build step: finalised real draft → data/draft.generated.json
 scripts/set-function-runtime.mjs  post-build: pins the API function to nodejs22.x
 scripts/test-rsvp.mjs       RSVP API checks (67 on the file store / 61 on fake Redis)
 scripts/fake-upstash.mjs    in-memory Upstash REST stand-in, for testing the Redis path
 scripts/check-styles.mjs    does a deployed/served site render styled? (core principle 6)
 src/lib/rsvp-*.js     RSVP: shared answer lists, the store, the API logic
 src/lib/schedule.js, matchcentre*.js, lineup-store.js  the 2027 Match Centre
-src/pages/api/        rsvp.js + rsvp-admin.js + lineups.js — the ONLY server routes
+src/lib/draft-*.js    the Draft Room: shared rules, store, API logic, scouting data, browser helpers
+src/pages/api/        rsvp.js + rsvp-admin.js + lineups.js + draft.js + draft-pick.js +
+                      draft-admin.js — the ONLY server routes
+src/pages/draft/      board.astro (the TV), captain.astro, commish.astro
 src/pages/rsvp/       index.astro (the permanent /rsvp) + admin.astro
 src/lib/data.js       loads JSON, builds id lookups (+ holesForMatch)
 src/lib/stats.js      ALL derived statistics (build-time), incl. the hole-stat block

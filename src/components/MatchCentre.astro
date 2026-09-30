@@ -36,7 +36,9 @@ const dateLine = (r) => `${weekday(r.date)} ${dayMonth(r.date)}${r.session ? ` Â
             {s.rounds.length} rounds Â· {s.rounds.reduce((n, r) => n + r.matchCount, 0)} matches Â· <b>{s.pointsAvailable}</b> points{archive ? '.' : <Fragment> Â· <b>{s.toWin}</b> to win outright.</Fragment>}
             {archive
               ? <Fragment> Each card shows the result and the points; the Tale of the Tape is the read as it stood <b>before</b> the trip.</Fragment>
-              : <Fragment> Teams are drafted live on arrival night; until then the sides are <b>{s.teams.A.label}</b> and <b>{s.teams.B.label}</b>.</Fragment>}
+              : s.teams.A.teamId && s.teams.B.teamId
+                ? <Fragment> The teams are drafted: <b>{s.teams.A.label}</b> v <b>{s.teams.B.label}</b>, and each side can only field its own players.</Fragment>
+                : <Fragment> Teams are drafted live on arrival night; until then the sides are <b>{s.teams.A.label}</b> and <b>{s.teams.B.label}</b>.</Fragment>}
           </p>
         </div>
         <p class="mc-status" id="mc-status" role="status">{archive ? '' : 'Loading the latest lineupsâ€¦'}</p>
@@ -83,6 +85,7 @@ const dateLine = (r) => `${weekday(r.date)} ${dayMonth(r.date)}${r.session ? ` Â
                         <div class:list={['mc-side', `mc-side--${side.toLowerCase()}`, res && !res.halved && (res.winnerSide === side ? 'is-won' : 'is-lost')]} style={sideStyle(side)}>
                           <div class="mc-side__band">
                             {s.teams[side].logo && <img class="mc-side__logo" src={s.teams[side].logo} alt="" width="22" height="22" />}
+                            {!s.teams[side].logo && s.teams[side].monogram && <span class="mc-side__mono" aria-hidden="true">{s.teams[side].monogram}</span>}
                             <span class="mc-side__label">{s.teams[side].label}</span>
                             {res && !res.halved && res.winnerSide === side && <span class="mc-w" title="Winners">W</span>}
                             {res && <span class="mc-side__pts">{res.points[side] === 0.5 ? 'Â½' : res.points[side] % 1 ? `${Math.floor(res.points[side])}Â½` : res.points[side]} pt{res.points[side] === 1 ? '' : 's'}</span>}
@@ -197,6 +200,7 @@ const dateLine = (r) => `${weekday(r.date)} ${dayMonth(r.date)}${r.session ? ` Â
   .mc-side--b { --mc-c: var(--terra-ink); }
   .mc-side__band { display: flex; align-items: center; gap: .45rem; padding-bottom: .4rem; border-bottom: 3px solid var(--mc-c); min-width: 0; }
   .mc-side__logo { width: 22px; height: 22px; object-fit: contain; flex: none; }
+  .mc-side__mono { width: 22px; height: 22px; flex: none; display: grid; place-items: center; border-radius: 50%; background: var(--mc-c); color: #fff; font-family: var(--serif); font-weight: 700; font-size: .75rem; line-height: 1; }
   .mc-side__label { font-size: .72rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--mc-c); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .mc-w { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--mc-c); color: #fff; font-size: .7rem; font-weight: 900; flex: none; }
   .mc-side__pts { margin-left: auto; font-size: .76rem; font-weight: 800; color: var(--mc-c); white-space: nowrap; font-variant-numeric: tabular-nums; }
@@ -230,7 +234,7 @@ const dateLine = (r) => `${weekday(r.date)} ${dayMonth(r.date)}${r.session ? ` Â
     .mc-match[data-size="1"] .mc-match__sides { gap: .45rem; }
     /* singles face to face: no room for the team name, the crest (or colour) carries it */
     .mc-match[data-size="1"] .mc-side__label { display: none; }
-    .mc-match[data-size="1"] .mc-side__logo { width: 20px; height: 20px; }
+    .mc-match[data-size="1"] .mc-side__logo, .mc-match[data-size="1"] .mc-side__mono { width: 20px; height: 20px; }
   }
 
   .mc-av { width: 28px; height: 28px; flex: none; border-radius: 50%; object-fit: cover; object-position: center 26%; background: var(--panel-2); }

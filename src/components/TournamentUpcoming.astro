@@ -7,7 +7,8 @@ import MatchCentre from './MatchCentre.astro';
 import { matchCentreData } from '../lib/matchcentre.js';
 import { scheduleFor } from '../lib/schedule.js';
 import { draftPoolFor } from '../lib/stats.js';
-import { tripFor } from '../lib/data.js';
+import { tripFor, draftResultFor, getPlayer } from '../lib/data.js';
+import { monogram } from '../lib/schedule.js';
 import { dateRange, num, pctText } from '../lib/format.js';
 
 const { t } = Astro.props;
@@ -22,6 +23,15 @@ const poolGroups = [
   { id: 'waiting', eyebrow: 'Still to come', title: 'Waiting on', rows: waitingPool, empty: null },
 ];
 const flyer = t.flyer || {};
+// After the live draft is finalised (scripts/pull-draft.mjs), the TBA scoreboard
+// becomes the two drafted teams and the Draft Pool tab leads with their rosters.
+const drafted = draftResultFor(t.id);
+const draftTeams = drafted ? ['A', 'B'].map((s) => {
+  const d = drafted.teams[s];
+  return { ...d, mono: monogram(d.name), captain: getPlayer(d.captainId),
+    style: `--accent:${d.color}`,
+    roster: d.playerIds.map((id) => ({ player: getPlayer(id), href: `/players/${getPlayer(id)?.slug}`, tag: id === d.captainId ? 'Captain' : drafted.pickNo?.[id] ? `Pick ${drafted.pickNo[id]}` : '' })).filter((r) => r.player) };
+}) : null;
 // One Overview for an upcoming edition: countdown, RSVP, the TBA scoreboard +
 // flyer, the facts, then the whole trip programme (TripHub.astro) flowing
 // straight on underneath. (There used to be a separate Trip tab; old #trip links
@@ -84,22 +94,44 @@ const JUMPS = trip ? [
       <div class="up-grid">
         <div class="up-main">
           <!-- where the scoreboard will go -->
-          <div class="tba-bug reveal">
-            <div class="tba-side">
-              <div class="tba-crest">?</div>
-              <div class="tba-team">Team&nbsp;1</div>
-              <div class="tba-sub">Captain TBA</div>
-              <div class="tba-score">—</div>
+          {draftTeams && (
+            <div class="tba-bug tba-bug--drafted reveal">
+              <div class="tba-side" style={draftTeams[0].style}>
+                <div class="tba-crest tba-crest--mono">{draftTeams[0].mono}</div>
+                <div class="tba-team">{draftTeams[0].name}</div>
+                <div class="tba-sub">Captain {draftTeams[0].captain?.name}</div>
+                <div class="tba-score">—</div>
+              </div>
+              <div class="tba-center"><span class="vs">vs</span><span class="tag">Not yet played</span></div>
+              <div class="tba-side" style={draftTeams[1].style}>
+                <div class="tba-crest tba-crest--mono">{draftTeams[1].mono}</div>
+                <div class="tba-team">{draftTeams[1].name}</div>
+                <div class="tba-sub">Captain {draftTeams[1].captain?.name}</div>
+                <div class="tba-score">—</div>
+              </div>
             </div>
-            <div class="tba-center"><span class="vs">vs</span><span class="tag">Not yet played</span></div>
-            <div class="tba-side">
-              <div class="tba-crest">?</div>
-              <div class="tba-team">Team&nbsp;2</div>
-              <div class="tba-sub">Captain TBA</div>
-              <div class="tba-score">—</div>
+          )}
+          {!draftTeams && (
+            <Fragment>
+            <div class="tba-bug reveal">
+              <div class="tba-side">
+                <div class="tba-crest">?</div>
+                <div class="tba-team">Team&nbsp;1</div>
+                <div class="tba-sub">Captain TBA</div>
+                <div class="tba-score">—</div>
+              </div>
+              <div class="tba-center"><span class="vs">vs</span><span class="tag">Not yet played</span></div>
+              <div class="tba-side">
+                <div class="tba-crest">?</div>
+                <div class="tba-team">Team&nbsp;2</div>
+                <div class="tba-sub">Captain TBA</div>
+                <div class="tba-score">—</div>
+              </div>
             </div>
-          </div>
-          <p class="tba-note"><b>Teams to be announced.</b> Captains and the draft are still to come — the pairings and scoreboard will appear here once the trip is played.</p>
+            <p class="tba-note"><b>Teams to be announced.</b> Captains and the draft are still to come — the pairings and scoreboard will appear here once the trip is played.</p>
+            </Fragment>
+          )}
+          {draftTeams && <p class="tba-note"><b>The teams are drafted.</b> See both rosters on the <a href="#pool" class="gold">Draft Pool</a> tab and the lineups in the Match Centre; the scoreboard fills in once the trip is played.</p>}
 
           <div class="grid up-facts">
             <div class="tile"><div class="tile__k">When</div><div class="up-fact-v">{dateRange(t.startDate, t.endDate)}</div></div>
@@ -131,6 +163,23 @@ const JUMPS = trip ? [
   <!-- DRAFT POOL -->
   <section class="tabpanel section" data-panel="pool">
     <div class="wrap">
+      {draftTeams && (
+        <div class="pool-group drafted">
+          <div class="section-head"><div><p class="eyebrow">Draft night</p><h2>The teams</h2></div><span class="faint">{draftTeams[0].roster.length + draftTeams[1].roster.length} players</span></div>
+          <div class="drafted__grid">
+            {draftTeams.map((d) => (
+              <div class="drafted__team card" style={d.style}>
+                <div class="drafted__head"><span class="drafted__mono">{d.mono}</span><h3>{d.name}</h3></div>
+                <ol class="drafted__list">
+                  {d.roster.map((r) => (
+                    <li><a href={r.href}><PlayerAvatar player={r.player} size={36} ring="var(--accent)" /><span class="drafted__name">{r.player.name}</span><span class="drafted__tag">{r.tag}</span></a></li>
+                  ))}
+                </ol>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
       <p class="muted" style="max-width:64ch;margin-bottom:1.6rem;font-size:.95rem">Everyone in the frame for the 2027 draft. The field fills itself from the <a href="/rsvp" class="gold">RSVPs</a>: a yes puts you in Confirmed, a maybe (or no reply yet) keeps you in Waiting on. Open any player for their scouting report.</p>
       {poolGroups.filter((g) => g.rows.length || g.empty).map((g) => (
         <div class:list={["pool-group", `pool-group--${g.id}`]}>
@@ -213,6 +262,21 @@ const JUMPS = trip ? [
   .tba-center .vs { font-family: var(--serif); font-style: italic; color: var(--gold); font-size: 1rem; }
   .tba-center .tag { font-size: .62rem; letter-spacing: .16em; text-transform: uppercase; color: var(--faint); text-align: center; }
   .tba-note { margin-top: 1rem; font-size: .92rem; color: var(--muted); }
+  .tba-bug--drafted { border-style: solid; }
+  .tba-bug--drafted .tba-side { background: color-mix(in srgb, var(--accent) 10%, var(--panel)); border-top: 4px solid var(--accent); }
+  .tba-bug--drafted .tba-team { color: var(--text); }
+  .tba-crest--mono { background: var(--accent); border: 0; color: #fff; font-weight: 700; }
+  .drafted { margin-bottom: 2.4rem; }
+  .drafted__grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem; }
+  .drafted__team { padding: 1rem 1.1rem 1.1rem; border-top: 5px solid var(--accent); }
+  .drafted__head { display: flex; align-items: center; gap: .6rem; margin-bottom: .7rem; }
+  .drafted__head h3 { margin: 0; font-size: 1.3rem; }
+  .drafted__mono { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; background: var(--accent); color: #fff; font-family: var(--serif); font-weight: 700; }
+  .drafted__list { list-style: none; margin: 0; padding: 0; display: grid; gap: .35rem; }
+  .drafted__list a { display: flex; align-items: center; gap: .6rem; padding: .2rem 0; color: inherit; text-decoration: none; }
+  .drafted__list a:hover .drafted__name { color: var(--terra-ink); }
+  .drafted__name { font-weight: 600; }
+  .drafted__tag { margin-left: auto; font-size: .72rem; font-weight: 700; color: var(--faint); }
   .tba-note b { color: var(--text); }
   .up-facts { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); margin-top: 1.4rem; }
   .up-fact-v { font-family: var(--serif); font-weight: 600; font-size: 1.2rem; margin-top: .3rem; color: var(--text); }
