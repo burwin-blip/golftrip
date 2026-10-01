@@ -31,7 +31,7 @@ export function draftRoomData(tid = DRAFT_TID) {
     const av = playerAvatar(p.id);
     const pool = poolBy[p.id];
     return {
-      id: p.id, name: p.name, first: p.name.split(' ')[0], last: p.name.split(' ').slice(1).join(' ') || p.name,
+      id: p.id, slug: p.slug || p.id, name: p.name, first: p.name.split(' ')[0], last: p.name.split(' ').slice(1).join(' ') || p.name,
       initials: playerInitials(p.name), portrait: playerPortrait(p.id), avatar: av?.src ?? null, avatarSquare: av?.square ?? false,
       group: pool?.group ?? null,                      // confirmed | maybe | waiting | null (not in the pool)
       rookie,

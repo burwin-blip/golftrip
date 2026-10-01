@@ -27,7 +27,14 @@ async function main() {
     return { side: s, id: t.id, name: t.name, color: hex.get(t.colorId) || t.color, colorId: t.colorId, captainId: t.captainId, playerIds: t.playerIds };
   };
   const pickNo = Object.fromEntries(doc.picks.map((p) => [p.playerId, p.n]));
-  return { tournamentId: doc.tournamentId, finalisedAt: new Date(doc.finalisedAt).toISOString(), teams: { A: team('A'), B: team('B') }, pickNo };
+  // The pick-by-pick record for the permanent Draft Night recap (index and power
+  // ranking as stamped at each pick; no keys, nothing private).
+  const draft = {
+    tournamentId: doc.tournamentId, mode: 'real', captains: doc.captains, firstPick: doc.firstPick, order: doc.order, pickMs: doc.pickMs,
+    finalisedAt: doc.finalisedAt, teams: { A: team('A'), B: team('B') },
+    picks: doc.picks.map(({ n, side, playerId, clockMs, rank, index }) => ({ n, side, playerId, clockMs, rank: rank ?? null, index: index ?? null })),
+  };
+  return { tournamentId: doc.tournamentId, finalisedAt: new Date(doc.finalisedAt).toISOString(), teams: { A: team('A'), B: team('B') }, pickNo, draft };
 }
 
 try {

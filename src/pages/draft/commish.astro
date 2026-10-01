@@ -11,7 +11,7 @@ const data = draftRoomData();
 ---
 <Base title="Commissioner" description="The Annual 2027 draft — commissioner." bare>
   <div class="cm" id="cm">
-    <div class="cm-mockbar" id="cm-mockbar" hidden>MOCK MODE · a rehearsal: every screen shows “MOCK DRAFT” and finalise writes nothing</div>
+    <div class="cm-mockbar" id="cm-mockbar" hidden>MOCK MODE · a full dress rehearsal: every screen, the finale, the sounds and the recap, watermarked MOCK. Finalise publishes nothing</div>
     <div class="cm-locked" id="cm-locked" hidden>
       <h1>Commissioner</h1>
       <p>Paste your admin key (the one for /rsvp/admin).</p>
@@ -27,6 +27,7 @@ const data = draftRoomData();
           <button type="button" data-mode="mock">Mock draft</button>
         </div>
         <a class="cm-boardlink" href="/draft/board" target="_blank" rel="noopener">Open the board ↗</a>
+        <a class="cm-boardlink" href="/draft/recap" target="_blank" rel="noopener">Recap ↗</a>
         <span class="cm-conn" id="cm-conn" title="Connection"></span>
       </header>
       <p class="cm-err cm-banner" id="cm-err" role="alert"></p>
@@ -38,6 +39,8 @@ const data = draftRoomData();
           <button type="button" class="cm-btn" id="cm-pause">PAUSE</button>
           <button type="button" class="cm-btn cm-btn--go" id="cm-resume">RESUME</button>
           <button type="button" class="cm-btn cm-btn--warn" id="cm-undo">UNDO last pick</button>
+          <button type="button" class="cm-btn" id="cm-finale" hidden>REPLAY FINALE</button>
+          <button type="button" class="cm-btn cm-btn--sound" id="cm-sound" aria-pressed="false">Board sound: OFF</button>
         </div>
         <p class="cm-note" id="cm-startnote"></p>
       </section>
@@ -125,6 +128,8 @@ const data = draftRoomData();
   .cm-btn { border: 0; border-radius: 10px; padding: .7rem 1.1rem; font: inherit; font-weight: 900; letter-spacing: .06em; background: #17293F; color: #fff; cursor: pointer; }
   .cm-btn--go { background: #1F7A4D; }
   .cm-btn--warn { background: #A73820; }
+  .cm-btn--sound { background: #fff; color: #17293F; box-shadow: inset 0 0 0 2px #CBD3DB; }
+  .cm-btn--sound[aria-pressed="true"] { background: #FCD79A; box-shadow: none; }
   .cm-btn:disabled { background: #C5CDD5; cursor: not-allowed; }
   .cm-btn[hidden] { display: none; }
   .cm-small { border: 1.5px solid #CBD3DB; background: #fff; border-radius: 999px; padding: .3rem .8rem; font: inherit; font-size: .8rem; font-weight: 700; cursor: pointer; color: #17293F; }
@@ -317,6 +322,9 @@ const data = draftRoomData();
     $('cm-pause').hidden = s !== 'running';
     $('cm-resume').hidden = s !== 'paused';
     $('cm-undo').hidden = !['running', 'paused', 'complete'].includes(s);
+    $('cm-finale').hidden = !['complete', 'finalised'].includes(s);
+    $('cm-sound').setAttribute('aria-pressed', String(!!doc.sound));
+    $('cm-sound').textContent = `Board sound: ${doc.sound ? 'ON' : 'OFF'}`;
     $('cm-undo').disabled = !doc.picks.length || busy;
     const n = doc.participants.length;
     const problems = [];
@@ -349,7 +357,7 @@ const data = draftRoomData();
     if (!show) { lastFinalSig = ''; return; }
     const done = doc.status === 'finalised';
     $('cm-finalnote').textContent = done
-      ? (st.mode === 'mock' ? 'Mock finalised: the board shows the final screen. Nothing outside the mock was written; RESET to go again.' : 'Finalised. The rosters are on the Match Centre and the site is rebuilding with the real teams.')
+      ? (st.mode === 'mock' ? 'Mock finalised: the board is on the finale and the Draft Night recap is ready (Recap ↗, top right). Nothing outside the mock was written; RESET clears it all.' : 'Finalised. The rosters are on the Match Centre, and the site is rebuilding with the real teams and the permanent Draft Night recap (Recap ↗ shows it now).')
       : st.mode === 'mock'
         ? 'MOCK: a dry run. You’ll see exactly what would be written, and nothing outside the mock draft changes.'
         : 'Writes the rosters to the Match Centre (Team A/B become these teams, and each side can only field its own players), then rebuilds the site so the 2027 page shows the real teams.';
@@ -397,6 +405,7 @@ const data = draftRoomData();
     const clearedList = out.rehearsal ? '' : out.clearedSlots.map((c) => `<li>Round ${esc(c.round)} match ${esc(c.match)}: ${esc(c.name)} removed from side ${c.side}</li>`).join('');
     $('cm-result').innerHTML = `<div class="ok">${out.rehearsal ? '<b>MOCK — nothing was written.</b> A real finalise would write:' : '<b>Finalised.</b>'}<br>${line('A')}<br>${line('B')}<br>
       Match Centre slots ${out.rehearsal ? 'that would be ' : ''}cleared: ${cleared}${clearedList ? `<ul>${clearedList}</ul>` : ''}
+      <br><a class="gold" href="/draft/recap" target="_blank" rel="noopener">Open the Draft Night recap ↗</a>
       ${out.rehearsal ? '' : `<br>Site rebuild: ${esc({ triggered: 'started (about 2 minutes)', 'no-hook': 'no deploy hook set up — redeploy by hand' }[out.rebuild] || out.rebuild)}`}</div>`;
   });
 
@@ -416,6 +425,8 @@ const data = draftRoomData();
     if (out) { $('cm-resetword').value = ''; $('cm-unfin').checked = false; $('cm-result').innerHTML = ''; lastFinalSig = ''; resetReady(); }
   });
 
+  $('cm-finale').addEventListener('click', () => act('finale'));
+  $('cm-sound').addEventListener('click', () => act('sound', { on: !doc.sound }));
   $('cm-start').addEventListener('click', () => act('start'));
   $('cm-pause').addEventListener('click', () => act('pause'));
   $('cm-resume').addEventListener('click', () => act('resume'));

@@ -681,6 +681,40 @@ shells that poll the API (every state change is server-side, in Redis):
   regenerate — regenerating kills the old link), START / PAUSE / RESUME / UNDO (two
   taps) / RESET (type RESET), the picks list with each pick's time, and FINALISE.
 
+**Draft night presentation (added Sept 2026):**
+- **Announcer reveals:** "THE PICK IS IN" (5s countdown) and the card slam carry a
+  Ryder Cup-style "PICK 3 — TEAM PEDLER" line.
+- **The finale:** as the last reveal ends the board clears and the two teams
+  assemble like a fight poster: team name + monogram, captain's card first, then
+  each roster sweeping in, alternating sides every 0.5s, then a big "vs" and "THE
+  ANNUAL 2027 — THE TEAMS ARE SET". That is the board's resting state (complete
+  and finalised). Timing is offsets from `finaleAt` (`finaleTimeline()` in
+  draft-shared.js), set by the server when the last pick locks; the board renders
+  with CSS animation delays relative to now, so a refresh lands in step. The
+  console's **REPLAY FINALE** (`action: 'finale'`) just moves `finaleAt`.
+- **Sound** (`doc.sound`, **off by default**, kept across RESET): a toggle on the
+  console. The board synthesises everything with Web Audio (no audio files): a
+  tick on each of the clock's last 5 seconds, a brass-ish sting on every reveal, a
+  rising build under the finale cards and a fanfare on the title. Browsers only
+  allow sound after a click on the page, so while sound is on the board shows
+  "Click to turn on the board's sound". **After any refresh of the TV it must be
+  clicked again.**
+- **Draft Night recap:** every pick is stamped server-side with the player's index
+  and power ranking at that moment. `draftRecap()` grades each pick against the
+  rankings among the RANKED picks only (unranked players aren't graded, so an
+  early rookie pick doesn't skew everyone else): went ≥ band places later than
+  ranked = **steal**, ≥ band earlier = **reach**, else **fair** (band = max(2,
+  ranked picks / 5), so ±3 for 14). Highlights: steal of the draft, biggest reach.
+  `src/lib/draft-recap.js` renders it, and the same function feeds both places:
+  the permanent **Draft Night tab** on the 2027 page (build time, from
+  `data/draft.generated.json`, real finalise only) and **`/draft/recap`** (live in
+  the browser from `/api/draft`, so a mock recap is viewable the moment the mock
+  is finalised, watermarked MOCK). Tested: the same picks give identical rows.
+- **Mock = full dress rehearsal:** reveals, finale, replay, sounds and the recap
+  all behave exactly as on the night. The only difference is that a real finalise
+  writes the rosters, publishes the recap (pull-draft → rebuild) and updates the
+  Match Centre teams. RESET clears the mock completely.
+
 **Rules (owner's decisions, Sept 2026):** captains are on their own teams
 automatically; snake order A,B,B,A… from whoever picks first; 2:00 a pick; **no
 auto-pick** (overtime just counts up). ~8s between picks (5s reveal + 3s slam).
@@ -1271,10 +1305,10 @@ scripts/fake-upstash.mjs    in-memory Upstash REST stand-in, for testing the Red
 scripts/check-styles.mjs    does a deployed/served site render styled? (core principle 6)
 src/lib/rsvp-*.js     RSVP: shared answer lists, the store, the API logic
 src/lib/schedule.js, matchcentre*.js, lineup-store.js  the 2027 Match Centre
-src/lib/draft-*.js    the Draft Room: shared rules, store, API logic, scouting data, browser helpers
+src/lib/draft-*.js    the Draft Room: shared rules, store, API logic, scouting data, browser helpers, recap renderer
 src/pages/api/        rsvp.js + rsvp-admin.js + lineups.js + draft.js + draft-pick.js +
                       draft-admin.js — the ONLY server routes
-src/pages/draft/      board.astro (the TV), captain.astro, commish.astro
+src/pages/draft/      board.astro (the TV), captain.astro, commish.astro, recap.astro (live recap)
 src/pages/rsvp/       index.astro (the permanent /rsvp) + admin.astro
 src/lib/data.js       loads JSON, builds id lookups (+ holesForMatch)
 src/lib/stats.js      ALL derived statistics (build-time), incl. the hole-stat block

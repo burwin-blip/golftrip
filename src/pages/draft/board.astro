@@ -21,6 +21,8 @@ const data = draftRoomData();
       <section class="db-stage" id="db-stage" aria-live="polite"></section>
       <section class="db-team" data-side="B"><h2 class="db-team__name" id="db-name-B">Team B</h2><div class="db-roster" id="db-roster-B"></div></section>
     </main>
+    <section class="db-finale" id="db-finale" aria-live="polite"></section>
+    <button type="button" class="db-sound" id="db-sound" hidden>🔊 Click to turn on the board’s sound</button>
   </div>
   <script type="application/json" id="db-data" set:html={JSON.stringify(data)} />
 </Base>
@@ -67,6 +69,48 @@ const data = draftRoomData();
   .db-mock { position: fixed; inset: 0; z-index: 50; pointer-events: none; display: grid; place-items: center; }
   .db-mock[hidden] { display: none; }   /* display:grid would otherwise override [hidden] and show the watermark on the REAL draft */
   .db-mock span { transform: rotate(-24deg); font-weight: 900; font-size: 14vw; letter-spacing: .08em; color: rgba(224,106,46,.09); white-space: nowrap; border: .6vw solid rgba(224,106,46,.09); padding: 0 3vw; }
+  /* announcer: "PICK 3 — TEAM PEDLER" */
+  .db-ann { display: flex; align-items: baseline; justify-content: center; gap: .5em; flex-wrap: wrap; font-weight: 900; text-transform: uppercase; letter-spacing: .08em; line-height: 1; margin: 0; }
+  .db-ann__n { color: #FCD79A; font-size: clamp(1.2rem, .6rem + 1.7vw, 2.6rem); }
+  .db-ann__dash { color: rgba(255,255,255,.5); font-size: clamp(1rem, .5rem + 1.4vw, 2.2rem); }
+  .db-ann__t { color: var(--c); font-size: clamp(1.2rem, .6rem + 1.7vw, 2.6rem); font-family: var(--serif); letter-spacing: .02em; }
+  .db-ann--slam { animation: db-ann .6s ease-out both; }
+  .db-ann-sub { margin: 0; font-size: clamp(.75rem, .5rem + .5vw, 1rem); font-weight: 800; letter-spacing: .3em; text-transform: uppercase; color: rgba(231,236,242,.6); }
+  @keyframes db-ann { from { transform: translateY(-30px); opacity: 0; letter-spacing: .4em; } to { transform: none; opacity: 1; } }
+
+  /* the finale: the fight poster assembles itself */
+  .db-finale { display: none; }
+  .db[data-finale="1"] .db-main, .db[data-finale="1"] .db-order { display: none; }
+  .db[data-finale="1"] .db-finale { display: flex; flex-direction: column; flex: 1; min-height: 0; padding: 0 2vw 2vh; }
+  .fn-intro { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; font-family: var(--serif); font-weight: 800; font-size: clamp(3rem, 2rem + 5vw, 8rem); color: #fff; text-transform: uppercase; animation: fn-intro 1.5s ease-in-out both; z-index: 5; }
+  .fn-grid { flex: 1; display: grid; grid-template-columns: minmax(0, 1fr) clamp(90px, 9vw, 180px) minmax(0, 1fr); gap: 1.5vw; align-items: start; min-height: 0; }
+  .fn-side { --c: var(--a); min-width: 0; }
+  .fn-side[data-side="B"] { --c: var(--b); }
+  .fn-head { display: flex; align-items: center; gap: 1rem; padding-bottom: .7rem; margin-bottom: 1.2vh; border-bottom: 6px solid var(--c); animation: fn-head .7s ease-out both; }
+  .fn-side[data-side="B"] .fn-head { flex-direction: row-reverse; text-align: right; }
+  .fn-mono { width: clamp(52px, 4.5vw, 84px); height: clamp(52px, 4.5vw, 84px); border-radius: 50%; display: grid; place-items: center; background: var(--c); color: #fff; font-family: var(--serif); font-weight: 800; font-size: clamp(1.6rem, 1rem + 1.6vw, 2.8rem); box-shadow: 0 0 0 4px rgba(255,255,255,.9), 0 0 40px var(--c); flex: none; }
+  .fn-name { margin: 0; font-family: var(--serif); font-weight: 800; color: #fff; font-size: clamp(1.6rem, 1rem + 2vw, 3.2rem); line-height: 1; }
+  .fn-cap { margin: .3rem 0 0; font-size: clamp(.7rem, .5rem + .4vw, 1rem); font-weight: 800; letter-spacing: .2em; text-transform: uppercase; color: rgba(231,236,242,.7); }
+  .fn-cards { display: grid; grid-template-columns: repeat(var(--cols, 4), minmax(0, 1fr)); gap: .9vw; }
+  .fn-card { animation: fn-in-a .55s cubic-bezier(.2, 1.4, .4, 1) both; }
+  .fn-side[data-side="B"] .fn-card { animation-name: fn-in-b; }
+  .fn-card .dc { --dc-c: var(--c); }
+  .fn-card .dc__name { font-size: clamp(.7rem, .45rem + .6vw, 1.1rem); }
+  .fn-card .dc__meta { font-size: clamp(.55rem, .4rem + .35vw, .75rem); }
+  .fn-card--cap .dc { box-shadow: 0 0 0 3px var(--c), 0 0 30px -4px var(--c); }
+  .fn-vs { align-self: center; text-align: center; font-family: var(--serif); font-style: italic; font-weight: 800; font-size: clamp(3rem, 2rem + 5vw, 9rem); color: #FCD79A; text-shadow: 0 0 40px rgba(252,215,154,.5); animation: fn-vs .8s cubic-bezier(.2, 1.6, .4, 1) both; }
+  .fn-title { text-align: center; margin: 2vh 0 0; animation: fn-title 1s ease-out both; }
+  .fn-title b { display: block; font-weight: 900; letter-spacing: .4em; text-transform: uppercase; font-size: clamp(.9rem, .6rem + 1vw, 1.6rem); color: #FCD79A; }
+  .fn-title span { display: block; font-family: var(--serif); font-weight: 800; text-transform: uppercase; color: #fff; font-size: clamp(2rem, 1.2rem + 3vw, 4.6rem); line-height: 1.05; margin-top: .3rem; }
+  @keyframes fn-intro { 0% { opacity: 0; transform: scale(.9); } 25%, 70% { opacity: 1; transform: none; } 100% { opacity: 0; transform: scale(1.15); } }
+  @keyframes fn-head { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: none; } }
+  @keyframes fn-in-a { from { opacity: 0; transform: translateX(-60vw) rotate(-12deg) scale(1.3); } to { opacity: 1; transform: none; } }
+  @keyframes fn-in-b { from { opacity: 0; transform: translateX(60vw) rotate(12deg) scale(1.3); } to { opacity: 1; transform: none; } }
+  @keyframes fn-vs { from { opacity: 0; transform: scale(3); } to { opacity: 1; transform: none; } }
+  @keyframes fn-title { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: none; } }
+  .db-sound { position: fixed; right: 1.2rem; bottom: 1.2rem; z-index: 60; border: 0; border-radius: 999px; padding: .7rem 1.2rem; font: inherit; font-weight: 800; background: #FCD79A; color: #0C1B2C; cursor: pointer; box-shadow: 0 10px 30px -10px #000; }
+  .db-sound[hidden] { display: none; }
+  @media (max-width: 900px) { .fn-grid { grid-template-columns: 1fr; } .fn-vs { font-size: 3rem; } .fn-side[data-side="B"] .fn-head { flex-direction: row; text-align: left; } }
   @keyframes db-pulse { 50% { box-shadow: 0 0 0 2px #fff, 0 0 38px var(--c); } }
   @keyframes db-flash { 50% { opacity: .35; } }
   @keyframes db-tick { from { transform: scale(1.25); opacity: .6; } to { transform: scale(1); opacity: 1; } }
@@ -75,7 +119,7 @@ const data = draftRoomData();
 </style>
 
 <script>
-  import { phaseAt, rosters, clockText } from '../../lib/draft-shared.js';
+  import { phaseAt, rosters, clockText, finaleTimeline } from '../../lib/draft-shared.js';
   import { startPolling, cardHtml, esc, CARD_CSS } from '../../lib/draft-client.js';
 
   const DATA = JSON.parse(document.getElementById('db-data').textContent);
@@ -88,11 +132,17 @@ const data = draftRoomData();
   const surname = (id) => (P[id]?.last || id);
   const teamName = (s) => doc?.teams?.[s]?.name || (doc?.captains?.[s] ? `Team ${surname(doc.captains[s])}` : `Team ${s}`);
 
+  // Ryder Cup announcer style: "PICK 3 — TEAM PEDLER"
+  const announce = (n, s, slam = false) => `<p class="db-ann${slam ? ' db-ann--slam' : ''}"><span class="db-ann__n">Pick ${n}</span><span class="db-ann__dash">—</span><span class="db-ann__t">${esc(teamName(s))}</span></p>`;
+
   function render() {
     if (!doc) return;
     const t = now();
     const ph = phaseAt(doc, t);
     root.dataset.phase = ph.phase;
+    const finale = ['complete', 'finalised'].includes(ph.phase) && doc.finaleAt;
+    root.dataset.finale = finale ? '1' : '0';
+    sounds(ph, t);
     const mock = doc.mode === 'mock';
     $('db-mock').hidden = !mock; $('db-mocktag').hidden = !mock;
     // team colours: the finalised ones, else the stage defaults
@@ -144,16 +194,85 @@ const data = draftRoomData();
           <p class="db-clock${low ? ' is-low' : ''}">${clockText(ph.remainingMs)}</p><p class="db-sub">${esc(P[captain]?.name || '')} is picking</p>`; break;
       }
       case 'overtime': html = `<p class="db-k">Overtime</p><p class="db-who"><span>${esc(teamName(side))}</span></p><p class="db-clock">${clockText(ph.overMs, true)}</p><p class="db-sub">${esc(P[captain]?.name || '')} is still picking · pick ${ph.pickNo} of ${ph.total}</p>`; break;
-      case 'pick-is-in': html = `<p class="db-k">${esc(teamName(side))} · pick ${ph.reveal.pickNo}</p><p class="db-isin">The pick<br>is in</p><p class="db-count" key="${ph.countdown}">${ph.countdown}</p>`; break;
-      case 'slam': html = `<p class="db-k">${esc(teamName(side))} · pick ${ph.reveal.pickNo} of ${ph.total}</p><div class="db-reveal">${cardHtml(P[ph.reveal.playerId] || { name: ph.reveal.playerId, initials: '?' }, { size: 'lg' })}</div>`; break;
+      case 'pick-is-in': html = `${announce(ph.reveal.pickNo, side)}<p class="db-isin">The pick<br>is in</p><p class="db-count" key="${ph.countdown}">${ph.countdown}</p>`; break;
+      case 'slam': html = `${announce(ph.reveal.pickNo, side, true)}<p class="db-ann-sub">Pick ${ph.reveal.pickNo} of ${ph.total} · the selection is</p><div class="db-reveal">${cardHtml(P[ph.reveal.playerId] || { name: ph.reveal.playerId, initials: '?' }, { size: 'lg' })}</div>`; break;
       case 'paused': html = `<p class="db-k">Paused</p><p class="db-big">Stand by</p>${ph.pickNo ? `<p class="db-sub">${esc(teamName(ph.side))} on the clock · ${ph.overMs ? clockText(ph.overMs, true) + ' over' : clockText(ph.remainingMs) + ' left'}</p>` : ''}`; break;
       case 'complete': html = `<p class="db-k">The draft is done</p><p class="db-big">${esc(teamName('A'))}<br><span style="font-size:.45em;color:#FCD79A">v</span><br>${esc(teamName('B'))}</p>`; break;
       case 'finalised': html = `<p class="db-k">Final</p><p class="db-big">${esc(teamName('A'))}<br><span style="font-size:.45em;color:#FCD79A">v</span><br>${esc(teamName('B'))}</p><p class="db-sub">See you on the first tee</p>`; break;
     }
+    if (finale) renderFinale(t);
     // only rebuild the stage when it changes (keeps the animations from restarting every tick)
     const sig = `${ph.phase}|${ph.pickNo}|${ph.countdown}|${ph.reveal?.pickNo}|${Math.floor((ph.remainingMs ?? ph.overMs ?? 0) / 1000)}|${doc.rev}`;
     if (sig !== lastShown) { $('db-stage').innerHTML = html; lastShown = sig; }
   }
+
+  // ---- the finale: built once per (start, teams, rosters); CSS animation delays
+  // relative to "now" do the timing, so a refresh mid-finale lands in step and a
+  // finished finale renders straight into its resting state.
+  let lastFinale = '';
+  function renderFinale(t) {
+    const r = rosters(doc);
+    const sig = JSON.stringify([doc.finaleAt, r, doc.teams]);
+    if (sig === lastFinale) return;
+    lastFinale = sig;
+    const tl = finaleTimeline(r.A.length, r.B.length);
+    const el = t - doc.finaleAt;
+    const d = (ms) => `animation-delay:${((ms - el) / 1000).toFixed(2)}s`;
+    const mono = (s) => (teamName(s).replace(/^(team|the)\s+/i, '').trim()[0] || '?').toUpperCase();
+    const side = (s) => {
+      const cols = r[s].length <= 6 ? 3 : r[s].length <= 8 ? 4 : 5;
+      return `<div class="fn-side" data-side="${s}">
+        <header class="fn-head" style="${d(tl.headers)}"><span class="fn-mono">${esc(mono(s))}</span><div><p class="fn-name">${esc(teamName(s))}</p><p class="fn-cap">Captain ${esc(P[doc.captains[s]]?.name || '')}</p></div></header>
+        <div class="fn-cards" style="--cols:${cols}">${r[s].map((id, i) => `<div class="fn-card${i === 0 ? ' fn-card--cap' : ''}" style="${d(tl.cards[s][i])}">${cardHtml(P[id] || { name: id, initials: '?' }, { size: 'sm', badge: i === 0 ? '<span class="dc__cap">C</span>' : '' })}</div>`).join('')}</div></div>`;
+    };
+    $('db-finale').innerHTML = `${el < 1500 ? `<div class="fn-intro" style="${d(0)}">The draft is done</div>` : ''}
+      <div class="fn-grid">${side('A')}<div class="fn-vs" style="${d(tl.vs)}">vs</div>${side('B')}</div>
+      <p class="fn-title" style="${d(tl.title)}"><b>The Annual ${esc(DATA.tournamentId.match(/\d{4}/)?.[0] || '')} —</b><span>The teams are set</span></p>`;
+    if (doc.sound && el < 2000) scheduleFinaleSound(tl, el);
+  }
+
+  // ---- sound (off unless the commissioner turns it on; all synthesised here,
+  // no audio files). Browsers only allow sound after a click on the page, so the
+  // board shows a one-time "turn on sound" button while sound is on.
+  let ac = null;
+  const audio = () => (ac ||= new (window.AudioContext || window.webkitAudioContext)());
+  function tone(freq, at, dur, { type = 'sine', gain = 0.15, attack = 0.01 } = {}) {
+    const a = audio(), o = a.createOscillator(), g = a.createGain(), f = a.createBiquadFilter();
+    o.type = type; o.frequency.value = freq; f.type = 'lowpass'; f.frequency.value = 2400;
+    g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(gain, at + attack); g.gain.exponentialRampToValueAtTime(0.0001, at + dur);
+    o.connect(f).connect(g).connect(a.destination); o.start(at); o.stop(at + dur + 0.05);
+  }
+  const live = () => doc?.sound && ac && ac.state === 'running';
+  const playTick = (last) => { if (!live()) return; const t0 = ac.currentTime; tone(last ? 1320 : 990, t0, 0.07, { type: 'square', gain: 0.06, attack: 0.002 }); };
+  const playSting = () => {   // a short brass-ish hit: low root + a major chord
+    if (!live()) return; const t0 = ac.currentTime;
+    tone(98, t0, 0.9, { type: 'sawtooth', gain: 0.12 });
+    [392, 494, 587].forEach((f, i) => tone(f, t0 + 0.04 * i, 0.8, { type: 'sawtooth', gain: 0.07, attack: 0.02 }));
+  };
+  function scheduleFinaleSound(tl, el) {   // a rising build under the cards, then a fanfare on the title
+    if (!live()) return; const t0 = ac.currentTime - el / 1000;
+    const notes = [262, 330, 392, 523];
+    tl.cards.A.concat(tl.cards.B).sort((a, b) => a - b).forEach((ms, i) => { const at = t0 + ms / 1000; if (at > ac.currentTime) tone(notes[i % 4] / 2, at, 0.25, { type: 'triangle', gain: 0.07 }); });
+    const at = t0 + tl.title / 1000;
+    if (at > ac.currentTime) {
+      [392, 523, 659].forEach((f, i) => tone(f, at + i * 0.14, 0.22, { type: 'sawtooth', gain: 0.08 }));
+      [131, 262, 330, 392, 523].forEach((f) => tone(f, at + 0.45, 2.4, { type: 'sawtooth', gain: 0.06, attack: 0.05 }));
+    }
+  }
+  let lastTick = '', stung = new Set();
+  function sounds(ph, t) {
+    $('db-sound').hidden = !(doc.sound && (!ac || ac.state !== 'running'));
+    if (!live()) return;
+    if (ph.phase === 'clock' && ph.remainingMs <= 5000 && ph.remainingMs > 0) {
+      const sec = Math.ceil(ph.remainingMs / 1000), k = `${ph.pickNo}:${sec}`;
+      if (k !== lastTick) { lastTick = k; playTick(sec === 1); }
+    }
+    if (ph.phase === 'slam' && !stung.has(ph.reveal.lockedAt)) {
+      stung.add(ph.reveal.lockedAt);
+      if (t - ph.reveal.revealAt < 1500) playSting();
+    }
+  }
+  $('db-sound').addEventListener('click', async () => { try { await audio().resume(); } catch {} lastFinale = ''; render(); });
 
   const poll = startPolling('/api/draft', {
     every: 1000,

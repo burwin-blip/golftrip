@@ -40,6 +40,8 @@ export const emptyDraft = (mode) => ({
   participants: [], captains: { A: null, B: null }, firstPick: 'A', order: [],
   picks: [], clock: null, reveal: null, pausedAt: null, pickMs: PICK_MS,
   teams: { A: { name: null, color: null }, B: { name: null, color: null } }, finalisedAt: null, startedAt: null,
+  finaleAt: null,   // when the finale sequence (started/replayed) — server ms
+  sound: false,     // board sounds: OFF unless the commissioner turns them on
 });
 
 /** Each side's roster, captain first, then picks in order. */
@@ -94,4 +96,60 @@ export function phaseAt(doc, now) {
 export function clockText(ms, over = false) {
   const t = Math.max(0, Math.floor(ms / 1000));
   return `${over ? '+' : ''}${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`;
+}
+
+// ---- the finale -------------------------------------------------------------
+// After the last reveal the board clears and the two teams assemble like a
+// fight poster. Every step is a fixed offset (ms) from `finaleAt`, so a board
+// refreshed mid-finale lands at the right moment and a replay just moves
+// `finaleAt`.
+export const FINALE = { headers: 800, firstCard: 1500, perCard: 500, vsAfter: 600, titleAfter: 1300 };
+
+/** Offsets (ms after finaleAt) for each side's cards (captain first), the "vs" and the title. */
+export function finaleTimeline(nA, nB) {
+  const cards = { A: [], B: [] };
+  let t = FINALE.firstCard;
+  for (let i = 0; i < Math.max(nA, nB); i++) {
+    for (const [s, n] of [['A', nA], ['B', nB]]) if (i < n) { cards[s].push(t); t += FINALE.perCard; }
+  }
+  const last = t - FINALE.perCard;
+  return { headers: FINALE.headers, cards, vs: last + FINALE.vsAfter, title: last + FINALE.titleAfter, total: last + FINALE.titleAfter + 800 };
+}
+
+// ---- the draft recap ---------------------------------------------------------
+const ordinal = (n) => { const v = n % 100; return n + ((v >= 11 && v <= 13) ? 'th' : ({ 1: 'st', 2: 'nd', 3: 'rd' }[n % 10] || 'th')); };
+
+/**
+ * Pick-by-pick recap with a draft-value grade per pick, in the spirit of the 2026
+ * Draft Value analysis: where did the power rankings (as they stood at the
+ * pick, stamped by the server) say a player should go, and where did they go?
+ * "Expected" = their place among the drafted pool by power ranking (captains
+ * aren't picks; unranked players aren't graded). Picked well after that =
+ * steal; well before = reach; else fair.
+ * `scout` (id → { rank, index }) fills in picks made before stamping existed.
+ */
+export function draftRecap(doc, scout = {}) {
+  const picks = (doc.picks || []).map((p) => ({ ...p, rank: p.rank !== undefined ? p.rank : scout[p.playerId]?.rank ?? null, index: p.index !== undefined ? p.index : scout[p.playerId]?.index ?? null }));
+  // Grade among RANKED picks only, so an unranked rookie taken early doesn't
+  // make everyone after them look like a steal.
+  const ranked = picks.filter((p) => p.rank != null);
+  const expectedBy = Object.fromEntries([...ranked].sort((a, b) => a.rank - b.rank || a.n - b.n).map((p, i) => [p.playerId, i + 1]));
+  const actualBy = Object.fromEntries([...ranked].sort((a, b) => a.n - b.n).map((p, i) => [p.playerId, i + 1]));
+  const band = Math.max(2, Math.round(ranked.length / 5));     // 14 ranked picks → ±3
+  const rows = picks.map((p) => {
+    if (p.rank == null) return { n: p.n, side: p.side, playerId: p.playerId, rank: null, index: p.index, expected: null, delta: 0, grade: 'unranked', note: 'No power ranking yet, so no grade.', clockMs: p.clockMs ?? null };
+    const expected = expectedBy[p.playerId], delta = actualBy[p.playerId] - expected;   // + = went later than ranked
+    // concrete counts: lower-ranked players taken before them / higher-ranked still on the board
+    const before = ranked.filter((q) => q.n < p.n && q.rank > p.rank).length;
+    const passed = ranked.filter((q) => q.n > p.n && q.rank < p.rank).length;
+    let grade = 'fair', note;
+    if (delta >= band) { grade = 'steal'; note = `#${p.rank} in the power rankings, and ${before} lower-ranked player${before === 1 ? '' : 's'} went before them.`; }
+    else if (delta <= -band) { grade = 'reach'; note = `#${p.rank} in the power rankings, taken ahead of ${passed} higher-ranked player${passed === 1 ? '' : 's'}.`; }
+    else note = delta === 0 ? `Went right where the rankings had them (#${p.rank}).` : `Within ${Math.abs(delta)} of their ranked spot (#${p.rank}).`;
+    return { n: p.n, side: p.side, playerId: p.playerId, rank: p.rank, index: p.index, expected, delta, grade, note, clockMs: p.clockMs ?? null };
+  });
+  const graded = rows.filter((r) => r.grade !== 'unranked');
+  const steal = graded.filter((r) => r.grade === 'steal').sort((a, b) => b.delta - a.delta)[0] || null;
+  const reach = graded.filter((r) => r.grade === 'reach').sort((a, b) => a.delta - b.delta)[0] || null;
+  return { rows, band, steal, reach, captains: { ...doc.captains }, teams: doc.teams, mode: doc.mode, finalisedAt: doc.finalisedAt ?? null, pickMs: doc.pickMs };
 }

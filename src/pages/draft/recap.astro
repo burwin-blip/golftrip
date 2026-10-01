@@ -1,0 +1,49 @@
+---
+// /draft/recap — the Draft Night recap, live. Rendered in the browser from the
+// current draft the moment it's finalised, so a MOCK finalise shows exactly
+// what the real archive will look like (watermarked, never published). After a
+// REAL finalise the permanent copy is the "Draft Night" tab on the 2027 page;
+// this page shows it too, with a pointer there.
+import Base from '../../layouts/Base.astro';
+import { draftRoomData } from '../../lib/draft-data.js';
+import { tripFor } from '../../lib/data.js';
+const data = draftRoomData();
+const page = { players: data.players.map(({ id, slug, name, avatar, portrait, initials, rank, index }) => ({ id, slug, name, avatar, portrait, initials, rank, index })),
+  utcOffset: tripFor(data.tournamentId)?.utcOffset || '+00:00', tournamentId: data.tournamentId };
+---
+<Base title="Draft Night recap" description="The Annual 2027 draft, pick by pick.">
+  <div class="wrap section">
+    <div id="rc-root"><p class="muted" id="rc-wait">Loading the draft…</p></div>
+  </div>
+  <script type="application/json" id="rc-data" set:html={JSON.stringify(page)} />
+</Base>
+
+<script>
+  import { recapHtml, RECAP_CSS } from '../../lib/draft-recap.js';
+  const DATA = JSON.parse(document.getElementById('rc-data').textContent);
+  const P = Object.fromEntries(DATA.players.map((p) => [p.id, p]));
+  const scout = Object.fromEntries(DATA.players.map((p) => [p.id, { rank: p.rank, index: p.index }]));
+  document.head.insertAdjacentHTML('beforeend', `<style>${RECAP_CSS}</style>`);
+  const root = document.getElementById('rc-root');
+  let last = '';
+  async function tick() {
+    try {
+      const res = await fetch('/api/draft', { cache: 'no-store' });
+      const body = await res.json();
+      const d = body.draft;
+      const sig = `${d.mode}|${d.status}|${d.rev}`;
+      if (sig !== last) {
+        last = sig;
+        if (d.status === 'finalised') {
+          const real = d.mode === 'real' ? `<p class="muted" style="margin-bottom:1.2rem">This is the real draft. Its permanent home is the <a class="gold" href="/tournaments/${DATA.tournamentId}#draft-night">Draft Night tab on the 2027 page</a> (live a couple of minutes after finalise, once the site rebuilds).</p>` : '';
+          root.innerHTML = real + recapHtml(d, P, { mock: d.mode === 'mock', utcOffset: DATA.utcOffset, scout });
+        } else {
+          root.innerHTML = `<p class="eyebrow gold">Draft Night</p><h1 style="margin:.3rem 0 .6rem">The recap appears here when the draft is finalised</h1>
+            <p class="muted">${d.mode === 'mock' ? 'The MOCK draft is' : 'The draft is'} ${d.status === 'setup' ? 'not started yet' : d.status === 'complete' ? 'complete, waiting on the commissioner to finalise' : 'under way'}. This page updates by itself.</p>`;
+        }
+      }
+    } catch {}
+    setTimeout(tick, 3000);
+  }
+  tick();
+</script>

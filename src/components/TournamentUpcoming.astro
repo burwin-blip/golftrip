@@ -9,6 +9,8 @@ import { scheduleFor } from '../lib/schedule.js';
 import { draftPoolFor } from '../lib/stats.js';
 import { tripFor, draftResultFor, getPlayer } from '../lib/data.js';
 import { monogram } from '../lib/schedule.js';
+import { draftRoomData } from '../lib/draft-data.js';
+import { recapHtml, RECAP_CSS } from '../lib/draft-recap.js';
 import { dateRange, num, pctText } from '../lib/format.js';
 
 const { t } = Astro.props;
@@ -41,7 +43,13 @@ const trip = tripFor(t.id);
 // Match Centre (lineups + Tale of the Tape) appears once the edition has a
 // match schedule (data/schedule_<year>.json).
 const hasSchedule = !!scheduleFor(t.id);
-const TABS = [['overview', 'Overview'], ['pool', 'Draft Pool'], ['guide', 'Draft Guide'], ...(hasSchedule ? [['match-centre', 'Match Centre']] : [])];
+// The permanent Draft Night recap: only after a REAL finalise (the mock's lives at /draft/recap).
+const recap = drafted?.draft ? (() => {
+  const players = draftRoomData(t.id).players;
+  return recapHtml(drafted.draft, Object.fromEntries(players.map((p) => [p.id, p])), {
+    utcOffset: trip?.utcOffset, scout: Object.fromEntries(players.map((p) => [p.id, { rank: p.rank, index: p.index }])) });
+})() : null;
+const TABS = [['overview', 'Overview'], ['pool', 'Draft Pool'], ...(recap ? [['draft-night', 'Draft Night']] : []), ['guide', 'Draft Guide'], ...(hasSchedule ? [['match-centre', 'Match Centre']] : [])];
 // Jump links for the long Overview — only to sections that actually render
 // (same guards as TripHub).
 const JUMPS = trip ? [
@@ -214,6 +222,12 @@ const JUMPS = trip ? [
       ))}
     </div>
   </section>
+
+  {recap && (
+    <section class="tabpanel section" data-panel="draft-night">
+      <div class="wrap"><Fragment set:html={`<style>${RECAP_CSS}</style>` + recap} /></div>
+    </section>
+  )}
 
   <!-- DRAFT GUIDE (placeholder) -->
   <section class="tabpanel section" data-panel="guide">

@@ -18,12 +18,17 @@ import { players as sitePlayers } from './data.js';
 import * as store from './draft-store.js';
 import { loadLineups, saveLineups } from './lineup-store.js';
 import { emptyLineups } from './matchcentre-shared.js';
+import { draftRoomData } from './draft-data.js';
 import { MODES, PICK_MS, REVEAL_MS, SLAM_MS, TEAM_COLOURS, emptyDraft, snakeOrder, picksFor, rosters, available, phaseAt } from './draft-shared.js';
 
 export class DraftError extends Error {
   constructor(message, status = 400) { super(message); this.status = status; }
 }
 
+// Each pick is stamped with the player's index and power ranking as they stood
+// at that moment (the recap grades picks against them). Computed once per server.
+let scoutCache = null;
+export const scout = () => (scoutCache ||= Object.fromEntries(draftRoomData().players.map((p) => [p.id, { rank: p.rank ?? null, index: p.index ?? null }])));
 const nameOf = (id) => sitePlayers.find((p) => p.id === id)?.name ?? id;
 const validIds = () => new Set(sitePlayers.map((p) => p.id));
 // A local test run can shorten the clock (DRAFT_PICK_SECONDS); production always
@@ -96,10 +101,11 @@ export async function submitPick(key, body, { env = process.env } = {}) {
     const last = pickNo === doc.order.length;
     const next = {
       ...doc, rev: doc.rev + 1,
-      picks: [...doc.picks, { n: pickNo, side, playerId, lockedAt: now, clockMs: now - doc.clock.startsAt }],
+      picks: [...doc.picks, { n: pickNo, side, playerId, lockedAt: now, clockMs: now - doc.clock.startsAt, rank: scout()[playerId]?.rank ?? null, index: scout()[playerId]?.index ?? null }],
       reveal: { pickNo, side, playerId, lockedAt: now, revealAt: now + REVEAL_MS, doneAt: now + REVEAL_MS + SLAM_MS },
       clock: last ? null : { pickNo: pickNo + 1, startsAt: now + REVEAL_MS + SLAM_MS },
       status: last ? 'complete' : 'running',
+      finaleAt: last ? now + REVEAL_MS + SLAM_MS : null,   // the finale starts as the last reveal ends
     };
     await store.saveDraft(mode, next, env);
     return { ok: true, mode, draft: next, serverNow: Date.now() };
@@ -175,15 +181,20 @@ export async function adminAction(key, body, { env = process.env } = {}) {
         const lastPick = doc.picks[doc.picks.length - 1];
         // The player goes back in the pool; the draft pauses with that captain back
         // on the clock, which restarts at a full 2:00 on RESUME.
-        return save({ ...doc, status: 'paused', pausedAt: now, picks: doc.picks.slice(0, -1), reveal: null, clock: { pickNo: lastPick.n, startsAt: now } },
+        return save({ ...doc, status: 'paused', pausedAt: now, picks: doc.picks.slice(0, -1), reveal: null, finaleAt: null, clock: { pickNo: lastPick.n, startsAt: now } },
           { undone: { pickNo: lastPick.n, playerId: lastPick.playerId, name: nameOf(lastPick.playerId) } });
       }
       case 'reset': {
         if (String(body.confirm || '').trim().toUpperCase() !== 'RESET') throw new DraftError('Type RESET to confirm.');
         if (doc.status === 'finalised' && mode === 'real' && body.unfinalise !== true) throw new DraftError('This draft is finalised. Resetting it won’t undo the rosters already written — tick “I understand” to reset anyway.', 409);
         // Keep the setup (players, captains, who picks first) so a rehearsal can go again.
-        return save({ ...emptyDraft(mode), participants: doc.participants, captains: doc.captains, firstPick: doc.firstPick });
+        return save({ ...emptyDraft(mode), participants: doc.participants, captains: doc.captains, firstPick: doc.firstPick, sound: Boolean(doc.sound) });
       }
+      case 'finale': {   // replay the finale on the board, on demand
+        if (!['complete', 'finalised'].includes(doc.status)) throw new DraftError('The finale plays once every pick is in.', 409);
+        return save({ ...doc, finaleAt: now });
+      }
+      case 'sound': return save({ ...doc, sound: body.on === true });
       case 'finalise': return finalise(doc, mode, body, key, env, save);
       default: throw new DraftError(`Unknown action "${action}".`);
     }
