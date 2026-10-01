@@ -41,7 +41,6 @@ export const emptyDraft = (mode) => ({
   picks: [], clock: null, reveal: null, pausedAt: null, pickMs: PICK_MS,
   teams: { A: { name: null, color: null }, B: { name: null, color: null } }, finalisedAt: null, startedAt: null,
   finaleAt: null,   // when the finale sequence (started/replayed) — server ms
-  sound: false,     // board sounds: OFF unless the commissioner turns them on
 });
 
 /** Each side's roster, captain first, then picks in order. */

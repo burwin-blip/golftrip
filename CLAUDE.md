@@ -692,13 +692,8 @@ shells that poll the API (every state change is server-side, in Redis):
   draft-shared.js), set by the server when the last pick locks; the board renders
   with CSS animation delays relative to now, so a refresh lands in step. The
   console's **REPLAY FINALE** (`action: 'finale'`) just moves `finaleAt`.
-- **Sound** (`doc.sound`, **off by default**, kept across RESET): a toggle on the
-  console. The board synthesises everything with Web Audio (no audio files): a
-  tick on each of the clock's last 5 seconds, a brass-ish sting on every reveal, a
-  rising build under the finale cards and a fanfare on the title. Browsers only
-  allow sound after a click on the page, so while sound is on the board shows
-  "Click to turn on the board's sound". **After any refresh of the TV it must be
-  clicked again.**
+- **No sound.** The board is deliberately silent (a sound option was built and then
+  removed at the owner's request, Sept 2026). Don't add audio back without asking.
 - **Draft Night recap:** every pick is stamped server-side with the player's index
   and power ranking at that moment. `draftRecap()` grades each pick against the
   rankings among the RANKED picks only (unranked players aren't graded, so an
@@ -710,7 +705,7 @@ shells that poll the API (every state change is server-side, in Redis):
   `data/draft.generated.json`, real finalise only) and **`/draft/recap`** (live in
   the browser from `/api/draft`, so a mock recap is viewable the moment the mock
   is finalised, watermarked MOCK). Tested: the same picks give identical rows.
-- **Mock = full dress rehearsal:** reveals, finale, replay, sounds and the recap
+- **Mock = full dress rehearsal:** reveals, finale, replay and the recap
   all behave exactly as on the night. The only difference is that a real finalise
   writes the rosters, publishes the recap (pull-draft → rebuild) and updates the
   Match Centre teams. RESET clears the mock completely.

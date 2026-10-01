@@ -188,13 +188,12 @@ export async function adminAction(key, body, { env = process.env } = {}) {
         if (String(body.confirm || '').trim().toUpperCase() !== 'RESET') throw new DraftError('Type RESET to confirm.');
         if (doc.status === 'finalised' && mode === 'real' && body.unfinalise !== true) throw new DraftError('This draft is finalised. Resetting it won’t undo the rosters already written — tick “I understand” to reset anyway.', 409);
         // Keep the setup (players, captains, who picks first) so a rehearsal can go again.
-        return save({ ...emptyDraft(mode), participants: doc.participants, captains: doc.captains, firstPick: doc.firstPick, sound: Boolean(doc.sound) });
+        return save({ ...emptyDraft(mode), participants: doc.participants, captains: doc.captains, firstPick: doc.firstPick });
       }
       case 'finale': {   // replay the finale on the board, on demand
         if (!['complete', 'finalised'].includes(doc.status)) throw new DraftError('The finale plays once every pick is in.', 409);
         return save({ ...doc, finaleAt: now });
       }
-      case 'sound': return save({ ...doc, sound: body.on === true });
       case 'finalise': return finalise(doc, mode, body, key, env, save);
       default: throw new DraftError(`Unknown action "${action}".`);
     }

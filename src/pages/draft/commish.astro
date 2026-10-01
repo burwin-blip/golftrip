@@ -11,7 +11,7 @@ const data = draftRoomData();
 ---
 <Base title="Commissioner" description="The Annual 2027 draft — commissioner." bare>
   <div class="cm" id="cm">
-    <div class="cm-mockbar" id="cm-mockbar" hidden>MOCK MODE · a full dress rehearsal: every screen, the finale, the sounds and the recap, watermarked MOCK. Finalise publishes nothing</div>
+    <div class="cm-mockbar" id="cm-mockbar" hidden>MOCK MODE · a full dress rehearsal: every screen, the finale and the recap, watermarked MOCK. Finalise publishes nothing</div>
     <div class="cm-locked" id="cm-locked" hidden>
       <h1>Commissioner</h1>
       <p>Paste your admin key (the one for /rsvp/admin).</p>
@@ -40,7 +40,6 @@ const data = draftRoomData();
           <button type="button" class="cm-btn cm-btn--go" id="cm-resume">RESUME</button>
           <button type="button" class="cm-btn cm-btn--warn" id="cm-undo">UNDO last pick</button>
           <button type="button" class="cm-btn" id="cm-finale" hidden>REPLAY FINALE</button>
-          <button type="button" class="cm-btn cm-btn--sound" id="cm-sound" aria-pressed="false">Board sound: OFF</button>
         </div>
         <p class="cm-note" id="cm-startnote"></p>
       </section>
@@ -128,8 +127,6 @@ const data = draftRoomData();
   .cm-btn { border: 0; border-radius: 10px; padding: .7rem 1.1rem; font: inherit; font-weight: 900; letter-spacing: .06em; background: #17293F; color: #fff; cursor: pointer; }
   .cm-btn--go { background: #1F7A4D; }
   .cm-btn--warn { background: #A73820; }
-  .cm-btn--sound { background: #fff; color: #17293F; box-shadow: inset 0 0 0 2px #CBD3DB; }
-  .cm-btn--sound[aria-pressed="true"] { background: #FCD79A; box-shadow: none; }
   .cm-btn:disabled { background: #C5CDD5; cursor: not-allowed; }
   .cm-btn[hidden] { display: none; }
   .cm-small { border: 1.5px solid #CBD3DB; background: #fff; border-radius: 999px; padding: .3rem .8rem; font: inherit; font-size: .8rem; font-weight: 700; cursor: pointer; color: #17293F; }
@@ -323,8 +320,6 @@ const data = draftRoomData();
     $('cm-resume').hidden = s !== 'paused';
     $('cm-undo').hidden = !['running', 'paused', 'complete'].includes(s);
     $('cm-finale').hidden = !['complete', 'finalised'].includes(s);
-    $('cm-sound').setAttribute('aria-pressed', String(!!doc.sound));
-    $('cm-sound').textContent = `Board sound: ${doc.sound ? 'ON' : 'OFF'}`;
     $('cm-undo').disabled = !doc.picks.length || busy;
     const n = doc.participants.length;
     const problems = [];
@@ -426,7 +421,6 @@ const data = draftRoomData();
   });
 
   $('cm-finale').addEventListener('click', () => act('finale'));
-  $('cm-sound').addEventListener('click', () => act('sound', { on: !doc.sound }));
   $('cm-start').addEventListener('click', () => act('start'));
   $('cm-pause').addEventListener('click', () => act('pause'));
   $('cm-resume').addEventListener('click', () => act('resume'));

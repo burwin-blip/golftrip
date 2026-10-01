@@ -22,7 +22,6 @@ const data = draftRoomData();
       <section class="db-team" data-side="B"><h2 class="db-team__name" id="db-name-B">Team B</h2><div class="db-roster" id="db-roster-B"></div></section>
     </main>
     <section class="db-finale" id="db-finale" aria-live="polite"></section>
-    <button type="button" class="db-sound" id="db-sound" hidden>🔊 Click to turn on the board’s sound</button>
   </div>
   <script type="application/json" id="db-data" set:html={JSON.stringify(data)} />
 </Base>
@@ -108,8 +107,6 @@ const data = draftRoomData();
   @keyframes fn-in-b { from { opacity: 0; transform: translateX(60vw) rotate(12deg) scale(1.3); } to { opacity: 1; transform: none; } }
   @keyframes fn-vs { from { opacity: 0; transform: scale(3); } to { opacity: 1; transform: none; } }
   @keyframes fn-title { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: none; } }
-  .db-sound { position: fixed; right: 1.2rem; bottom: 1.2rem; z-index: 60; border: 0; border-radius: 999px; padding: .7rem 1.2rem; font: inherit; font-weight: 800; background: #FCD79A; color: #0C1B2C; cursor: pointer; box-shadow: 0 10px 30px -10px #000; }
-  .db-sound[hidden] { display: none; }
   @media (max-width: 900px) { .fn-grid { grid-template-columns: 1fr; } .fn-vs { font-size: 3rem; } .fn-side[data-side="B"] .fn-head { flex-direction: row; text-align: left; } }
   @keyframes db-pulse { 50% { box-shadow: 0 0 0 2px #fff, 0 0 38px var(--c); } }
   @keyframes db-flash { 50% { opacity: .35; } }
@@ -142,7 +139,6 @@ const data = draftRoomData();
     root.dataset.phase = ph.phase;
     const finale = ['complete', 'finalised'].includes(ph.phase) && doc.finaleAt;
     root.dataset.finale = finale ? '1' : '0';
-    sounds(ph, t);
     const mock = doc.mode === 'mock';
     $('db-mock').hidden = !mock; $('db-mocktag').hidden = !mock;
     // team colours: the finalised ones, else the stage defaults
@@ -228,51 +224,7 @@ const data = draftRoomData();
     $('db-finale').innerHTML = `${el < 1500 ? `<div class="fn-intro" style="${d(0)}">The draft is done</div>` : ''}
       <div class="fn-grid">${side('A')}<div class="fn-vs" style="${d(tl.vs)}">vs</div>${side('B')}</div>
       <p class="fn-title" style="${d(tl.title)}"><b>The Annual ${esc(DATA.tournamentId.match(/\d{4}/)?.[0] || '')} —</b><span>The teams are set</span></p>`;
-    if (doc.sound && el < 2000) scheduleFinaleSound(tl, el);
   }
-
-  // ---- sound (off unless the commissioner turns it on; all synthesised here,
-  // no audio files). Browsers only allow sound after a click on the page, so the
-  // board shows a one-time "turn on sound" button while sound is on.
-  let ac = null;
-  const audio = () => (ac ||= new (window.AudioContext || window.webkitAudioContext)());
-  function tone(freq, at, dur, { type = 'sine', gain = 0.15, attack = 0.01 } = {}) {
-    const a = audio(), o = a.createOscillator(), g = a.createGain(), f = a.createBiquadFilter();
-    o.type = type; o.frequency.value = freq; f.type = 'lowpass'; f.frequency.value = 2400;
-    g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(gain, at + attack); g.gain.exponentialRampToValueAtTime(0.0001, at + dur);
-    o.connect(f).connect(g).connect(a.destination); o.start(at); o.stop(at + dur + 0.05);
-  }
-  const live = () => doc?.sound && ac && ac.state === 'running';
-  const playTick = (last) => { if (!live()) return; const t0 = ac.currentTime; tone(last ? 1320 : 990, t0, 0.07, { type: 'square', gain: 0.06, attack: 0.002 }); };
-  const playSting = () => {   // a short brass-ish hit: low root + a major chord
-    if (!live()) return; const t0 = ac.currentTime;
-    tone(98, t0, 0.9, { type: 'sawtooth', gain: 0.12 });
-    [392, 494, 587].forEach((f, i) => tone(f, t0 + 0.04 * i, 0.8, { type: 'sawtooth', gain: 0.07, attack: 0.02 }));
-  };
-  function scheduleFinaleSound(tl, el) {   // a rising build under the cards, then a fanfare on the title
-    if (!live()) return; const t0 = ac.currentTime - el / 1000;
-    const notes = [262, 330, 392, 523];
-    tl.cards.A.concat(tl.cards.B).sort((a, b) => a - b).forEach((ms, i) => { const at = t0 + ms / 1000; if (at > ac.currentTime) tone(notes[i % 4] / 2, at, 0.25, { type: 'triangle', gain: 0.07 }); });
-    const at = t0 + tl.title / 1000;
-    if (at > ac.currentTime) {
-      [392, 523, 659].forEach((f, i) => tone(f, at + i * 0.14, 0.22, { type: 'sawtooth', gain: 0.08 }));
-      [131, 262, 330, 392, 523].forEach((f) => tone(f, at + 0.45, 2.4, { type: 'sawtooth', gain: 0.06, attack: 0.05 }));
-    }
-  }
-  let lastTick = '', stung = new Set();
-  function sounds(ph, t) {
-    $('db-sound').hidden = !(doc.sound && (!ac || ac.state !== 'running'));
-    if (!live()) return;
-    if (ph.phase === 'clock' && ph.remainingMs <= 5000 && ph.remainingMs > 0) {
-      const sec = Math.ceil(ph.remainingMs / 1000), k = `${ph.pickNo}:${sec}`;
-      if (k !== lastTick) { lastTick = k; playTick(sec === 1); }
-    }
-    if (ph.phase === 'slam' && !stung.has(ph.reveal.lockedAt)) {
-      stung.add(ph.reveal.lockedAt);
-      if (t - ph.reveal.revealAt < 1500) playSting();
-    }
-  }
-  $('db-sound').addEventListener('click', async () => { try { await audio().resume(); } catch {} lastFinale = ''; render(); });
 
   const poll = startPolling('/api/draft', {
     every: 1000,
