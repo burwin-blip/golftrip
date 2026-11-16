@@ -191,7 +191,7 @@ function validateTrip(trip, file, validTournamentIds) {
     if (c.slug !== undefined && c.slug !== null) {
       str(c.slug, `${at} → "slug"`);
       if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(c.slug)) {
-        bad(`${at} → "slug" must be lower-case words joined by hyphens (e.g. "terra-lago-south") — it's the profile URL and the photo folder name. Got ${JSON.stringify(c.slug)}.`);
+        bad(`${at} → "slug" must be lower-case words joined by hyphens (e.g. "desert-willow-firecliff") — it's the profile URL and the photo folder name. Got ${JSON.stringify(c.slug)}.`);
       }
       if (courseSlugs.includes(c.slug)) bad(`${at} → duplicate "slug" "${c.slug}". Each course needs its own.`);
       courseSlugs.push(c.slug);
@@ -223,6 +223,13 @@ function validateTrip(trip, file, validTournamentIds) {
       if (c.tee?.name && c.tees.length && !c.tees.some((x) => x.name === c.tee.name)) {
         bad(`${at} → "tee" is "${c.tee.name}", which isn't one of the names in "tees" (${c.tees.map((x) => `"${x.name}"`).join(', ')}). Use the same spelling so it can be highlighted.`);
       }
+    }
+    // A course whose scorecard isn't known yet (e.g. which nine of a 27-hole
+    // club). Shown in place of the tee strip: { line, flag, note }.
+    if (c.pending !== undefined && c.pending !== null) {
+      if (typeof c.pending !== 'object' || Array.isArray(c.pending) || !c.pending.line) bad(`${at} → "pending" must be an object with a "line", e.g. { "line": "9 holes · Nine TBC · Par & yardage TBC", "flag": "Scorecard to come", "note": "…" }.`);
+      ['line', 'flag', 'note'].forEach((k) => str(c.pending[k], `${at} → "pending" → "${k}"`));
+      if (c.tee) bad(`${at} has both "tee" and "pending". Once the tees are known, drop "pending".`);
     }
     // A flyover / course-tour video: YouTube links embed, anything else is a link.
     if (c.flyover !== undefined && c.flyover !== null) {

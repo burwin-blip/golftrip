@@ -8,8 +8,8 @@ One folder per course (the folder name is the course's slug — don't rename it)
 
 | Folder | Course | Where official imagery lives |
 |---|---|---|
-| `terra-lago-south/` | Terra Lago — South | https://golfterralago.com/gallery-index-maple (add `?format=2500w` to image URLs for full size), home page |
-| `terra-lago-north/` | Terra Lago — North | same gallery as South — the site doesn't split the courses |
+| `indian-palms/` | Indian Palms Country Club | none yet — https://www.indianpalms.com/ (nine TBC) |
+| `eagle-falls/` | Eagle Falls Golf Course | none yet — the Fantasy Springs Resort golf pages |
 | `desert-willow-mountain-view/` | Desert Willow — Mountain View | https://www.desertwillow.com/photo-gallery/ ("Mountain View Course Gallery") and https://www.desertwillow.com/mountainviewcourse/ |
 | `desert-willow-firecliff/` | Desert Willow — Firecliff | https://www.desertwillow.com/photo-gallery/ ("Firecliff Course Gallery") and https://www.desertwillow.com/firecliffcourse/ (post-renovation hole photos) |
 | `classic-club/` | The Classic Club | https://www.classicclubgolf.com/gallery/ (mostly clubhouse — few course shots) |

@@ -97,7 +97,10 @@ const KIND_ICON = { golf: '⛳', draft: '🎯', awards: '🏆', travel: '✈', s
                 {c.name && c.tee && (
                   <p class="course__play tabnums">{playingLine(c.tee, c.par)}{c.tee.confirmed === false && <i title="Figures from a scorecard database — to be confirmed on the ground">TBC</i>}</p>
                 )}
-                {c.name && courseLine(c) && <p class="course__spec tabnums">{courseLine(c)}</p>}
+                {c.name && !c.tee && c.pending && (
+                  <p class="course__play tabnums" title={c.pending.note || undefined}>{c.pending.line}</p>
+                )}
+                {c.name && !c.pending && courseLine(c) && <p class="course__spec tabnums">{courseLine(c)}</p>}
                 {c.format && <span class="pill course__fmt">{c.format}</span>}
                 {c.note && <p class="course__note">{c.note}</p>}
                 {c.href && <span class="course__link">Course profile <span aria-hidden="true">→</span></span>}

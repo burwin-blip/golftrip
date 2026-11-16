@@ -71,6 +71,13 @@ const host = (u) => { try { return new URL(u).hostname.replace(/^www\./, ''); } 
         </div>
       )}
 
+      {!tee && c.pending && (
+        <div class="cplay">
+          <p class="cplay__v tabnums">{c.pending.line}</p>
+          {c.pending.flag && <span class="cplay__flag cplay__flag--tbc" title={c.pending.note || undefined}>{c.pending.flag}</span>}
+        </div>
+      )}
+
       {(c.description || c.signature) && (
         <div class="cbody">
           {c.description && (

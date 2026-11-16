@@ -18,6 +18,7 @@ const dune = (h >> 7) % 2;             // which foreground ridge
 {photo ? (
   <img class="cphoto" src={photo.full} alt={photo.alt || course.name} loading={loading} decoding="async" sizes={sizes} style={`aspect-ratio:${ratio}`} />
 ) : (
+  <div class="cphoto-wait">
   <svg class="cphoto cphoto--placeholder" viewBox="0 0 160 100" role="img"
        aria-label={`${course.name} — no photos yet`} preserveAspectRatio="xMidYMid slice" style={`aspect-ratio:${ratio}`}>
     <defs>
@@ -51,8 +52,13 @@ const dune = (h >> 7) % 2;             // which foreground ridge
       <path d="M1.1,0.5 L12,4.5 L1.1,8.5 Z" fill="#E06A2E" />
     </g>
   </svg>
+  <span class="cphoto-wait__tag" aria-hidden="true">Photos coming soon</span>
+  </div>
 )}
 
 <style>
+  .cphoto-wait { position: relative; }
+  /* a quiet label so the drawn scene reads as "not yet", not "broken image" */
+  .cphoto-wait__tag { position: absolute; left: .6rem; bottom: .6rem; font-size: .62rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: #fff; background: rgba(23, 41, 63, .72); padding: .28rem .6rem; border-radius: 99px; pointer-events: none; }
   .cphoto { display: block; width: 100%; height: auto; object-fit: cover; background: var(--panel-2); }
 </style>

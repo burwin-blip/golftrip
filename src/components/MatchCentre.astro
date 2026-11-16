@@ -493,7 +493,7 @@ const dateLine = (r) => `${weekday(r.date)} ${dayMonth(r.date)}${r.session ? ` �
         : strokes.perPlayer.map((p) => `<li><b>${esc(p.first)}</b> — ${p.courseHandicap == null ? `<span class="faint">${ARCHIVE ? 'not on the card' : 'no index yet'}</span>` : `${hcpWord} ${p.courseHandicap}`}${p.strokes ? `, ${p.strokes > 0 ? '' : 'gives back '}${Math.abs(p.strokes)} stroke${Math.abs(p.strokes) === 1 ? '' : 's'}` : round.handicap === 'full-difference' && p.courseHandicap != null ? ', plays off 0' : ''}${p.holes.length ? `<span class="mc-tape__holes">on holes ${esc(strokeHolesText(p.holes))}</span>` : ''}</li>`).join('');
       const fmtNote = P[everyone.find((id) => P[id] && !P[id].rookie)]?.byFormat?.[round.formatKey]?.note;
       const tee = round.course.tee;
-      const where = ARCHIVE ? `${round.course.name} · the card's playing handicaps` : `${round.course.name}, ${tee.name} ${Number(tee.rating).toFixed(1)}/${tee.slope}`;
+      const where = ARCHIVE ? `${round.course.name} · the card's playing handicaps` : tee?.rating != null ? `${round.course.name}, ${tee.name} ${Number(tee.rating).toFixed(1)}/${tee.slope}` : round.course.name;
       const nug = nuggets(round, mt, sl, strokes);
       return `<div class="mc-tape">
         <div class="mc-verdict"><span class="mc-verdict__k">${ARCHIVE ? 'Tale of the Tape · the pre-trip read' : 'Tale of the Tape'}</span>${verdict}</div>

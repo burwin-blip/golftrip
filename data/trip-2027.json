@@ -34,337 +34,170 @@
   {
    "round": "Round 1",
    "date": "2027-03-26",
-   "slug": "terra-lago-south",
-   "name": "Terra Lago — South Course",
+   "slug": "indian-palms",
+   "name": "Indian Palms Country Club",
    "location": "Indio, California",
-   "url": "https://golfterralago.com/",
+   "url": "https://www.indianpalms.com/",
    "format": null,
    "note": null,
-   "designer": "Schmidt-Curley Design (Lee Schmidt & Brian Curley)",
-   "opened": 1999,
-   "par": 72,
-   "yardage": 7044,
-   "tee": {
-    "name": "Blue (Championship)",
-    "yardage": 6401,
-    "rating": 71.6,
-    "slope": 133,
-    "par": 72,
-    "confirmed": false,
-    "source": "https://images.squarespace-cdn.com/content/v1/5b4f6ff9e17ba367c23c31cd/1539901295534-29OB8BFT804XLI1FB69B/course_scorecard.jpg",
-    "note": "Figures match the club’s own scorecard (c. 2018) and GolfPass. The club’s card calls this the Championship tee (a gold row); “Blue” is GolfPass’s name. Older listings show 70.9/130 — confirm at the pro shop.",
-    "holes": [
-     {
-      "hole": 1,
-      "par": 4,
-      "si": 15,
-      "yards": 365
-     },
-     {
-      "hole": 2,
-      "par": 4,
-      "si": 3,
-      "yards": 384
-     },
-     {
-      "hole": 3,
-      "par": 5,
-      "si": 17,
-      "yards": 511
-     },
-     {
-      "hole": 4,
-      "par": 3,
-      "si": 9,
-      "yards": 161
-     },
-     {
-      "hole": 5,
-      "par": 4,
-      "si": 5,
-      "yards": 429
-     },
-     {
-      "hole": 6,
-      "par": 3,
-      "si": 7,
-      "yards": 191
-     },
-     {
-      "hole": 7,
-      "par": 4,
-      "si": 11,
-      "yards": 387
-     },
-     {
-      "hole": 8,
-      "par": 5,
-      "si": 13,
-      "yards": 572
-     },
-     {
-      "hole": 9,
-      "par": 4,
-      "si": 1,
-      "yards": 425
-     },
-     {
-      "hole": 10,
-      "par": 4,
-      "si": 4,
-      "yards": 357
-     },
-     {
-      "hole": 11,
-      "par": 4,
-      "si": 2,
-      "yards": 440
-     },
-     {
-      "hole": 12,
-      "par": 3,
-      "si": 6,
-      "yards": 135
-     },
-     {
-      "hole": 13,
-      "par": 4,
-      "si": 10,
-      "yards": 350
-     },
-     {
-      "hole": 14,
-      "par": 5,
-      "si": 14,
-      "yards": 487
-     },
-     {
-      "hole": 15,
-      "par": 4,
-      "si": 16,
-      "yards": 289
-     },
-     {
-      "hole": 16,
-      "par": 4,
-      "si": 8,
-      "yards": 333
-     },
-     {
-      "hole": 17,
-      "par": 3,
-      "si": 12,
-      "yards": 117
-     },
-     {
-      "hole": 18,
-      "par": 5,
-      "si": 18,
-      "yards": 468
-     }
-    ],
-    "holesSource": "https://images.squarespace-cdn.com/content/v1/5b4f6ff9e17ba367c23c31cd/1539901295534-29OB8BFT804XLI1FB69B/course_scorecard.jpg",
-    "holesNote": "Club scorecard (c. 2018): the Championship row, and the single Men's HCP row that applies to every men's tee."
+   "designer": null,
+   "opened": null,
+   "par": null,
+   "yardage": null,
+   "tee": null,
+   "pending": {
+    "line": "9 holes · Nine TBC · Par & yardage TBC",
+    "flag": "Scorecard to come",
+    "note": "Placeholder. Indian Palms has three nines (Indian, Mountain, Royal). Which nine we play and its scorecard (par, yardage, stroke index) will be confirmed later. Round 1 is a gross scramble with no strokes, so no rating, slope or stroke index is needed to play it. Once the nine is known, add a \"tee\" with its 9 holes and drop this block."
    },
-   "signature": "The 2nd — the “Box Car” par 4, played hard along a canal and crossed by a bridge built from an old railway wagon.",
-   "description": "Formerly Landmark Golf Club, and host of the PGA Tour's Skins Game from 1999 to 2002. Big contoured greens with water and bunkering throughout, and the club's trademark railway-wagon bridges.",
-   "source": "https://www.golfpass.com/travel-advisor/courses/15284-golf-club-at-terra-lago-south-course",
-   "tees": [
-    {
-     "name": "Black (Professional)",
-     "yardage": 7044,
-     "rating": 75.1,
-     "slope": 140,
-     "par": 72
-    },
-    {
-     "name": "Blue (Championship)",
-     "yardage": 6401,
-     "rating": 71.6,
-     "slope": 133,
-     "par": 72
-    },
-    {
-     "name": "White (Regular)",
-     "yardage": 5838,
-     "rating": 68.9,
-     "slope": 126,
-     "par": 72
-    },
-    {
-     "name": "Red (Forward)",
-     "yardage": 5045,
-     "rating": null,
-     "slope": null,
-     "par": 72
-    }
-   ]
+   "signature": null,
+   "description": "A historic 27-hole club in Indio, with three nines to choose from: the Indian, the Mountain and the Royal. We play one of them for Friday morning's 9-hole scramble to open the trip.",
+   "source": null
   },
   {
    "round": "Round 2",
    "date": "2027-03-26",
-   "slug": "terra-lago-north",
-   "name": "Terra Lago — North Course",
+   "slug": "eagle-falls",
+   "name": "Eagle Falls Golf Course",
    "location": "Indio, California",
-   "url": "https://golfterralago.com/",
+   "url": null,
    "format": null,
    "note": null,
-   "designer": "Schmidt-Curley Design (Lee Schmidt & Brian Curley)",
-   "opened": 1999,
+   "designer": "Clive Clark",
+   "opened": null,
    "par": 72,
-   "yardage": 7060,
+   "yardage": 6715,
    "tee": {
-    "name": "Yellow (Championship)",
-    "yardage": 6511,
-    "rating": 71.4,
-    "slope": 132,
+    "name": "Eagle",
+    "yardage": 6715,
+    "rating": 72.8,
+    "slope": 133,
     "par": 72,
-    "confirmed": false,
-    "source": "https://images.squarespace-cdn.com/content/v1/5b4f6ff9e17ba367c23c31cd/1539901295534-29OB8BFT804XLI1FB69B/course_scorecard.jpg",
-    "note": "Figures match the club’s own scorecard (c. 2018) and GolfPass. The club’s card calls this the Championship tee (a gold row); other sites call it Blue, Yellow or Gold. Older listings show 71.5/131 — confirm at the pro shop.",
+    "confirmed": null,
+    "source": null,
+    "note": "Eagle tees (the tips) from the trip organiser's scorecard, Nov 2026: 3,419 out, 3,296 in. Men's stroke index.",
     "holes": [
      {
       "hole": 1,
       "par": 4,
-      "si": 9,
-      "yards": 356
+      "si": 15,
+      "yards": 394
      },
      {
       "hole": 2,
       "par": 4,
-      "si": 1,
-      "yards": 376
+      "si": 5,
+      "yards": 440
      },
      {
       "hole": 3,
       "par": 4,
-      "si": 17,
-      "yards": 340
+      "si": 11,
+      "yards": 372
      },
      {
       "hole": 4,
-      "par": 3,
-      "si": 5,
-      "yards": 167
+      "par": 5,
+      "si": 3,
+      "yards": 494
      },
      {
       "hole": 5,
-      "par": 5,
-      "si": 13,
-      "yards": 554
+      "par": 4,
+      "si": 9,
+      "yards": 413
      },
      {
       "hole": 6,
-      "par": 5,
-      "si": 7,
-      "yards": 546
+      "par": 3,
+      "si": 17,
+      "yards": 129
      },
      {
       "hole": 7,
-      "par": 3,
-      "si": 15,
-      "yards": 132
+      "par": 5,
+      "si": 1,
+      "yards": 571
      },
      {
       "hole": 8,
       "par": 4,
-      "si": 11,
-      "yards": 358
+      "si": 7,
+      "yards": 406
      },
      {
       "hole": 9,
-      "par": 4,
-      "si": 3,
-      "yards": 436
+      "par": 3,
+      "si": 13,
+      "yards": 200
      },
      {
       "hole": 10,
-      "par": 5,
-      "si": 18,
-      "yards": 519
+      "par": 4,
+      "si": 8,
+      "yards": 438
      },
      {
       "hole": 11,
       "par": 4,
-      "si": 10,
-      "yards": 395
+      "si": 16,
+      "yards": 269
      },
      {
       "hole": 12,
       "par": 4,
-      "si": 12,
-      "yards": 332
+      "si": 2,
+      "yards": 476
      },
      {
       "hole": 13,
-      "par": 3,
-      "si": 2,
-      "yards": 201
+      "par": 4,
+      "si": 6,
+      "yards": 385
      },
      {
       "hole": 14,
       "par": 4,
-      "si": 16,
-      "yards": 301
+      "si": 12,
+      "yards": 377
      },
      {
       "hole": 15,
-      "par": 3,
-      "si": 6,
-      "yards": 152
+      "par": 4,
+      "si": 18,
+      "yards": 301
      },
      {
       "hole": 16,
-      "par": 4,
-      "si": 8,
-      "yards": 376
+      "par": 3,
+      "si": 14,
+      "yards": 184
      },
      {
       "hole": 17,
-      "par": 5,
-      "si": 14,
-      "yards": 518
+      "par": 4,
+      "si": 10,
+      "yards": 388
      },
      {
       "hole": 18,
-      "par": 4,
+      "par": 5,
       "si": 4,
-      "yards": 452
+      "yards": 478
      }
     ],
-    "holesSource": "https://images.squarespace-cdn.com/content/v1/5b4f6ff9e17ba367c23c31cd/1539901295534-29OB8BFT804XLI1FB69B/course_scorecard.jpg",
-    "holesNote": "Club scorecard (c. 2018): the Championship row, and the single Men's HCP row that applies to every men's tee."
+    "holesSource": null,
+    "holesNote": "Eagle-tee yardages and the men's stroke index, as supplied by the trip organiser (Nov 2026)."
    },
-   "signature": "The island-green par 3 — the hole the Skins Game was built around.",
-   "description": "The longer of Terra Lago's two. Dramatic elevation changes across the Coachella Valley, and from the seventh tee a view that runs from one end of the valley to the other.",
-   "source": "https://www.golfpass.com/travel-advisor/courses/15283-golf-club-at-terra-lago-north-course",
+   "signature": null,
+   "description": "The Clive Clark course at Fantasy Springs Resort. We play it off the Eagle tees, the tips.",
+   "source": null,
    "tees": [
     {
-     "name": "Black (Professional)",
-     "yardage": 7060,
-     "rating": 73.7,
-     "slope": 137,
-     "par": 72
-    },
-    {
-     "name": "Yellow (Championship)",
-     "yardage": 6511,
-     "rating": 71.4,
-     "slope": 132,
-     "par": 72
-    },
-    {
-     "name": "White (Regular)",
-     "yardage": 5870,
-     "rating": 68.5,
-     "slope": 125,
-     "par": 72
-    },
-    {
-     "name": "Red (Forward)",
-     "yardage": 5067,
-     "rating": null,
-     "slope": null,
+     "name": "Eagle",
+     "yardage": 6715,
+     "rating": 72.8,
+     "slope": 133,
      "par": 72
     }
    ]
@@ -1001,14 +834,14 @@
      "title": "Round 1",
      "detail": null,
      "kind": "golf",
-     "course": "terra-lago-south"
+     "course": "indian-palms"
     },
     {
      "time": null,
      "title": "Round 2",
      "detail": null,
      "kind": "golf",
-     "course": "terra-lago-north"
+     "course": "eagle-falls"
     }
    ]
   },

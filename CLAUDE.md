@@ -463,11 +463,17 @@ Field notes:
     print to one decimal (`rating1()`). These numbers set everyone's handicap strokes, so:
     **`confirmed: true`** only when the figures came from the club's own card
     (Desert Willow — official PDFs, 06/2023); **`confirmed: false`** shows a
-    **"To be confirmed on the ground"** flag (Terra Lago — club card c. 2018 +
-    GolfPass; Classic Club — its card prints no ratings, so 71.0/129 is
+    **"To be confirmed on the ground"** flag (Classic Club — its card prints no ratings, so 71.0/129 is
     GolfPass/GolfLink). `note` says exactly where each figure came from.
-    Terra Lago's own card names tees Professional / **Championship** / Regular /
-    Forward, not colours — hence "Blue (Championship)" / "Yellow (Championship)".
+    Eagle Falls' Eagle-tee figures came from the trip organiser (Nov 2026) and
+    carry `confirmed: null` (no flag either way).
+  - **`pending`** `{ line, flag, note }` stands in for `tee` when a course's
+    scorecard isn't known yet. Indian Palms (R1) has three nines (Indian,
+    Mountain, Royal) and the nine is TBC, so it has `tee: null` and
+    `pending.line` "9 holes · Nine TBC · Par & yardage TBC" renders in the tee
+    strip's place on the profile and rota card. R1 is a gross scramble, so no
+    rating/slope/SI is needed. When the nine is known, add its `tee` (9 holes)
+    and delete `pending` — the build rejects both at once.
   - **`tees`** is the full table (every set) under the callout; the row whose
     `name` equals `tee.name` is highlighted "We play" (the build rejects a
     mismatch). A null rating renders "—" (combos with no published rating). The
@@ -479,8 +485,7 @@ Field notes:
     a styled external link. Only official/quality videos: 2027 has the club
     playlists for Mountain View (2015) and Classic Club, and a link to
     Desert Willow's post-renovation drone flyovers for Firecliff (its YouTube
-    set pre-dates the renovation). **Terra Lago: none found** (only a 2008
-    StrackaLine render and a 1-min agency promo — deliberately not linked).
+    set pre-dates the renovation). Indian Palms and Eagle Falls: none yet.
 
 ### Course photos (`public/photos/<year>/courses/<slug>/`)
 Same idea as the player portraits — **the folder name is the wiring**. Drop
@@ -489,21 +494,16 @@ file is the hero** (on the profile *and* on its rota card), the rest become a
 lightbox gallery. Read by `src/lib/course-photos.js`; no JSON to edit.
 
 ```
-public/photos/2027/courses/terra-lago-south/01-first-tee.jpg
+public/photos/2027/courses/eagle-falls/01-first-tee.jpg
 public/photos/2027/courses/classic-club/02-clubhouse.jpg
 ```
-Status (23 September 2026 — the owner re-sorted the Terra Lago shots between North
-and South; the folders are the source of truth). Everything is web-optimised
+Status (16 November 2026 — the original Friday venue dropped from the rota; its two folders
+were deleted). Everything is web-optimised
 `.webp` (full ≤1600px q80 + a `-thumb.webp` at 560px q68), renamed `01-…` so the
 chosen hero sorts first; files already optimised are copied, never re-encoded.
-Firecliff 3 · Mountain View 5 · Terra Lago South 7 (incl. `06-tee-boxes`, the
-aerial of the stepped tees through the badlands, placed on South by judgement
-because the owner filed it there) · Terra Lago North 4 (hero `01-island-green`,
-its signature par 3; the clubhouse; and the shared aerial, which is deliberately
-in BOTH Terra Lago galleries) · Classic Club 4 (hero `01-green-mountain`).
-Firecliff is the thin one (3 shots, 768px wide). A saved web page
-(`Golf-Club-at-Terra-Lago.html`) the owner had in the South folder is
-intentionally NOT on the site. The raw downloads live outside the repo in
+Firecliff 3 · Mountain View 5 · Classic Club 4 (hero `01-green-mountain`) ·
+**Indian Palms and Eagle Falls: none yet** — they show the drawn placeholder with
+a "Photos coming soon" tag. Firecliff is the thin one (3 shots, 768px wide). The raw downloads live outside the repo in
 `../Photos/course-originals/`. `public/photos/2027/courses/README.md` lists each
 folder and the official gallery pages to collect from.
 
@@ -577,8 +577,9 @@ all-time archive and is untouched.
 
 **The schedule** (`data/schedule_2027.json`, read by `src/lib/schedule.js`, which
 validates it at build time and computes every total): 5 rounds, 22 matches, **38
-points, 19.5 to win**. R1 Fri 26 Mar AM, 2v2 Scramble, **9 holes**, Terra Lago South,
-4×1pt · R2 Fri PM, 2v2 Best Ball, Terra Lago North, 4×2 · R3 Sat AM, 4v4 Scramble,
+points, 19.5 to win**. R1 Fri 26 Mar AM, 2v2 Scramble, **9 holes**, Indian Palms CC
+(nine TBC), 4×1pt · R2 Fri PM, 2v2 Best Ball, Eagle Falls GC (Eagle tees
+72.8/133), 4×2 · R3 Sat AM, 4v4 Scramble,
 18 holes, Mountain View, 2×1 · R4 Sat PM, 2v2 **Combined Stableford** (partners'
 points ADDED; new for 2027, 2026 was Team Average Stableford), Firecliff, 4×2 ·
 R5 Sun, Singles, Classic Club, 8×2, **Match 8 = the Championship Match**. Round
@@ -591,7 +592,7 @@ Teams are drafted live Thursday night, so both sides are `Team A` / `Team B` wit
 R1); Best Ball + Combined Stableford **100% course handicap** each; Singles **100%
 of the difference**. Course handicap = `round(index × slope/113 + (rating − par))`
 from each round's course and our tees. Stroke holes come from **`tee.holes`** in
-`trip-2027.json`: `[{hole, par, si, yards}]` for our tees on all five courses, read
+`trip-2027.json`: `[{hole, par, si, yards}]` for our tees on every course with a known card (all but Indian Palms, whose nine is TBC), read
 from the official scorecards (`tee.holesSource` / `holesNote` name the card), and
 checked: 18 holes, SI 1–18 once each, par and yardage totals match.
 

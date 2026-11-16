@@ -5,7 +5,7 @@
 // on that course's profile on the next build: the first one as the hero, the
 // rest as a lightbox gallery. Nothing to register, no JSON to edit.
 //
-//   public/photos/2027/courses/terra-lago-south/01-first-tee.jpg
+//   public/photos/2027/courses/eagle-falls/01-first-tee.jpg
 //   public/photos/2027/courses/classic-club/clubhouse.jpg
 //
 // The slug is the course's `slug` in data/trip-<year>.json. Files sort by
