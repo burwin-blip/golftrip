@@ -30,6 +30,7 @@ function build(s) {
     if (course.date && course.date !== r.date) bad(`${at}: date ${r.date} disagrees with the rota's ${course.date} for ${course.name}.`);
     const tee = course.tee || {};
     if (r.handicap !== 'gross' && !(tee.holes?.length === 18)) bad(`${at}: ${course.name} needs its 18 holes (par + stroke index) on "tee.holes" for handicap strokes.`);
+    if (r.firstTee != null && (typeof r.firstTee !== 'string' || !/^\d{1,2}:\d{2} ?[AP]M$/.test(r.firstTee))) bad(`${at}: "firstTee" must look like "2:06 PM".`);
     if (r.championshipMatch != null && !(r.championshipMatch >= 1 && r.championshipMatch <= r.matchCount)) bad(`${at}: "championshipMatch" must be a match number in this round.`);
     const matches = Array.from({ length: r.matchCount }, (_, k) => ({
       number: k + 1,
@@ -40,6 +41,7 @@ function build(s) {
       ...r,
       course: {
         slug: course.slug, name: course.name, location: course.location ?? null,
+        signatureHole: course.signatureHole ?? null,
         tee: { name: tee.name, yardage: tee.yardage ?? null, rating: tee.rating ?? null, slope: tee.slope ?? null,
           par: tee.par ?? course.par ?? null, holes: tee.holes ?? [] },
       },

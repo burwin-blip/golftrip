@@ -231,6 +231,12 @@ function validateTrip(trip, file, validTournamentIds) {
       ['line', 'flag', 'note'].forEach((k) => str(c.pending[k], `${at} → "pending" → "${k}"`));
       if (c.tee) bad(`${at} has both "tee" and "pending". Once the tees are known, drop "pending".`);
     }
+    // The one hole worth naming everywhere (course page, Match Centre header).
+    if (c.signatureHole !== undefined && c.signatureHole !== null) {
+      const h = c.signatureHole;
+      if (typeof h !== 'object' || Array.isArray(h) || !Number.isInteger(h.hole) || h.hole < 1 || h.hole > 18) bad(`${at} → "signatureHole" must be { "hole": 17, "name": "Alcatraz" } with a hole from 1 to 18.`);
+      str(h.name, `${at} → "signatureHole" → "name"`);
+    }
     // A flyover / course-tour video: YouTube links embed, anything else is a link.
     if (c.flyover !== undefined && c.flyover !== null) {
       if (typeof c.flyover !== 'object' || Array.isArray(c.flyover) || !c.flyover.url) bad(`${at} → "flyover" must be an object with a "url", e.g. { "url": "https://www.youtube.com/watch?v=…", "title": "…", "by": "…" }.`);

@@ -23,7 +23,7 @@ const HCP_LABEL = archive
   ? { gross: 'Gross — no strokes', 'full-course': 'Playing handicap on the card', 'full-difference': 'Difference (lower man off 0)' }
   : { gross: 'Gross — no strokes', 'full-course': 'Full course handicap', 'full-difference': 'Full difference (lower man off 0)' };
 const sideStyle = (side) => (s?.teams?.[side]?.color ? `--mc-c:${s.teams[side].color}` : '');
-const dateLine = (r) => `${weekday(r.date)} ${dayMonth(r.date)}${r.session ? ` · ${r.session}` : ''}`;
+const dateLine = (r) => `${weekday(r.date)} ${dayMonth(r.date)}${r.session ? ` · ${r.session}` : ''}${r.firstTee ? ` · first tee ${r.firstTee}` : ''}`;
 ---
 {data && (
   <div class:list={['mc', { 'mc--archive': archive }]} id="mc" data-state="loading" data-mode={data.mode}>
@@ -62,6 +62,7 @@ const dateLine = (r) => `${weekday(r.date)} ${dayMonth(r.date)}${r.session ? ` �
               <div><dt>Points</dt><dd>{r.pointsPerMatch} each · {r.points}</dd></div>
               {r.course.tee?.rating != null && <div><dt>Tees</dt><dd>{r.course.tee.name} · {rating1(r.course.tee.rating)}/{r.course.tee.slope}</dd></div>}
               <div><dt>Handicap</dt><dd>{HCP_LABEL[r.handicap]}</dd></div>
+              {r.course.signatureHole && <div><dt>Signature</dt><dd>No. {r.course.signatureHole.hole}{r.course.signatureHole.name && ` · “${r.course.signatureHole.name}”`}</dd></div>}
             </dl>
             {r.formatChange && <p class="mc-round__note">{r.formatChange}</p>}
           </header>

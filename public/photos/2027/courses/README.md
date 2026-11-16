@@ -9,7 +9,7 @@ One folder per course (the folder name is the course's slug — don't rename it)
 | Folder | Course | Where official imagery lives |
 |---|---|---|
 | `indian-palms/` | Indian Palms Country Club | none yet — https://www.indianpalms.com/ (nine TBC) |
-| `eagle-falls/` | Eagle Falls Golf Course | none yet — the Fantasy Springs Resort golf pages |
+| `pga-west-stadium/` | PGA West — Stadium Course | https://www.pgawest.com/ (`/Images/Library/hp-pete-dye-stadium-course.jpg` is the hero; `hp-Overview.jpg`, the 16th, is a tighter crop of the same shot) |
 | `desert-willow-mountain-view/` | Desert Willow — Mountain View | https://www.desertwillow.com/photo-gallery/ ("Mountain View Course Gallery") and https://www.desertwillow.com/mountainviewcourse/ |
 | `desert-willow-firecliff/` | Desert Willow — Firecliff | https://www.desertwillow.com/photo-gallery/ ("Firecliff Course Gallery") and https://www.desertwillow.com/firecliffcourse/ (post-renovation hole photos) |
 | `classic-club/` | The Classic Club | https://www.classicclubgolf.com/gallery/ (mostly clubhouse — few course shots) |

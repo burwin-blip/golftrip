@@ -57,147 +57,151 @@
   {
    "round": "Round 2",
    "date": "2027-03-26",
-   "slug": "eagle-falls",
-   "name": "Eagle Falls Golf Course",
-   "location": "Indio, California",
-   "url": null,
+   "slug": "pga-west-stadium",
+   "name": "PGA West — Stadium Course",
+   "location": "La Quinta, California",
+   "url": "https://www.pgawest.com/",
    "format": null,
    "note": null,
-   "designer": "Clive Clark",
+   "designer": "Pete Dye",
    "opened": null,
    "par": 72,
-   "yardage": 6715,
+   "yardage": 6739,
    "tee": {
-    "name": "Eagle",
-    "yardage": 6715,
-    "rating": 72.8,
-    "slope": 133,
+    "name": "Blue",
+    "yardage": 6739,
+    "rating": 73.1,
+    "slope": 140,
     "par": 72,
     "confirmed": null,
     "source": null,
-    "note": "Eagle tees (the tips) from the trip organiser's scorecard, Nov 2026: 3,419 out, 3,296 in. Men's stroke index.",
+    "note": "Blue tees from the trip organiser’s scorecard (Nov 2026): 3,350 out, 3,389 in. Men’s stroke index.",
     "holes": [
      {
       "hole": 1,
       "par": 4,
-      "si": 15,
-      "yards": 394
+      "si": 9,
+      "yards": 382
      },
      {
       "hole": 2,
       "par": 4,
-      "si": 5,
-      "yards": 440
+      "si": 15,
+      "yards": 348
      },
      {
       "hole": 3,
       "par": 4,
-      "si": 11,
-      "yards": 372
+      "si": 3,
+      "yards": 448
      },
      {
       "hole": 4,
-      "par": 5,
-      "si": 3,
-      "yards": 494
+      "par": 3,
+      "si": 17,
+      "yards": 170
      },
      {
       "hole": 5,
-      "par": 4,
-      "si": 9,
-      "yards": 413
+      "par": 5,
+      "si": 7,
+      "yards": 514
      },
      {
       "hole": 6,
       "par": 3,
-      "si": 17,
-      "yards": 129
+      "si": 5,
+      "yards": 223
      },
      {
       "hole": 7,
-      "par": 5,
-      "si": 1,
-      "yards": 571
+      "par": 4,
+      "si": 11,
+      "yards": 309
      },
      {
       "hole": 8,
-      "par": 4,
-      "si": 7,
-      "yards": 406
+      "par": 5,
+      "si": 13,
+      "yards": 526
      },
      {
       "hole": 9,
-      "par": 3,
-      "si": 13,
-      "yards": 200
+      "par": 4,
+      "si": 1,
+      "yards": 430
      },
      {
       "hole": 10,
       "par": 4,
-      "si": 8,
-      "yards": 438
+      "si": 6,
+      "yards": 380
      },
      {
       "hole": 11,
-      "par": 4,
-      "si": 16,
-      "yards": 269
+      "par": 5,
+      "si": 8,
+      "yards": 591
      },
      {
       "hole": 12,
       "par": 4,
-      "si": 2,
-      "yards": 476
+      "si": 18,
+      "yards": 347
      },
      {
       "hole": 13,
-      "par": 4,
-      "si": 6,
-      "yards": 385
+      "par": 3,
+      "si": 10,
+      "yards": 195
      },
      {
       "hole": 14,
       "par": 4,
       "si": 12,
-      "yards": 377
+      "yards": 372
      },
      {
       "hole": 15,
       "par": 4,
-      "si": 18,
-      "yards": 301
+      "si": 4,
+      "yards": 436
      },
      {
       "hole": 16,
-      "par": 3,
-      "si": 14,
-      "yards": 184
+      "par": 5,
+      "si": 16,
+      "yards": 517
      },
      {
       "hole": 17,
-      "par": 4,
-      "si": 10,
-      "yards": 388
+      "par": 3,
+      "si": 14,
+      "yards": 146
      },
      {
       "hole": 18,
-      "par": 5,
-      "si": 4,
-      "yards": 478
+      "par": 4,
+      "si": 2,
+      "yards": 405
      }
     ],
     "holesSource": null,
-    "holesNote": "Eagle-tee yardages and the men's stroke index, as supplied by the trip organiser (Nov 2026)."
+    "holesNote": "Blue-tee yardages and the men’s stroke index, as supplied by the trip organiser (Nov 2026)."
    },
-   "signature": null,
-   "description": "The Clive Clark course at Fantasy Springs Resort. We play it off the Eagle tees, the tips.",
+   "signature": "The 17th — “Alcatraz”, the island-green par 3. 146 yards off our Blue tees, and the hole every American Express broadcast waits for.",
+   "signatureHole": {
+    "hole": 17,
+    "name": "Alcatraz"
+   },
+   "description": "Pete Dye’s Stadium Course, the host course of The American Express on the PGA Tour. Built for galleries and famously unforgiving, it saves its most famous hole for the end: the island-green 17th, Alcatraz.",
    "source": null,
    "tees": [
     {
-     "name": "Eagle",
-     "yardage": 6715,
-     "rating": 72.8,
-     "slope": 133,
+     "name": "Blue",
+     "yardage": 6739,
+     "rating": 73.1,
+     "slope": 140,
      "par": 72
     }
    ]
@@ -837,11 +841,11 @@
      "course": "indian-palms"
     },
     {
-     "time": null,
+     "time": "2:06 PM",
      "title": "Round 2",
-     "detail": null,
+     "detail": "First tee.",
      "kind": "golf",
-     "course": "eagle-falls"
+     "course": "pga-west-stadium"
     }
    ]
   },

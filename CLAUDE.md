@@ -465,8 +465,13 @@ Field notes:
     (Desert Willow — official PDFs, 06/2023); **`confirmed: false`** shows a
     **"To be confirmed on the ground"** flag (Classic Club — its card prints no ratings, so 71.0/129 is
     GolfPass/GolfLink). `note` says exactly where each figure came from.
-    Eagle Falls' Eagle-tee figures came from the trip organiser (Nov 2026) and
-    carry `confirmed: null` (no flag either way).
+    PGA West Stadium's Blue-tee figures (73.1/140) came from the trip organiser
+    (Nov 2026) and carry `confirmed: null` (no flag either way).
+  - **`signatureHole`** `{ hole, name }` (optional): the one hole worth naming.
+    Stadium has `{ 17, "Alcatraz" }`; it shows as a "Signature" fact in the
+    Match Centre round header (the prose version lives in `signature`). A
+    schedule round may also carry **`firstTee`** ("2:06 PM", R2), appended to
+    the Match Centre's date line.
   - **`pending`** `{ line, flag, note }` stands in for `tee` when a course's
     scorecard isn't known yet. Indian Palms (R1) has three nines (Indian,
     Mountain, Royal) and the nine is TBC, so it has `tee: null` and
@@ -485,7 +490,7 @@ Field notes:
     a styled external link. Only official/quality videos: 2027 has the club
     playlists for Mountain View (2015) and Classic Club, and a link to
     Desert Willow's post-renovation drone flyovers for Firecliff (its YouTube
-    set pre-dates the renovation). Indian Palms and Eagle Falls: none yet.
+    set pre-dates the renovation). Indian Palms and Stadium: none yet.
 
 ### Course photos (`public/photos/<year>/courses/<slug>/`)
 Same idea as the player portraits — **the folder name is the wiring**. Drop
@@ -494,7 +499,7 @@ file is the hero** (on the profile *and* on its rota card), the rest become a
 lightbox gallery. Read by `src/lib/course-photos.js`; no JSON to edit.
 
 ```
-public/photos/2027/courses/eagle-falls/01-first-tee.jpg
+public/photos/2027/courses/pga-west-stadium/01-first-tee.jpg
 public/photos/2027/courses/classic-club/02-clubhouse.jpg
 ```
 Status (16 November 2026 — the original Friday venue dropped from the rota; its two folders
@@ -502,8 +507,9 @@ were deleted). Everything is web-optimised
 `.webp` (full ≤1600px q80 + a `-thumb.webp` at 560px q68), renamed `01-…` so the
 chosen hero sorts first; files already optimised are copied, never re-encoded.
 Firecliff 3 · Mountain View 5 · Classic Club 4 (hero `01-green-mountain`) ·
-**Indian Palms and Eagle Falls: none yet** — they show the drawn placeholder with
-a "Photos coming soon" tag. Firecliff is the thin one (3 shots, 768px wide). The raw downloads live outside the repo in
+PGA West Stadium 2 (official pgawest.com images, Nov 2026: hero
+`01-stadium-course`, and `02-hole-16`, which is a tighter crop of the same shot) ·
+**Indian Palms: none yet** — the drawn placeholder with a "Photos coming soon" tag. Firecliff is the thin one (3 shots, 768px wide). The raw downloads live outside the repo in
 `../Photos/course-originals/`. `public/photos/2027/courses/README.md` lists each
 folder and the official gallery pages to collect from.
 
@@ -578,8 +584,8 @@ all-time archive and is untouched.
 **The schedule** (`data/schedule_2027.json`, read by `src/lib/schedule.js`, which
 validates it at build time and computes every total): 5 rounds, 22 matches, **38
 points, 19.5 to win**. R1 Fri 26 Mar AM, 2v2 Scramble, **9 holes**, Indian Palms CC
-(nine TBC), 4×1pt · R2 Fri PM, 2v2 Best Ball, Eagle Falls GC (Eagle tees
-72.8/133), 4×2 · R3 Sat AM, 4v4 Scramble,
+(nine TBC), 4×1pt · R2 Fri PM, 2v2 Best Ball, PGA West Stadium Course (Blue
+tees 73.1/140, first tee 2:06 PM), 4×2 · R3 Sat AM, 4v4 Scramble,
 18 holes, Mountain View, 2×1 · R4 Sat PM, 2v2 **Combined Stableford** (partners'
 points ADDED; new for 2027, 2026 was Team Average Stableford), Firecliff, 4×2 ·
 R5 Sun, Singles, Classic Club, 8×2, **Match 8 = the Championship Match**. Round
