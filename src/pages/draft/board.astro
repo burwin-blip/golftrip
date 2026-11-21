@@ -88,11 +88,15 @@ const data = { ...draftRoomData(), videos };
   @keyframes db-ann { from { transform: translateY(-30px); opacity: 0; letter-spacing: .4em; } to { transform: none; opacity: 1; } }
 
   /* reveal video: full-screen over the board (the MOCK watermark stays on top) */
-  .db-video { position: fixed; inset: 0; z-index: 40; background: #000; display: grid; place-items: center; animation: db-vin .35s ease-out both; }
+  /* The whole frame, never cropped: the video gets the screen minus a caption bar
+     and is letterboxed inside it (object-fit: contain on black). The video sits in
+     an absolutely-sized box: as a grid/flex item with height:100% it grew to its
+     own aspect ratio (a square clip became 1920x1920 on a 1080p TV) and got cut off. */
+  .db-video { position: fixed; inset: 0; z-index: 40; background: #000; animation: db-vin .35s ease-out both; --cap: clamp(64px, 9vh, 120px); }
   .db-video[hidden] { display: none; }
-  .db-video video { width: 100%; height: 100%; object-fit: contain; background: #000; }
-  .db-video__lt { position: absolute; left: 0; right: 0; bottom: 0; padding: 3vh 4vw 4vh; background: linear-gradient(to top, rgba(0,0,0,.75), transparent); }
-  .db-video__lt .db-ann { justify-content: flex-start; }
+  .db-video video { position: absolute; left: 0; top: 0; width: 100%; height: calc(100% - var(--cap)); object-fit: contain; object-position: center; background: #000; display: block; }
+  .db-video__lt { position: absolute; left: 0; right: 0; bottom: 0; height: var(--cap); display: flex; align-items: center; justify-content: center; padding: 0 4vw; background: #000; }
+  .db-video__lt .db-ann { justify-content: center; }
   @keyframes db-vin { from { opacity: 0; } to { opacity: 1; } }
   .db-sound { position: fixed; right: 1.2rem; bottom: 1.2rem; z-index: 60; border: 0; border-radius: 999px; padding: .7rem 1.2rem; font: inherit; font-weight: 800; background: #FCD79A; color: #0C1B2C; cursor: pointer; box-shadow: 0 10px 30px -10px #000; }
   .db-sound[hidden] { display: none; }
