@@ -28,7 +28,12 @@ export const SIDE_GAME_ANSWERS = { yes: 'Yes', no: 'No' };
 
 // Captains are unlimited (owner's call, Sept 2026): `maxNominations` / `maxWriteIns`
 // are only sanity caps against a garbage request, far above any real answer.
-export const LIMITS = { name: 60, sentence: 280, teamName: 60, hcpMin: -10, hcpMax: 54, maxNominations: 40, maxWriteIns: 10 };
+export const LIMITS = { name: 60, sentence: 280, teamName: 60, hcpMin: -10, hcpMax: 54, maxNominations: 40, maxWriteIns: 10, email: 254 };
+
+// Email (PRIVATE, organiser-only — like DOB). Deliberately simple: something@something.tld,
+// no spaces. The same pattern is sent to the form, so client and server agree.
+export const EMAIL_PATTERN = '^[^\\s@]+@[^\\s@]+\\.[^\\s@]{2,}$';
+export const isEmail = (s) => typeof s === 'string' && s.length <= LIMITS.email && new RegExp(EMAIL_PATTERN).test(s);
 
 // ---- format migration -------------------------------------------------------
 // The first version of the form stored ONE strongest / weakest part and ONE

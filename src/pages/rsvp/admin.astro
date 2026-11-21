@@ -41,6 +41,18 @@ import BrandMark from '../../components/BrandMark.astro';
         <div class="table-scroll"><table class="data ad-table" id="ad-table"></table></div>
       </section>
 
+      <section class="ad-sec" id="ad-emails">
+        <h2>Backfill emails</h2>
+        <p class="muted ad-note">Paste one player per line, e.g. <code>Ed Nelson — ed@example.com</code>. <b>Preview</b> first: only players who already have an RSVP get an email, only on an exact name match (case and spacing aside), and an email a player typed in themselves is never overwritten. Near-misses are listed for you to check, never applied. Nothing is written until you press <b>Apply</b>.</p>
+        <textarea id="ad-bf-text" class="ad-bf" rows="8" spellcheck="false" placeholder="Name — email"></textarea>
+        <div class="ad-actions" style="margin-top:.6rem">
+          <button class="btn btn--navy" id="ad-bf-preview" type="button">Preview</button>
+          <button class="btn btn--terra" id="ad-bf-apply" type="button" disabled>Apply</button>
+          <span class="faint" id="ad-bf-msg"></span>
+        </div>
+        <div id="ad-bf-report"></div>
+      </section>
+
       <div class="ad-two">
         <section class="ad-sec">
           <h2>Captain votes</h2>
@@ -110,6 +122,12 @@ import BrandMark from '../../components/BrandMark.astro';
   .ad-cap--flag { box-shadow: inset 0 0 0 2px var(--gold-bright), var(--shadow); }
   .ad-tag { display: inline-block; vertical-align: .15em; margin-left: .4rem; font-family: var(--sans); font-size: .62rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); background: var(--panel-2); padding: .15rem .45rem; border-radius: 99px; }
   .ad-flag { margin: .45rem 0 .2rem; padding: .45rem .7rem; border-radius: var(--r-sm); background: var(--gold-soft); color: var(--gold); font-size: .85rem; font-weight: 700; }
+  .ad-bf { width: 100%; font: .9rem/1.5 ui-monospace, Menlo, monospace; padding: .7rem .9rem; border: 0; border-radius: var(--r-sm); background: var(--paper); box-shadow: inset 0 0 0 1.5px var(--line-strong); }
+  .ad-rep { margin-top: 1rem; display: grid; gap: .8rem; }
+  .ad-rep h3 { font-size: 1rem; margin-bottom: .3rem; }
+  .ad-rep ul { margin: 0; padding-left: 1.1rem; font-size: .9rem; line-height: 1.55; }
+  .ad-rep__box { background: var(--panel); border-radius: var(--r); box-shadow: var(--shadow); padding: .8rem 1rem; }
+  .ad-rep__box--warn { box-shadow: inset 0 0 0 2px var(--gold-bright), var(--shadow); }
   @media (max-width: 760px) { .ad-two { grid-template-columns: 1fr; gap: 0; } }
 </style>
 
@@ -151,7 +169,7 @@ import BrandMark from '../../components/BrandMark.astro';
 
     const rows = data.rows.slice().sort((a, b) =>
       (ORDER[a.effectiveStatus] ?? 3) - (ORDER[b.effectiveStatus] ?? 3) || a.name.localeCompare(b.name));
-    $('#ad-table').innerHTML = `<thead><tr><th>Player</th><th>RSVP</th><th>Replied</th><th class="num">Handicap</th><th>Date of birth</th><th>Strongest</th><th>Weakest</th><th>In a sentence</th><th>Captain picks · team names</th><th>$250</th><th>LD / CTP</th></tr></thead><tbody>${rows.map((r) => {
+    $('#ad-table').innerHTML = `<thead><tr><th>Player</th><th>RSVP</th><th>Replied</th><th class="num">Handicap</th><th>Date of birth</th><th>Email</th><th>Strongest</th><th>Weakest</th><th>In a sentence</th><th>Captain picks · team names</th><th>$250</th><th>LD / CTP</th></tr></thead><tbody>${rows.map((r) => {
       const st = r.status
         ? `<span class="ad-st ad-st--${r.status}">${LABEL[r.status]}</span>`
         : `<span class="ad-st ad-st--none">No reply</span>`;
@@ -163,6 +181,7 @@ import BrandMark from '../../components/BrandMark.astro';
         <td>${esc(when(r.submittedAt))}${r.submissions > 1 ? `<span class="ad-sub">${r.submissions} submissions · first ${esc(when(r.firstSubmittedAt))}</span>` : ''}</td>
         <td class="num">${esc(hcp(r.handicapEntering))}${r.handicapHistory.length > 1 ? `<span class="ad-sub">${esc(hist)}</span>` : ''}</td>
         <td>${esc(r.dob || '')}</td>
+        <td>${r.email ? `${esc(r.email)}<span class="ad-sub">${esc({ rsvp: 'From the RSVP', update: 'Added later', backfill: 'Backfilled' }[r.emailSource] || '')}${r.emailUpdatedAt ? ' · ' + esc(when(r.emailUpdatedAt)) : ''}</span>` : ''}</td>
         <td class="listcell">${r.strengths.map(esc).join('<br>')}</td>
         <td class="listcell">${r.weaknesses.map(esc).join('<br>')}</td>
         <td class="wrapcell">${esc(r.sentence || '')}</td>
@@ -211,7 +230,7 @@ import BrandMark from '../../components/BrandMark.astro';
     const COLS = [
       ['name', 'Name'], ['id', 'Player id'], ['status', 'RSVP'], ['createdViaRsvp', 'Joined via RSVP'], ['createdAt', 'Joined at'],
       ['firstSubmittedAt', 'First submitted'], ['submittedAt', 'Last submitted'], ['submissions', 'Submissions'], ['statusHistory', 'RSVP history'],
-      ['handicapEntering', 'Handicap'], ['handicapHistory', 'Handicap history'], ['dob', 'Date of birth'],
+      ['handicapEntering', 'Handicap'], ['handicapHistory', 'Handicap history'], ['dob', 'Date of birth'], ['email', 'Email'],
       ['strengths', 'Strongest parts'], ['weaknesses', 'Weakest parts'], ['sentence', 'One sentence'],
       ['captains', 'Captain picks'], ['teams', 'Team names (by captain)'],
       ['greenFee', 'Q8 $250 green fee'], ['longestDrive', 'Q9 Longest drive / CTP'],
@@ -255,6 +274,45 @@ import BrandMark from '../../components/BrandMark.astro';
       b.textContent = `Couldn’t remove: ${err.message}`;
     }
   });
+  // ---- Backfill emails (preview → apply) ----
+  const parseLines = (text) => text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean).map((l) => {
+    const m = l.match(/[^\s<>(),;—–]+@[^\s<>(),;—–]+/);
+    if (!m) return { name: l, email: '' };
+    const name = l.replace(m[0], '').replace(/[<>()]/g, ' ').replace(/[\s,;:—–-]+$/g, '').replace(/^[\s,;:—–-]+/g, '').trim();
+    return { name, email: m[0] };
+  });
+  let bfEntries = null;
+  async function backfill(apply) {
+    const entries = apply ? bfEntries : parseLines($('#ad-bf-text').value);
+    if (!entries?.length) { $('#ad-bf-msg').textContent = 'Paste the list first.'; return; }
+    $('#ad-bf-msg').textContent = apply ? 'Applying…' : 'Checking…';
+    let body;
+    try {
+      const res = await fetch('/api/rsvp-admin', { method: 'POST', headers: { 'content-type': 'application/json', 'x-admin-key': key() }, body: JSON.stringify({ action: 'emails', entries, apply }) });
+      body = await res.json();
+    } catch { body = { ok: false, error: 'Couldn’t reach the server.' }; }
+    if (!body.ok) { $('#ad-bf-msg').textContent = body.error; return; }
+    bfEntries = entries;
+    const r = body.report, li = (xs, f) => xs.length ? `<ul>${xs.map(f).join('')}</ul>` : '<p class="faint">None.</p>';
+    const box = (title, html, warn) => `<div class="ad-rep__box${warn ? ' ad-rep__box--warn' : ''}"><h3>${title}</h3>${html}</div>`;
+    $('#ad-bf-report').innerHTML = `<div class="ad-rep">
+      ${box(`${apply ? 'Updated' : 'Will update'} (${r.updated.length})`, li(r.updated, (x) => `<li>${esc(x.name)} — ${esc(x.email)}</li>`))}
+      ${box(`Already had this email (${r.unchanged.length})`, li(r.unchanged, (x) => `<li>${esc(x.name)}</li>`))}
+      ${box(`Conflicts: a different email is already on file, left alone (${r.conflicts.length})`, li(r.conflicts, (x) => `<li>${esc(x.name)}: on file ${esc(x.onFile)}, list says ${esc(x.listed)}</li>`), r.conflicts.length)}
+      ${box(`Near-misses: please confirm (${r.nearMisses.length})`, li(r.nearMisses, (x) => `<li>List says “${esc(x.listed)}”, site has ${x.candidates.map((c) => `“${esc(c.name)}”${c.rsvpd ? '' : ' (no RSVP yet)'}`).join(' or ')}. Not applied.</li>`), r.nearMisses.length)}
+      ${box(`On the list but no RSVP yet, skipped (${r.noRsvp.length})`, li(r.noRsvp, (x) => `<li>${esc(x.name)}</li>`))}
+      ${box(`On the list but not on the site at all (${r.unknown.length})`, li(r.unknown, (x) => `<li>${esc(x.name)}</li>`))}
+      ${r.invalid.length ? box(`Lines that couldn’t be read (${r.invalid.length})`, li(r.invalid, (x) => `<li>${esc(x.name)} ${esc(x.email)}</li>`), true) : ''}
+      ${box(`RSVP’d players not matched by the list (${r.rsvpdWithoutEntry.length} of ${body.rsvpdCount})`, li(r.rsvpdWithoutEntry, (x) => `<li>${esc(x.name)}${x.hasEmail ? ' (already has an email)' : ''}${x.nearListNames.length ? ` · close to “${x.nearListNames.map(esc).join('”, “')}”` : ''}</li>`), r.rsvpdWithoutEntry.some((x) => !x.hasEmail))}
+    </div>`;
+    $('#ad-bf-apply').disabled = apply || !r.updated.length;
+    $('#ad-bf-msg').textContent = apply ? `Done. ${r.updated.length} email${r.updated.length === 1 ? '' : 's'} added.` : 'Preview only. Nothing written yet.';
+    if (apply) await load();
+  }
+  $('#ad-bf-preview').addEventListener('click', () => backfill(false));
+  $('#ad-bf-apply').addEventListener('click', () => backfill(true));
+  $('#ad-bf-text').addEventListener('input', () => { $('#ad-bf-apply').disabled = true; bfEntries = null; });
+
   $('#ad-refresh').addEventListener('click', load);
   $('#ad-keyform').addEventListener('submit', (e) => { e.preventDefault(); location.hash = encodeURIComponent($('#ad-key').value.trim()); });
   window.addEventListener('hashchange', load);

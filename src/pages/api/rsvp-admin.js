@@ -2,7 +2,7 @@
 // votes, team names, Q8/Q9). Requires the `x-admin-key` header to match the
 // RSVP_ADMIN_KEY environment variable (set in Vercel, never in this public repo).
 // Read by the unlinked /rsvp/admin page.
-import { readAdmin, deleteRsvp, isAdminKey, RsvpError } from '../../lib/rsvp-api.js';
+import { readAdmin, deleteRsvp, backfillEmails, isAdminKey, RsvpError } from '../../lib/rsvp-api.js';
 import { RsvpNotConfigured } from '../../lib/rsvp-store.js';
 
 export const prerender = false;
@@ -25,4 +25,12 @@ export async function GET({ request }) {
 // DELETE /api/rsvp-admin?player=<id> — remove one player's RSVP (e.g. a test entry).
 export async function DELETE({ request, url }) {
   try { return json(await deleteRsvp(request.headers.get('x-admin-key') || '', url.searchParams.get('player'))); } catch (e) { return fail(e, request); }
+}
+
+// POST /api/rsvp-admin { action: 'emails', entries, apply } — backfill emails onto
+// existing RSVP records (preview unless apply: true). Admin key required.
+export async function POST({ request }) {
+  let body;
+  try { body = await request.json(); } catch { return json({ ok: false, error: 'Bad request.' }, 400); }
+  try { return json(await backfillEmails(request.headers.get('x-admin-key') || '', body)); } catch (e) { return fail(e, request); }
 }

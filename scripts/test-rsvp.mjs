@@ -171,7 +171,7 @@ if (!STORE) {
 console.log('\n9. Privacy');
 g = await get('?player=ben-urwin');
 ok(g.player && g.player.handicap === 6.8 && g.player.strengths.includes('Putting'), 'public GET pre-fills handicap / strengths');
-const leaked = ['dob', 'captainVoteIds', 'captainVoteId', 'teamNames', 'teamName', 'captainWriteIns', 'greenFee', 'longestDrive'].filter((k) => k in g.player);
+const leaked = ['dob', 'email', 'captainVoteIds', 'captainVoteId', 'teamNames', 'teamName', 'captainWriteIns', 'greenFee', 'longestDrive'].filter((k) => k in g.player);
 ok(leaked.length === 0, `public GET exposes no private fields${leaked.length ? ' (leaked: ' + leaked + ')' : ''}`);
 ok(!JSON.stringify(g).includes('1990-05-17') && !JSON.stringify(await get()).includes('Sand Wedgies') && !JSON.stringify(await get('?player=tom-brunskill')).includes('Heroes'), 'no DOB, team names or write-ins anywhere in the public responses');
 ok((await admin('wrong')).status === 401, 'admin API refuses a wrong key');
@@ -182,6 +182,57 @@ ok((await post({ ...base, playerId: 'ben-urwin', status: 'perhaps' })).status ==
 ok((await post({ ...base, playerId: 'ben-urwin', handicap: 'ten' })).status === 400, 'non-numeric handicap rejected');
 ok((await post({ ...base, newName: 'Cher' })).status === 400, 'single-word name rejected');
 ok((await post({ ...base, playerId: 'ben-urwin', dob: '2030-01-01' })).status === 400, 'future date of birth rejected');
+
+console.log('\n10b. Email (private, organiser-only)');
+const adminPost = async (body, key = ADMIN_KEY) => {
+  const r = await fetch(`${BASE}/api/rsvp-admin`, { method: 'POST', headers: { 'content-type': 'application/json', 'x-admin-key': key }, body: JSON.stringify(body) });
+  return { status: r.status, body: await r.json() };
+};
+ok((await post({ ...base, playerId: 'ben-urwin', email: 'not-an-email' })).status === 400, 'bad email format rejected');
+r = await post({ ...base, playerId: 'ben-urwin', handicap: '6.8', email: 'ben.test@example.com' });
+ok(r.status === 200, 'RSVP with an email saves');
+a = await admin();
+ok(row(a, 'ben-urwin').email === 'ben.test@example.com' && row(a, 'ben-urwin').emailSource === 'rsvp', 'admin sees the email (source: rsvp)');
+r = await post({ ...base, playerId: 'ben-urwin', handicap: '6.8' });
+a = await admin();
+ok(r.status === 200 && row(a, 'ben-urwin').email === 'ben.test@example.com', 'a re-submission with no email keeps the one on file');
+ok((await post({ ...base, playerId: 'ben-urwin', handicap: '6.8', email: '' })).status === 200, 'email is optional');
+g = await get('?player=ben-urwin');
+ok(!('email' in g.player) && !JSON.stringify(g).includes('ben.test@example.com') && !JSON.stringify(await get()).includes('@example.com'), 'public GET never includes an email');
+// email-only update: existing RSVP required, nothing else touched
+const tomBefore = row(await admin(), 'tom-brunskill');
+r = await post({ mode: 'email', playerId: 'tom-brunskill', email: 'tom.only@example.com' });
+const after = row(await admin(), 'tom-brunskill');
+ok(r.status === 200 && after.email === 'tom.only@example.com' && after.emailSource === 'update', 'email-only update saves just the email');
+ok(after.status === tomBefore.status && after.submissions === tomBefore.submissions && after.submittedAt === tomBefore.submittedAt && JSON.stringify(after.captainVotes) === JSON.stringify(tomBefore.captainVotes) && after.dob === tomBefore.dob, 'email-only update leaves the RSVP itself untouched');
+ok((await post({ mode: 'email', playerId: 'ed-nelson', email: 'x@example.com' })).status === 409, 'email-only update refused for a player with no RSVP (no record created)');
+ok(!row(await admin(), 'ed-nelson').status, 'still no RSVP record for that player');
+ok((await post({ mode: 'email', playerId: 'tom-brunskill', email: 'nope' })).status === 400, 'email-only update validates the format');
+ok((await post({ mode: 'email', playerId: 'tom-brunskill', email: '' })).status === 400, 'email-only update needs an email');
+// backfill: preview, exact names only, never creates or overwrites
+ok((await adminPost({ action: 'emails', entries: [] }, 'wrong')).status === 401, 'backfill refuses a wrong key');
+const entries = [
+  { name: 'Tom Brunskill', email: 'tom.list@example.com' },          // has a self-entered email → conflict
+  { name: 'ben urwin', email: 'ben.test@example.com' },             // same email already → unchanged
+  { name: 'Ed Nelson', email: 'ed@example.com' },             // no RSVP → skipped
+  { name: 'Jack Mctesty', email: 'jack@example.com' },              // near-miss of Jack McTest → not applied
+  { name: 'Jack McTest', email: 'jack@example.com' },               // exact → update
+  { name: 'Nobody Atall', email: 'n@example.com' },                 // not on the site
+];
+let bf = await adminPost({ action: 'emails', entries });
+const R = bf.body.report;
+ok(bf.status === 200 && !bf.body.applied && R.updated.map((x) => x.id).join() === 'jack-mctest', 'preview: only the exact RSVP’d match would update');
+ok(R.conflicts.some((x) => x.id === 'tom-brunskill') && R.unchanged.some((x) => x.id === 'ben-urwin'), 'preview: self-entered email reported as a conflict; identical one as unchanged');
+ok(R.noRsvp.some((x) => x.id === 'ed-nelson') && R.unknown.some((x) => x.name === 'Nobody Atall'), 'preview: no-RSVP player skipped, unknown name reported');
+ok(R.nearMisses.some((x) => x.listed === 'Jack Mctesty' && x.candidates.some((c) => c.id === 'jack-mctest')), 'preview: near-miss reported, not guessed');
+ok(!row(await admin(), 'jack-mctest').email, 'preview writes nothing');
+const jackBefore = row(await admin(), 'jack-mctest');
+bf = await adminPost({ action: 'emails', entries, apply: true });
+a = await admin();
+ok(bf.body.applied && row(a, 'jack-mctest').email === 'jack@example.com' && row(a, 'jack-mctest').emailSource === 'backfill', 'apply writes the exact match (source: backfill)');
+ok(row(a, 'tom-brunskill').email === 'tom.only@example.com' && !row(a, 'ed-nelson').status && !row(a, 'ed-nelson').email, 'apply never overwrites or creates records');
+const strip = (x) => { const { email, emailUpdatedAt, emailSource, ...rest } = x; return JSON.stringify(rest); };
+ok(strip(row(a, 'jack-mctest')) === strip(jackBefore), 'apply leaves every other field alone');
 
 console.log('\n11. Admin delete (clearing a test entry)');
 const del = async (id, key = ADMIN_KEY) => (await fetch(`${BASE}/api/rsvp-admin?player=${id}`, { method: 'DELETE', headers: { 'x-admin-key': key } })).status;

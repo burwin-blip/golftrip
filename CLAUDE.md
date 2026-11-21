@@ -916,7 +916,8 @@ behind it. (`src/pages/rsvp/index.astro`.)
 ### The flow
 Opening screen (the Duel in the Desert flyer art, dates from `tournaments.json`)
 → **Who are you?** (the wall of faces, or "I'm not listed" → full name) → **RSVP**
-(yes / maybe / no) → **Your game** (Q1 DOB, Q2 handicap, Q3 strongest parts and
+(yes / maybe / no) → **Your game** (Q1 DOB, **email** (optional, private — see
+**Email** below), Q2 handicap, Q3 strongest parts and
 Q4 weakest parts — **multi-select**, at least one each, a part can't be in both —
 Q5 one sentence) → **2027 questions** (Q6 captain nominees, **as many as they like**,
 plus **"Someone else" write-ins** (see below), Q7 an optional team name **per
@@ -949,6 +950,31 @@ ONE place, `src/lib/rsvp-shared.js`.
 - **2027 page**: an RSVP band on the Overview (under the countdown) and a link in
   the Draft Pool intro.
 
+### Email (added Nov 2026) — organiser-only, like DOB
+- **Optional but encouraged** field on "Your game", tagged Private, format-checked on
+  the phone and the server (`isEmail` / `EMAIL_PATTERN` in `rsvp-shared.js`). Stored on
+  the PERMANENT profile (`rsvp:profiles` → `email`, `emailUpdatedAt`, `emailSource`:
+  `rsvp` | `update` | `backfill`). A blank box on a re-submission **keeps** the email
+  on file (a returning player on a new phone has no private pre-fill). Pre-filled
+  only from this phone's localStorage, like the other private answers.
+- **Email-only update** for someone who already RSVP'd: on the RSVP step a returning
+  player sees "Add my email only" → a side screen (`data-screen="email"`, outside the
+  step dots) → `POST /api/rsvp { mode: 'email', playerId, email }` (`updateEmail()`).
+  It refuses a player with no RSVP record (409, nothing created) and writes nothing
+  but the email. Private, so it never fires the deploy hook.
+- **Never public**: not in `GET /api/rsvp`, not in `data/rsvp.generated.json`
+  (pull-rsvp copies named public fields only), never on a page. Only the admin API,
+  the admin table ("Email" column with its source + time) and the CSV export.
+- **Backfill** (admin page → "Backfill emails"): paste `Name — email` lines →
+  **Preview** → **Apply**, via `POST /api/rsvp-admin { action: 'emails', entries,
+  apply }` (`backfillEmails()`, admin key). Owner's rules: only players who already
+  have an RSVP record (nobody is created or confirmed); the name must match EXACTLY
+  (case/extra spaces aside); punctuation/spelling variants and same-surname +
+  close-first-name pairs (Ed/Edward) are listed as **near-misses**, never applied; an
+  email the player typed themselves is never overwritten (listed as a conflict); only
+  the email fields are written. The organiser's list itself is never stored in the
+  repo — it's pasted into the admin page.
+
 ### Captain nominations: unlimited + "Someone else" write-ins (Sept 2026)
 - No cap: tick as many captains as you like; each is one vote. (`LIMITS.maxNominations`
   / `maxWriteIns` are only sanity caps against a junk request.) At least one pick
@@ -978,7 +1004,7 @@ ONE place, `src/lib/rsvp-shared.js`.
 one field per player id, so a re-submission can only overwrite — never duplicate:
 - `rsvp:players` — players created via "I'm not listed" (`{id, name, createdAt}`).
 - `rsvp:profiles` — PERMANENT player data: `strengths[]`, `weaknesses[]`,
-  `sentence` (public), `dob` (**private**), `handicapHistory: [{at, index, source}]`
+  `sentence` (public), `dob` and `email` (+ `emailUpdatedAt`, `emailSource`) (**private**), `handicapHistory: [{at, index, source}]`
   (append-only — a new entry whenever the number changes).
 - `rsvp:event:duel-in-the-desert-2027` — 2027 EVENT data: `status`,
   `handicapEntering`, `captainVoteIds[]` (**player ids**, unlimited),
@@ -1032,8 +1058,8 @@ of creating a second one. New ids are kebab-case like every other id.
 
 ### Privacy (required)
 - **PUBLIC**: name, RSVP status, handicap, strongest / weakest, the sentence.
-- **PRIVATE — never on the public site, never in the repo**: date of birth, captain
-  votes, team-name suggestions, Q8, Q9. They're stored only in Redis and returned
+- **PRIVATE — never on the public site, never in the repo**: date of birth, email,
+  captain votes, team-name suggestions, Q8, Q9. They're stored only in Redis and returned
   only by the key-protected admin API. `GET /api/rsvp?player=<id>` returns public
   fields only. Anyone can tap anyone's name (no login), so the form pre-fills
   private answers **only from that phone's localStorage**, never from the server.
@@ -1044,7 +1070,7 @@ of creating a second one. New ids are kebab-case like every other id.
 acceptable for this private group. The page is an empty shell; the data loads only
 when the key after `#` matches the `RSVP_ADMIN_KEY` env var (set in Vercel; never in
 the repo; the `#` part is never sent to servers or logs). Shows everyone incl.
-no-reply, timestamps + change history, handicaps (with history), DOB, strengths /
+no-reply, timestamps + change history, handicaps (with history), DOB, email, strengths /
 weaknesses (one per line), each person's captain picks with their team names,
 captain vote tallies (**each nomination = one vote**, unlimited per person;
 write-ins tallied as described below), team names grouped by captain, Q8/Q9 totals, and an **"Export results
@@ -1076,11 +1102,11 @@ every portrait silently becomes a placeholder without it.
 
 ### Testing — run BOTH stores
 ```
-# 1. file store (includes the old-format migration checks)            → 67 checks
+# 1. file store (includes the old-format migration checks)            → 88 checks
 RSVP_LOCAL_STORE=/tmp/rsvp-test.json RSVP_ADMIN_KEY=test-key npx astro dev --port 4400
 STORE=/tmp/rsvp-test.json BASE=http://localhost:4400 ADMIN_KEY=test-key npm run test:rsvp
 
-# 2. the REAL Redis code path, via a fake Upstash server (fresh = empty) → 61 checks
+# 2. the REAL Redis code path, via a fake Upstash server (fresh = empty) → 82 checks
 node scripts/fake-upstash.mjs &
 KV_REST_API_URL=http://localhost:4600 KV_REST_API_TOKEN=x RSVP_ADMIN_KEY=test-key npx astro dev --port 4400
 BASE=http://localhost:4400 ADMIN_KEY=test-key npm run test:rsvp
@@ -1305,7 +1331,7 @@ scripts/verify_holes.mjs    reconciles the hole layer (54 checks)
 scripts/pull-rsvp.mjs       build step: RSVP store → data/rsvp.generated.json (public slice)
 scripts/pull-draft.mjs      build step: finalised real draft → data/draft.generated.json
 scripts/set-function-runtime.mjs  post-build: pins the API function to nodejs22.x
-scripts/test-rsvp.mjs       RSVP API checks (67 on the file store / 61 on fake Redis)
+scripts/test-rsvp.mjs       RSVP API checks (88 on the file store / 82 on fake Redis)
 scripts/fake-upstash.mjs    in-memory Upstash REST stand-in, for testing the Redis path
 scripts/check-styles.mjs    does a deployed/served site render styled? (core principle 6)
 src/lib/rsvp-*.js     RSVP: shared answer lists, the store, the API logic

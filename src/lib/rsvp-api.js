@@ -5,14 +5,14 @@
 // Privacy split (the public repo + no-login site make this non-negotiable):
 //   PUBLIC  — name, RSVP status, handicap, strongest/weakest part, the sentence.
 //             These reach the static site at build time (scripts/pull-rsvp.mjs).
-//   PRIVATE — date of birth, captain vote, team-name suggestion, green fee (Q8),
-//             side-games (Q9). Only ever returned by the key-protected admin API.
+//   PRIVATE — date of birth, EMAIL, captain vote, team-name suggestion, green fee
+//             (Q8), side-games (Q9). Only ever returned by the key-protected admin API.
 // ---------------------------------------------------------------------------
 import staticPlayers from '../../data/players.json';
 import * as store from './rsvp-store.js';
 import {
   RSVP_TOURNAMENT_ID as TID, RSVP_STATUSES, GAME_PARTS, GREEN_FEE_ANSWERS,
-  SIDE_GAME_ANSWERS, LIMITS, slugify, tidyName, normalizeProfile, normalizeEvent, matchPlayerName, nameKey,
+  SIDE_GAME_ANSWERS, LIMITS, slugify, tidyName, normalizeProfile, normalizeEvent, matchPlayerName, nameKey, isEmail,
 } from './rsvp-shared.js';
 
 export class RsvpError extends Error {
@@ -58,6 +58,19 @@ function parseDob(raw, now) {
   const [y] = raw.split('-').map(Number);
   if (y < 1920 || raw > isoDate(new Date(now.getTime() - 12 * 365.25 * 86400000))) throw new RsvpError('That date of birth doesn’t look right.', 'dob');
   return raw;
+}
+
+// Email is optional on the RSVP (encouraged, never required). Blank → null, which
+// on a re-submission KEEPS the email already on file (a returning player on a new
+// phone has no private pre-fill, so a blank box must not wipe it).
+function parseEmail(raw, { required = false } = {}) {
+  const s = String(raw ?? '').trim();
+  if (!s) {
+    if (required) throw new RsvpError('Enter your email address.', 'email');
+    return null;
+  }
+  if (!isEmail(s)) throw new RsvpError('That email address doesn’t look right.', 'email');
+  return s;
 }
 
 const optText = (raw, max, field, label) => {
@@ -137,6 +150,7 @@ async function triggerRebuild(env) {
 // ---- POST /api/rsvp ---------------------------------------------------------
 export async function submitRsvp(body, { env = process.env, now = new Date() } = {}) {
   if (!body || typeof body !== 'object') throw new RsvpError('Bad request.');
+  if (body.mode === 'email') return updateEmail(body, { env, now });
   const known = await allKnownPlayers(env);
   const { player, isNew, matchedExisting } = await resolvePlayer(body, known, now);
 
@@ -147,6 +161,7 @@ export async function submitRsvp(body, { env = process.env, now = new Date() } =
   const weaknesses = someOf(body.weaknesses ?? body.weakness, GAME_PARTS, 'weaknesses', 'Pick at least one weakest part of your game.');
   if (strengths.some((g) => weaknesses.includes(g))) throw new RsvpError('The same part can’t be both a strength and a weakness.', 'weaknesses');
   const sentence = optText(body.sentence, LIMITS.sentence, 'sentence', 'Your one-sentence description');
+  const email = parseEmail(body.email);
 
   // Q6–Q9 are only asked of people who might come; a NO skips them.
   // Captains: as many as they like. Picks from the list are player ids; a
@@ -207,6 +222,7 @@ export async function submitRsvp(body, { env = process.env, now = new Date() } =
   const history = [...(prev.profile?.handicapHistory || [])];
   if (!history.length || history[history.length - 1].index !== handicap) history.push({ at, index: handicap, source: 'rsvp' });
   const profile = { ...(prev.profile || {}), dob, strengths, weaknesses, sentence, handicapHistory: history, updatedAt: at };
+  if (email && email !== prev.profile?.email) Object.assign(profile, { email, emailUpdatedAt: at, emailSource: 'rsvp' });
 
   // 2027 EVENT data — one record per player, overwritten on re-submission.
   const statusHistory = [...(prev.event?.statusHistory || [])];
@@ -238,6 +254,24 @@ export async function submitRsvp(body, { env = process.env, now = new Date() } =
     ok: true, playerId: player.id, name: player.name, status, isNew, matchedExisting: Boolean(matchedExisting),
     updated: Boolean(prev.event), confirmedCount, rebuild,
   };
+}
+
+// ---- POST /api/rsvp { mode: 'email', playerId, email } ------------------------
+// Add or change just the email, without redoing the RSVP. Only for a player who
+// has already RSVP'd (no RSVP record is ever created here), and it touches
+// nothing but the email. Private, so it never triggers a rebuild.
+export async function updateEmail(body, { env = process.env, now = new Date() } = {}) {
+  const known = await allKnownPlayers(env);
+  const p = body.playerId ? known.get(String(body.playerId)) : null;
+  if (!p) throw new RsvpError('Pick your name first.', 'playerId');
+  const email = parseEmail(body.email, { required: true });
+  const loaded = await store.loadOne(TID, p.id, env);
+  if (!loaded.event) throw new RsvpError('You haven’t RSVP’d yet. Send your RSVP first; you can add your email there.', 'playerId', 409);
+  const profile = { ...(normalizeProfile(loaded.profile) || {}) };
+  const changed = profile.email !== email;
+  if (changed) Object.assign(profile, { email, emailUpdatedAt: now.toISOString(), emailSource: 'update' });
+  if (changed) await store.putProfile(p.id, profile, env);
+  return { ok: true, mode: 'email', playerId: p.id, name: p.name, changed };
 }
 
 // ---- GET /api/rsvp ----------------------------------------------------------
@@ -317,7 +351,8 @@ export async function readAdmin(key, { env = process.env } = {}) {
       submittedAt: e?.submittedAt ?? null, firstSubmittedAt: e?.firstSubmittedAt ?? null,
       submissions: e?.submissions ?? 0, statusHistory: e?.statusHistory ?? [],
       handicapEntering: e?.handicapEntering ?? null, handicapHistory: pr?.handicapHistory ?? [],
-      dob: pr?.dob ?? null, strengths: pr?.strengths ?? [], weaknesses: pr?.weaknesses ?? [], sentence: pr?.sentence ?? null,
+      dob: pr?.dob ?? null, email: pr?.email ?? null, emailUpdatedAt: pr?.emailUpdatedAt ?? null, emailSource: pr?.emailSource ?? null,
+      strengths: pr?.strengths ?? [], weaknesses: pr?.weaknesses ?? [], sentence: pr?.sentence ?? null,
       captainVotes: (() => {
         const votes = (e?.captainVoteIds ?? []).map((id) => ({ id, name: nameOf(id), teamName: e.teamNames?.[id] ?? null }));
         for (const w of e?.captainWriteIns ?? []) {
@@ -367,4 +402,78 @@ export async function readAdmin(key, { env = process.env } = {}) {
     greenFee: tally('greenFee', GREEN_FEE_ANSWERS),
     longestDrive: tally('longestDrive', SIDE_GAME_ANSWERS),
   };
+}
+
+// ---- POST /api/rsvp-admin { action: 'emails', entries: [{ name, email }], apply } ----
+// One-off backfill of emails onto EXISTING RSVP records, from the organiser's list.
+// Preview by default; writes only with apply: true. Rules (owner's):
+//   - only players who already have an RSVP record — nobody is ever created or
+//     confirmed here;
+//   - a list name must match the stored name EXACTLY (case and extra spaces
+//     aside). Anything else — punctuation, accents, spelling — is reported as a
+//     near-miss for the organiser to confirm, never applied;
+//   - only the email is written; a different email the player entered themselves
+//     is never overwritten (reported as a conflict).
+const exactKey = (s) => String(s || '').trim().replace(/\s+/g, ' ').toLowerCase();
+function editDistance(a, b) {
+  const d = Array.from({ length: a.length + 1 }, (_, i) => [i, ...Array(b.length).fill(0)]);
+  for (let j = 1; j <= b.length; j++) d[0][j] = j;
+  for (let i = 1; i <= a.length; i++) for (let j = 1; j <= b.length; j++)
+    d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+  return d[a.length][b.length];
+}
+const nearMiss = (a, b) => {
+  const ka = nameKey(a), kb = nameKey(b);
+  if (!ka || !kb) return false;
+  if (ka === kb) return true;                                   // same letters, different punctuation/accents
+  if (editDistance(ka, kb) <= 2) return true;                   // a typo or two (Mctesty / McTest)
+  // Same surname AND a close first name: Ed / Edward, Tom / Thomas, Jon / John.
+  // A different first name on the same surname (Cale vs Ben Urwin) is a different person.
+  const wa = ka.split(' '), wb = kb.split(' '), fa = wa[0], fb = wb[0];
+  if (wa.length < 2 || wb.length < 2 || wa[wa.length - 1] !== wb[wb.length - 1]) return false;
+  return fa[0] === fb[0] && (fa.startsWith(fb) || fb.startsWith(fa) || editDistance(fa, fb) <= 3);
+};
+export async function backfillEmails(key, body, { env = process.env, now = new Date() } = {}) {
+  requireAdmin(key, env);
+  if (body?.action !== 'emails' || !Array.isArray(body.entries)) throw new RsvpError('Send { action: "emails", entries: [{ name, email }] }.');
+  if (body.entries.length > 200) throw new RsvpError('Too many entries.');
+  const known = [...(await allKnownPlayers(env)).values()];
+  const { event, profiles } = await store.loadAll(TID, env);
+  const rsvpd = known.filter((p) => event[p.id]);
+  const entries = body.entries.map((e) => ({ name: tidyName(e?.name) || String(e?.name ?? '').trim(), email: String(e?.email ?? '').trim() }));
+  const report = { updated: [], unchanged: [], conflicts: [], noRsvp: [], nearMisses: [], unknown: [], invalid: [], rsvpdWithoutEntry: [] };
+  const used = new Set();
+  for (const e of entries) {
+    if (!e.name || !isEmail(e.email)) { report.invalid.push({ name: e.name, email: e.email }); continue; }
+    const hit = known.filter((p) => exactKey(p.name) === exactKey(e.name));
+    if (hit.length === 1) {
+      const p = hit[0];
+      if (!event[p.id]) { report.noRsvp.push({ name: e.name, id: p.id }); continue; }
+      used.add(p.id);
+      const cur = normalizeProfile(profiles[p.id])?.email ?? null;
+      if (cur && cur.toLowerCase() === e.email.toLowerCase()) { report.unchanged.push({ name: p.name, id: p.id, email: cur }); continue; }
+      if (cur) { report.conflicts.push({ name: p.name, id: p.id, onFile: cur, listed: e.email }); continue; }
+      report.updated.push({ name: p.name, id: p.id, email: e.email });
+      continue;
+    }
+    const near = known.filter((p) => nearMiss(p.name, e.name));
+    if (near.length) report.nearMisses.push({ listed: e.name, email: e.email, candidates: near.map((p) => ({ id: p.id, name: p.name, rsvpd: Boolean(event[p.id]) })) });
+    else report.unknown.push({ name: e.name });
+  }
+  for (const p of rsvpd) if (!used.has(p.id)) {
+    const near = entries.filter((e) => nearMiss(p.name, e.name)).map((e) => e.name);
+    report.rsvpdWithoutEntry.push({ id: p.id, name: p.name, hasEmail: Boolean(normalizeProfile(profiles[p.id])?.email), nearListNames: near });
+  }
+  if (body.apply) {
+    const at = now.toISOString();
+    for (const u of report.updated) {
+      const loaded = await store.loadOne(TID, u.id, env);
+      if (!loaded.event) continue;                                // re-checked at write time
+      const prof = { ...(normalizeProfile(loaded.profile) || {}) };
+      if (prof.email) continue;                                   // filled in meanwhile: never overwrite
+      Object.assign(prof, { email: u.email, emailUpdatedAt: at, emailSource: 'backfill' });
+      await store.putProfile(u.id, prof, env);
+    }
+  }
+  return { ok: true, applied: Boolean(body.apply), rsvpdCount: rsvpd.length, report };
 }
