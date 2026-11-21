@@ -364,6 +364,9 @@ convention — **the filename is the wiring**.
   width with its centre 40% down. That keeps the face inside both the 4:5 card
   and the centre-high circle. The owner's raw files (named by first name) are
   kept outside the repo in `../Photos/player-originals/`.
+  Players created via the RSVP ("I'm not listed") work the same way: their id is the
+  slug of the typed name (Ben Dowdell → `ben-dowdell.jpg`, Nov 2026, cropped from a wide
+  costume shot with the same face-based framing; original in `source/photos/player-originals/`).
 - **`scripts/gen_portraits.py`** cuts the one portrait that only exists as an
   album frame (Michael Herring from `sg26-15`) down to 4:5 head-and-torso. Tom
   Brunskill was removed from it when his real headshot arrived. Crop boxes are fractions of the source, so they survive a
