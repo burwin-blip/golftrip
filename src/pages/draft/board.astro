@@ -29,7 +29,7 @@ const data = { ...draftRoomData(), videos };
     <!-- a player's reveal video, full-screen, between "THE PICK IS IN" and the slam -->
     <div class="db-video" id="db-video" hidden>
       <video id="db-vid" playsinline preload="auto" disablepictureinpicture></video>
-      <div class="db-video__lt" id="db-video-lt"></div>
+      <div class="db-video__bar"><div class="db-video__lt" id="db-video-lt"></div><button type="button" class="db-video__snd" id="db-video-snd" hidden>🔊 Click for sound</button></div>
     </div>
     <button type="button" class="db-sound" id="db-sound" hidden>🔊 Click to turn on sound for the reveal videos</button>
   </div>
@@ -88,18 +88,27 @@ const data = { ...draftRoomData(), videos };
   @keyframes db-ann { from { transform: translateY(-30px); opacity: 0; letter-spacing: .4em; } to { transform: none; opacity: 1; } }
 
   /* reveal video: full-screen over the board (the MOCK watermark stays on top) */
-  /* The whole frame, never cropped: the video gets the screen minus a caption bar
-     and is letterboxed inside it (object-fit: contain on black). The video sits in
-     an absolutely-sized box: as a grid/flex item with height:100% it grew to its
-     own aspect ratio (a square clip became 1920x1920 on a 1080p TV) and got cut off. */
-  .db-video { position: fixed; inset: 0; z-index: 40; background: #000; animation: db-vin .35s ease-out both; --cap: clamp(64px, 9vh, 120px); }
+  /* The whole frame, never cropped, on ANY screen: the overlay is the visible
+     viewport (fixed, inset 0 — it follows the window as toolbars come and go), laid
+     out as a column: the video takes all the space the caption bar doesn't, and is
+     letterboxed inside it (object-fit: contain on black). The caption bar sizes to
+     its own text (a long team name on a narrow window wraps and the video shrinks;
+     it never spills onto the picture). min-height: 0 matters: without it the video
+     grows to its own aspect ratio and gets cut off (a square clip became 1920x1920
+     on a 1080p screen). */
+  .db-video { position: fixed; inset: 0; z-index: 40; background: #000; animation: db-vin .35s ease-out both; display: flex; flex-direction: column; overflow: hidden; }
   .db-video[hidden] { display: none; }
-  .db-video video { position: absolute; left: 0; top: 0; width: 100%; height: calc(100% - var(--cap)); object-fit: contain; object-position: center; background: #000; display: block; }
-  .db-video__lt { position: absolute; left: 0; right: 0; bottom: 0; height: var(--cap); display: flex; align-items: center; justify-content: center; padding: 0 4vw; background: #000; }
-  .db-video__lt .db-ann { justify-content: center; }
+  .db-video video { flex: 1 1 0; min-height: 0; min-width: 0; width: 100%; height: auto; object-fit: contain; object-position: center; background: #000; display: block; }
+  .db-video__bar { flex: none; min-height: clamp(56px, 9vh, 120px); display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: .5rem 1.4rem; padding: .6em 4vw calc(.6em + env(safe-area-inset-bottom)); background: #000; }
+  .db-video__lt { display: flex; justify-content: center; min-width: 0; }
+  .db-video__snd { border: 0; border-radius: 999px; padding: .45rem .9rem; font: inherit; font-size: clamp(.7rem, .55rem + .35vw, .95rem); font-weight: 800; background: #FCD79A; color: #0C1B2C; cursor: pointer; white-space: nowrap; }
+  .db-video__snd[hidden] { display: none; }
+  .db-video__lt .db-ann { justify-content: center; text-align: center; }
   @keyframes db-vin { from { opacity: 0; } to { opacity: 1; } }
   .db-sound { position: fixed; right: 1.2rem; bottom: 1.2rem; z-index: 60; border: 0; border-radius: 999px; padding: .7rem 1.2rem; font: inherit; font-weight: 800; background: #FCD79A; color: #0C1B2C; cursor: pointer; box-shadow: 0 10px 30px -10px #000; }
   .db-sound[hidden] { display: none; }
+  /* while a reveal video plays, the corner hint hides and a chip in the caption bar takes over (nothing over the picture) */
+  .db:has(.db-video:not([hidden])) .db-sound { display: none; }
 
   /* the finale: the fight poster assembles itself */
   .db-finale { display: none; }
@@ -226,6 +235,7 @@ const data = { ...draftRoomData(), videos };
     video(ph, side);
     preload();
     $('db-sound').hidden = audioOk || finale || !(videoPlayingMuted || upcomingVideos().length);
+    $('db-video-snd').hidden = !(playing && vid.muted);
     // only rebuild the stage when it changes (keeps the animations from restarting every tick)
     const sig = `${ph.phase}|${ph.pickNo}|${ph.countdown}|${ph.reveal?.pickNo}|${Math.floor((ph.remainingMs ?? ph.overMs ?? 0) / 1000)}|${doc.rev}`;
     if (sig !== lastShown) { $('db-stage').innerHTML = html; lastShown = sig; }

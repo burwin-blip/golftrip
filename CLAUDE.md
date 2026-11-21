@@ -736,7 +736,11 @@ header and broken picture data reports "loaded/playing" in Chrome and shows blac
 stays on top), the WHOLE frame letterboxed on black (`object-fit: contain` in an
 absolutely-sized box above a black caption bar holding "PICK X — TEAM Y"; as a grid
 item with `height:100%` the video grew to its own aspect ratio, so square/vertical
-clips were cropped top and bottom — fixed Nov 2026); a live watchdog needs frames within 1.2s and steady progress, else it
+clips were cropped top and bottom — fixed Nov 2026). The overlay is a flex column
+(video `flex:1; min-height:0` + a caption bar that sizes to its text, so a long team
+name wraps and the video shrinks); the sound prompt is a chip IN that bar while a
+video plays (the corner hint hides), so nothing ever sits on the picture. Checked at
+1920x1080, 1440x789 (laptop + toolbars), 1280x600, 4K, 800x1100, mid-video resizes; a live watchdog needs frames within 1.2s and steady progress, else it
 falls back to the card, which holds until the slam (never a black screen or a stuck
 board). Sound: browsers need one click on the page, so the board shows "Click to
 turn on sound for the reveal videos" while any remaining player has a video and
