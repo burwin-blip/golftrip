@@ -702,8 +702,9 @@ shells that poll the API (every state change is server-side, in Redis):
   draft-shared.js), set by the server when the last pick locks; the board renders
   with CSS animation delays relative to now, so a refresh lands in step. The
   console's **REPLAY FINALE** (`action: 'finale'`) just moves `finaleAt`.
-- **No sound.** The board is deliberately silent (a sound option was built and then
-  removed at the owner's request, Sept 2026). Don't add audio back without asking.
+- **No sound effects.** The board's synthesised sounds were removed at the owner's
+  request (Sept 2026); don't add them back without asking. The only audio is a
+  player's own reveal video (below), which the owner asked for in Nov 2026.
 - **Draft Night recap:** every pick is stamped server-side with the player's index
   and power ranking at that moment. `draftRecap()` grades each pick against the
   rankings among the RANKED picks only (unranked players aren't graded, so an
@@ -719,6 +720,29 @@ shells that poll the API (every state change is server-side, in Redis):
   all behave exactly as on the night. The only difference is that a real finalise
   writes the rosters, publishes the recap (pull-draft → rebuild) and updates the
   Match Centre teams. RESET clears the mock completely.
+
+**Reveal videos (Nov 2026, owner's request):** `public/videos/draft-reveals/<player-id>.mp4`
+(README in the folder). `scripts/scan-reveal-videos.mjs` (a build step, before
+`astro dev` / `astro build`) reads each clip's length from its MP4 header and writes
+`src/lib/draft-videos.generated.json` (gitignored); `src/lib/draft-videos.js` reads it
+through a Vite glob (missing file = no videos). At lock time the server reserves
+`min(length, 30s)` as a **`video` phase** between "THE PICK IS IN" and the slam
+(`reveal.slamAt`, `reveal.video`), so the next clock and the finale wait for it on
+every screen; RESUME shifts `slamAt`/`finaleAt` too. The board preloads every
+remaining player's clip into memory as soon as the participants are known (one at a
+time) and test-plays it muted, counting frames actually DRAWN — a file with an intact
+header and broken picture data reports "loaded/playing" in Chrome and shows black, so
+"loaded" is not enough. At the reveal it plays from memory full-screen (MOCK watermark
+stays on top); a live watchdog needs frames within 1.2s and steady progress, else it
+falls back to the card, which holds until the slam (never a black screen or a stuck
+board). Sound: browsers need one click on the page, so the board shows "Click to
+turn on sound for the reveal videos" while any remaining player has a video and
+plays muted until then. Captains see "pick is in · revealing on the board" (the pick
+stays hidden); the console says the video is playing with its time left. Mock and
+real behave identically. Tested in a mock draft: video with/without sound, a corrupt
+file, a deleted (404) file, a player without a video, the 30s cap, a board opened
+mid-reveal. (This is the one sound on the board; the old synthesised effects stay
+removed.)
 
 **Rules (owner's decisions, Sept 2026):** captains are on their own teams
 automatically; snake order A,B,B,A… from whoever picks first; 2:00 a pick; **no
@@ -1330,6 +1354,7 @@ scripts/gen_portraits.py    cuts the two album-sourced player portraits to 4:5
 scripts/verify_holes.mjs    reconciles the hole layer (54 checks)
 scripts/pull-rsvp.mjs       build step: RSVP store → data/rsvp.generated.json (public slice)
 scripts/pull-draft.mjs      build step: finalised real draft → data/draft.generated.json
+scripts/scan-reveal-videos.mjs  build step: draft reveal videos + lengths → src/lib/draft-videos.generated.json
 scripts/set-function-runtime.mjs  post-build: pins the API function to nodejs22.x
 scripts/test-rsvp.mjs       RSVP API checks (88 on the file store / 82 on fake Redis)
 scripts/fake-upstash.mjs    in-memory Upstash REST stand-in, for testing the Redis path

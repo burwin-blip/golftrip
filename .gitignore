@@ -28,3 +28,5 @@ data/rsvp.generated.json
 # Draft Room — local dev store + the build's public slice of a finalised draft
 .draft-local/
 data/draft.generated.json
+# Draft Room — the build's list of reveal videos (scripts/scan-reveal-videos.mjs)
+src/lib/draft-videos.generated.json

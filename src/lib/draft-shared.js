@@ -13,6 +13,7 @@ export const DRAFT_TID = 'duel-in-the-desert-2027';
 export const PICK_MS = 120_000;   // 2:00 per pick (a local test run may shorten it; see draft-api.js)
 export const REVEAL_MS = 5_000;   // "THE PICK IS IN" + 5-second countdown
 export const SLAM_MS = 3_000;     // the card slams onto the roster, then the next clock starts
+export const VIDEO_CAP_MS = 30_000;   // a player's reveal video (if they have one) plays between the two, capped at 30s
 export const MODES = ['real', 'mock'];
 
 // Team colours for the drafted teams — a preset palette that deliberately leaves
@@ -60,7 +61,8 @@ export function available(doc) {
 /**
  * What is happening at `now` (server ms):
  *   phase: setup | waiting (next clock not started yet) | clock | overtime |
- *          pick-is-in | slam | paused | complete | finalised
+ *          pick-is-in | video (the player's reveal video, when they have one) |
+ *          slam | paused | complete | finalised
  * plus the side on the clock, ms left (clock) or over (overtime), the reveal
  * being shown and the countdown number.
  */
@@ -77,8 +79,12 @@ export function phaseAt(doc, now) {
   }
   const r = doc.reveal;
   if (r && now < r.doneAt) {
-    return { ...base, reveal: r, phase: now < r.revealAt ? 'pick-is-in' : 'slam',
-      countdown: now < r.revealAt ? Math.max(1, Math.ceil((r.revealAt - now) / 1000)) : null };
+    // slamAt: end of the reveal video (= revealAt when there's no video, and on
+    // documents saved before videos existed)
+    const slamAt = r.slamAt ?? r.revealAt;
+    return { ...base, reveal: r, phase: now < r.revealAt ? 'pick-is-in' : now < slamAt ? 'video' : 'slam',
+      countdown: now < r.revealAt ? Math.max(1, Math.ceil((r.revealAt - now) / 1000)) : null,
+      videoAtMs: now >= r.revealAt && now < slamAt ? now - r.revealAt : null };
   }
   if (doc.status === 'complete') return { ...base, phase: 'complete' };
   const c = doc.clock;

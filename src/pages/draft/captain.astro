@@ -202,7 +202,7 @@ const data = draftRoomData();
 
   function renderPool(ph) {
     // The pick being revealed stays in the pool until the board shows it (no spoilers).
-    const hidden = ph.phase === 'pick-is-in' ? ph.reveal.playerId : null;
+    const hidden = ph.phase === 'pick-is-in' || ph.phase === 'video' ? ph.reveal.playerId : null;
     let ids = doc.status === 'setup' ? doc.participants.filter((id) => id !== doc.captains.A && id !== doc.captains.B) : available(doc);
     if (hidden && !ids.includes(hidden)) ids = [...ids, hidden];
     if (selected && !ids.includes(selected)) selected = null;
@@ -227,7 +227,7 @@ const data = draftRoomData();
   }
 
   function renderRosters(ph) {
-    const hideN = ph.phase === 'pick-is-in' ? ph.reveal.pickNo : null;
+    const hideN = ph.phase === 'pick-is-in' || ph.phase === 'video' ? ph.reveal.pickNo : null;
     const r = rosters({ ...doc, picks: doc.picks.filter((p) => p.n !== hideN) });
     const per = { A: 1 + doc.order.filter((x) => x === 'A').length, B: 1 + doc.order.filter((x) => x === 'B').length };
     const sig = JSON.stringify([r, per, doc.teams, doc.captains]);
@@ -265,6 +265,7 @@ const data = draftRoomData();
       case 'clock': t = mine ? 'You’re on the clock' : `${teamName(ph.side)} is picking`; c = clockText(ph.remainingMs); break;
       case 'overtime': t = mine ? 'Overtime — make your pick' : `${teamName(ph.side)} · overtime`; c = clockText(ph.overMs, true); break;
       case 'pick-is-in': t = ph.reveal.side === side ? 'Your pick is in · revealing on the board' : `${teamName(ph.reveal.side)}’s pick is in`; c = String(ph.countdown); break;
+      case 'video': t = ph.reveal.side === side ? 'Your pick is in · their video is playing on the board' : `${teamName(ph.reveal.side)}’s pick is in · revealing on the board`; break;
       case 'slam': t = `${teamName(ph.reveal.side)} take ${P[ph.reveal.playerId]?.name || ''}`; break;
       case 'paused': t = 'Paused by the commissioner'; c = ph.pickNo ? (ph.overMs ? clockText(ph.overMs, true) : clockText(ph.remainingMs)) : ''; break;
       case 'complete': t = 'The draft is done'; break;

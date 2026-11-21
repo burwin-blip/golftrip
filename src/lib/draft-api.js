@@ -19,6 +19,7 @@ import * as store from './draft-store.js';
 import { loadLineups, saveLineups } from './lineup-store.js';
 import { emptyLineups } from './matchcentre-shared.js';
 import { draftRoomData } from './draft-data.js';
+import { revealVideoFor } from './draft-videos.js';
 import { MODES, PICK_MS, REVEAL_MS, SLAM_MS, TEAM_COLOURS, emptyDraft, snakeOrder, picksFor, rosters, available, phaseAt } from './draft-shared.js';
 
 export class DraftError extends Error {
@@ -99,13 +100,17 @@ export async function submitPick(key, body, { env = process.env } = {}) {
     if (ph.side !== side) throw new DraftError('You’re not on the clock.', 409);
     if (!available(doc).includes(playerId)) throw new DraftError('That player isn’t available.', 409);
     const last = pickNo === doc.order.length;
+    // A player with a reveal video gets it played between the countdown and the
+    // slam; the next clock (and the finale) wait for it. Capped at 30s.
+    const video = revealVideoFor(playerId);
+    const revealAt = now + REVEAL_MS, slamAt = revealAt + (video?.ms ?? 0), doneAt = slamAt + SLAM_MS;
     const next = {
       ...doc, rev: doc.rev + 1,
       picks: [...doc.picks, { n: pickNo, side, playerId, lockedAt: now, clockMs: now - doc.clock.startsAt, rank: scout()[playerId]?.rank ?? null, index: scout()[playerId]?.index ?? null }],
-      reveal: { pickNo, side, playerId, lockedAt: now, revealAt: now + REVEAL_MS, doneAt: now + REVEAL_MS + SLAM_MS },
-      clock: last ? null : { pickNo: pickNo + 1, startsAt: now + REVEAL_MS + SLAM_MS },
+      reveal: { pickNo, side, playerId, lockedAt: now, revealAt, slamAt, doneAt, video },
+      clock: last ? null : { pickNo: pickNo + 1, startsAt: doneAt },
       status: last ? 'complete' : 'running',
-      finaleAt: last ? now + REVEAL_MS + SLAM_MS : null,   // the finale starts as the last reveal ends
+      finaleAt: last ? doneAt : null,   // the finale starts as the last reveal ends
     };
     await store.saveDraft(mode, next, env);
     return { ok: true, mode, draft: next, serverNow: Date.now() };
@@ -173,8 +178,10 @@ export async function adminAction(key, body, { env = process.env } = {}) {
         // that was mid-flight) carries on exactly where it stopped.
         const d = now - (doc.pausedAt ?? now);
         const clock = doc.clock ? { ...doc.clock, startsAt: doc.clock.startsAt + d } : null;
-        const reveal = doc.reveal ? { ...doc.reveal, revealAt: doc.reveal.revealAt + d, doneAt: doc.reveal.doneAt + d } : null;
-        return save({ ...doc, status: doc.picks.length === doc.order.length ? 'complete' : 'running', pausedAt: null, clock, reveal });
+        const reveal = doc.reveal ? { ...doc.reveal, revealAt: doc.reveal.revealAt + d, doneAt: doc.reveal.doneAt + d,
+          ...(doc.reveal.slamAt != null ? { slamAt: doc.reveal.slamAt + d } : {}) } : null;
+        const finaleAt = doc.finaleAt != null && doc.finaleAt > (doc.pausedAt ?? now) ? doc.finaleAt + d : doc.finaleAt;
+        return save({ ...doc, status: doc.picks.length === doc.order.length ? 'complete' : 'running', pausedAt: null, clock, reveal, finaleAt });
       }
       case 'undo': {
         if (!['running', 'paused', 'complete'].includes(doc.status) || !doc.picks.length) throw new DraftError('Nothing to undo.', 409);

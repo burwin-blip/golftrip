@@ -308,6 +308,7 @@ const data = draftRoomData();
       case 'clock': t = `On the clock: ${who} · pick ${ph.pickNo} of ${ph.total}`; c = clockText(ph.remainingMs); break;
       case 'overtime': t = `OVERTIME: ${who} · pick ${ph.pickNo} of ${ph.total}`; c = clockText(ph.overMs, true); over = true; break;
       case 'pick-is-in': t = `The pick is in: ${teamName(ph.reveal.side)} took ${name(ph.reveal.playerId)} (board reveals in ${ph.countdown})`; break;
+      case 'video': t = `Reveal video playing on the board: ${name(ph.reveal.playerId)} to ${teamName(ph.reveal.side)}`; c = clockText(Math.max(0, (ph.reveal.slamAt ?? ph.reveal.revealAt) - ph.reveal.revealAt - (ph.videoAtMs ?? 0))); break;
       case 'slam': t = `Revealed: ${name(ph.reveal.playerId)} to ${teamName(ph.reveal.side)}`; break;
       case 'paused': t = `PAUSED${ph.pickNo ? ` · ${who} on the clock, pick ${ph.pickNo} of ${ph.total}` : ''}`; c = ph.pickNo ? (ph.overMs ? clockText(ph.overMs, true) : clockText(ph.remainingMs)) : ''; over = !!ph.overMs; break;
       case 'complete': t = `All ${ph.total} picks are in. Finalise below.`; break;

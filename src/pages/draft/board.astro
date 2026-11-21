@@ -6,7 +6,11 @@
 // board lands exactly where things stand — including mid-reveal.
 import Base from '../../layouts/Base.astro';
 import { draftRoomData } from '../../lib/draft-data.js';
-const data = draftRoomData();
+import { revealVideoFor, REVEAL_VIDEOS } from '../../lib/draft-videos.js';
+// Reveal videos (public/videos/draft-reveals/<player-id>.mp4): what the board
+// preloads and plays. The server reserves the same capped length in each reveal.
+const videos = Object.fromEntries(Object.keys(REVEAL_VIDEOS).map((id) => [id, revealVideoFor(id)]));
+const data = { ...draftRoomData(), videos };
 ---
 <Base title="Draft Board" description="The Annual 2027 draft — live." bare>
   <div class="db" id="db" data-phase="setup">
@@ -22,6 +26,12 @@ const data = draftRoomData();
       <section class="db-team" data-side="B"><h2 class="db-team__name" id="db-name-B">Team B</h2><div class="db-roster" id="db-roster-B"></div></section>
     </main>
     <section class="db-finale" id="db-finale" aria-live="polite"></section>
+    <!-- a player's reveal video, full-screen, between "THE PICK IS IN" and the slam -->
+    <div class="db-video" id="db-video" hidden>
+      <video id="db-vid" playsinline preload="auto" disablepictureinpicture></video>
+      <div class="db-video__lt" id="db-video-lt"></div>
+    </div>
+    <button type="button" class="db-sound" id="db-sound" hidden>🔊 Click to turn on sound for the reveal videos</button>
   </div>
   <script type="application/json" id="db-data" set:html={JSON.stringify(data)} />
 </Base>
@@ -76,6 +86,16 @@ const data = draftRoomData();
   .db-ann--slam { animation: db-ann .6s ease-out both; }
   .db-ann-sub { margin: 0; font-size: clamp(.75rem, .5rem + .5vw, 1rem); font-weight: 800; letter-spacing: .3em; text-transform: uppercase; color: rgba(231,236,242,.6); }
   @keyframes db-ann { from { transform: translateY(-30px); opacity: 0; letter-spacing: .4em; } to { transform: none; opacity: 1; } }
+
+  /* reveal video: full-screen over the board (the MOCK watermark stays on top) */
+  .db-video { position: fixed; inset: 0; z-index: 40; background: #000; display: grid; place-items: center; animation: db-vin .35s ease-out both; }
+  .db-video[hidden] { display: none; }
+  .db-video video { width: 100%; height: 100%; object-fit: contain; background: #000; }
+  .db-video__lt { position: absolute; left: 0; right: 0; bottom: 0; padding: 3vh 4vw 4vh; background: linear-gradient(to top, rgba(0,0,0,.75), transparent); }
+  .db-video__lt .db-ann { justify-content: flex-start; }
+  @keyframes db-vin { from { opacity: 0; } to { opacity: 1; } }
+  .db-sound { position: fixed; right: 1.2rem; bottom: 1.2rem; z-index: 60; border: 0; border-radius: 999px; padding: .7rem 1.2rem; font: inherit; font-weight: 800; background: #FCD79A; color: #0C1B2C; cursor: pointer; box-shadow: 0 10px 30px -10px #000; }
+  .db-sound[hidden] { display: none; }
 
   /* the finale: the fight poster assembles itself */
   .db-finale { display: none; }
@@ -144,8 +164,9 @@ const data = draftRoomData();
     // team colours: the finalised ones, else the stage defaults
     for (const s of ['A', 'B']) if (doc.teams?.[s]?.color) root.style.setProperty(s === 'A' ? '--a' : '--b', doc.teams[s].color);
 
-    // never show a pick before its reveal: while "THE PICK IS IN" runs, it's hidden
-    const hidden = ph.phase === 'pick-is-in' ? ph.reveal.pickNo : null;
+    // never show a pick before its reveal: while "THE PICK IS IN" (and the player's
+    // video) runs, it's hidden from the rosters and the order strip
+    const hidden = ph.phase === 'pick-is-in' || ph.phase === 'video' ? ph.reveal.pickNo : null;
     const visible = { ...doc, picks: doc.picks.filter((p) => p.n !== hidden) };
     const r = rosters(visible);
     const per = { A: 1 + doc.order.filter((x) => x === 'A').length, B: 1 + doc.order.filter((x) => x === 'B').length };
@@ -191,12 +212,16 @@ const data = draftRoomData();
       }
       case 'overtime': html = `<p class="db-k">Overtime</p><p class="db-who"><span>${esc(teamName(side))}</span></p><p class="db-clock">${clockText(ph.overMs, true)}</p><p class="db-sub">${esc(P[captain]?.name || '')} is still picking · pick ${ph.pickNo} of ${ph.total}</p>`; break;
       case 'pick-is-in': html = `${announce(ph.reveal.pickNo, side)}<p class="db-isin">The pick<br>is in</p><p class="db-count" key="${ph.countdown}">${ph.countdown}</p>`; break;
+      case 'video':   // under the video (and the seamless fallback if a video can't play): the card reveal
       case 'slam': html = `${announce(ph.reveal.pickNo, side, true)}<p class="db-ann-sub">Pick ${ph.reveal.pickNo} of ${ph.total} · the selection is</p><div class="db-reveal">${cardHtml(P[ph.reveal.playerId] || { name: ph.reveal.playerId, initials: '?' }, { size: 'lg' })}</div>`; break;
       case 'paused': html = `<p class="db-k">Paused</p><p class="db-big">Stand by</p>${ph.pickNo ? `<p class="db-sub">${esc(teamName(ph.side))} on the clock · ${ph.overMs ? clockText(ph.overMs, true) + ' over' : clockText(ph.remainingMs) + ' left'}</p>` : ''}`; break;
       case 'complete': html = `<p class="db-k">The draft is done</p><p class="db-big">${esc(teamName('A'))}<br><span style="font-size:.45em;color:#FCD79A">v</span><br>${esc(teamName('B'))}</p>`; break;
       case 'finalised': html = `<p class="db-k">Final</p><p class="db-big">${esc(teamName('A'))}<br><span style="font-size:.45em;color:#FCD79A">v</span><br>${esc(teamName('B'))}</p><p class="db-sub">See you on the first tee</p>`; break;
     }
     if (finale) renderFinale(t);
+    video(ph, side);
+    preload();
+    $('db-sound').hidden = audioOk || finale || !(videoPlayingMuted || upcomingVideos().length);
     // only rebuild the stage when it changes (keeps the animations from restarting every tick)
     const sig = `${ph.phase}|${ph.pickNo}|${ph.countdown}|${ph.reveal?.pickNo}|${Math.floor((ph.remainingMs ?? ph.overMs ?? 0) / 1000)}|${doc.rev}`;
     if (sig !== lastShown) { $('db-stage').innerHTML = html; lastShown = sig; }
@@ -225,6 +250,136 @@ const data = draftRoomData();
       <div class="fn-grid">${side('A')}<div class="fn-vs" style="${d(tl.vs)}">vs</div>${side('B')}</div>
       <p class="fn-title" style="${d(tl.title)}"><b>The Annual ${esc(DATA.tournamentId.match(/\d{4}/)?.[0] || '')} —</b><span>The teams are set</span></p>`;
   }
+
+  // ---- reveal videos ----------------------------------------------------------
+  // Preloaded into memory (blob URLs) as soon as the participants are known, one
+  // at a time, then test-decoded: a file that won't decode is marked failed up
+  // front, so its reveal falls straight back to the card. At reveal time the
+  // board plays from memory; if anything goes wrong (not loaded, error, stall,
+  // blocked) it falls back to the normal card reveal. It never waits on the
+  // network and never shows a black screen: the server has already reserved the
+  // video's time, so the card simply holds until the slam.
+  const VIDEOS = DATA.videos || {};
+  const cache = new Map();          // id → { state: 'loading'|'ready'|'failed', url, tries, retryAt }
+  let loading = false;
+  let audioOk = navigator.userActivation?.hasBeenActive ?? false;
+  let videoPlayingMuted = false;
+  const upcomingVideos = () => {
+    if (!doc?.participants?.length || ['complete', 'finalised'].includes(doc.status)) return [];
+    const taken = new Set([...(doc.picks || []).map((p) => p.playerId), doc.captains?.A, doc.captains?.B]);
+    return doc.participants.filter((id) => VIDEOS[id] && !taken.has(id));
+  };
+  // Counts frames the browser actually DRAWS (not just "loaded"/"playing": a file
+  // with an intact header and broken picture data reports both and shows black).
+  const onFrames = (v, need, cb) => {
+    let n = 0, last = -1;
+    if (v.requestVideoFrameCallback) {
+      const tick = () => { if (++n >= need) cb(); else v.requestVideoFrameCallback(tick); };
+      v.requestVideoFrameCallback(tick);
+    } else {   // no frame callback: fall back to playback time really moving
+      const iv = setInterval(() => { if (v.currentTime > last + 0.01 && last >= 0) n++; last = v.currentTime; if (n >= need) { clearInterval(iv); cb(); } }, 100);
+    }
+  };
+  const probe = (url) => new Promise((resolve) => {   // can this browser actually decode and draw it?
+    const v = document.createElement('video');
+    let done = false;
+    const end = (ok) => { if (done) return; done = true; v.pause(); v.removeAttribute('src'); v.load(); resolve(ok); };
+    v.muted = true; v.preload = 'auto'; v.playsInline = true;
+    v.addEventListener('error', () => end(false), { once: true });
+    v.addEventListener('loadeddata', () => {
+      if (!v.videoWidth) return end(false);
+      onFrames(v, 4, () => end(v.currentTime > 0.05));
+      v.play().catch(() => end(false));
+    }, { once: true });
+    setTimeout(() => end(false), 10000);
+    v.src = url;
+  });
+  async function preload() {
+    if (loading) return;
+    const id = upcomingVideos().find((x) => {
+      const c = cache.get(x);
+      return !c || (c.state === 'failed' && c.tries < 3 && Date.now() > c.retryAt);
+    });
+    if (!id) return;
+    loading = true;
+    const tries = (cache.get(id)?.tries || 0) + 1;
+    cache.set(id, { state: 'loading', tries });
+    try {
+      const res = await fetch(VIDEOS[id].url);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const blob = await res.blob();
+      if (!blob.size) throw new Error('empty');
+      const url = URL.createObjectURL(blob);
+      if (!(await probe(url))) { URL.revokeObjectURL(url); throw new Error('cannot decode'); }
+      cache.set(id, { state: 'ready', url, tries });
+    } catch (e) {
+      console.warn('[board] reveal video unavailable:', id, e?.message || e);
+      cache.set(id, { state: 'failed', tries, retryAt: Date.now() + 5000 });
+    }
+    loading = false;
+    preload();
+  }
+
+  const box = $('db-video'), vid = $('db-vid');
+  let playing = null;                // key of the reveal currently on screen
+  const failed = new Set();          // reveals that fell back to the card
+  let watchdog = null, stallTimer = null;
+  const stopVideo = () => {
+    clearTimeout(watchdog); clearTimeout(stallTimer);
+    if (playing) { vid.pause(); vid.removeAttribute('src'); vid.load(); }
+    playing = null; videoPlayingMuted = false; box.hidden = true;
+  };
+  const fallBack = (key, why) => {
+    console.warn('[board] reveal video fell back to the card:', why);
+    failed.add(key); stopVideo();
+  };
+  function video(ph, side) {
+    const r = ph.reveal;
+    if (ph.phase !== 'video' || !r?.video) { if (playing) stopVideo(); return; }
+    const key = `${doc.rev}:${r.pickNo}:${r.playerId}:${r.revealAt}`;
+    if (failed.has(key) || playing === key) return;
+    const c = cache.get(r.playerId);
+    if (c?.state === 'failed') return fallBack(key, 'preload failed');
+    // not preloaded yet (e.g. the board was opened mid-draft): try the file directly,
+    // but only for as long as the watchdog allows
+    const src = c?.state === 'ready' ? c.url : r.video.url;
+    playing = key;
+    vid.src = src;
+    vid.muted = !audioOk;
+    const at = (ph.videoAtMs || 0) / 1000;
+    if (at > 0.3) { try { vid.currentTime = at; } catch {} }   // a refreshed board joins mid-video
+    $('db-video-lt').innerHTML = announce(r.pickNo, side, true);
+    box.hidden = false;
+    vid.onerror = () => fallBack(key, 'error');
+    vid.onwaiting = () => { clearTimeout(stallTimer); stallTimer = setTimeout(() => { if (playing === key && (vid.readyState < 3 || vid.paused)) fallBack(key, 'stalled'); }, 1500); };
+    vid.onplaying = () => clearTimeout(stallTimer);
+    // watchdog: real frames must appear within 1.2s and keep coming (a stall of
+    // 1.5s, or playback time that stops moving, also falls back to the card)
+    clearTimeout(watchdog);
+    let drawn = false, lastT = -1, still = 0;
+    onFrames(vid, 2, () => { drawn = true; });
+    watchdog = setTimeout(function check() {
+      if (playing !== key) return;
+      if (!drawn) return fallBack(key, 'no frames drawn');
+      still = vid.currentTime > lastT + 0.05 || vid.ended ? 0 : still + 1;
+      lastT = vid.currentTime;
+      if (still >= 3) return fallBack(key, 'playback stopped');
+      watchdog = setTimeout(check, 500);
+    }, 1200);
+    const go = () => vid.play().then(() => { videoPlayingMuted = vid.muted; }).catch((e) => {
+      if (e?.name === 'NotAllowedError' && !vid.muted) { vid.muted = true; videoPlayingMuted = true; return go(); }   // autoplay with sound blocked: play muted, show the hint
+      fallBack(key, e?.name || 'play failed');
+    });
+    go();
+  }
+  // One click anywhere on the board allows sound (browsers require it).
+  const unlock = () => {
+    audioOk = true;
+    if (playing && vid.muted) { vid.muted = false; videoPlayingMuted = false; }
+    $('db-sound').hidden = true;
+  };
+  document.addEventListener('pointerdown', unlock);
+  document.addEventListener('keydown', unlock);
 
   const poll = startPolling('/api/draft', {
     every: 1000,
