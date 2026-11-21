@@ -733,7 +733,10 @@ remaining player's clip into memory as soon as the participants are known (one a
 time) and test-plays it muted, counting frames actually DRAWN — a file with an intact
 header and broken picture data reports "loaded/playing" in Chrome and shows black, so
 "loaded" is not enough. At the reveal it plays from memory full-screen (MOCK watermark
-stays on top); a live watchdog needs frames within 1.2s and steady progress, else it
+stays on top), the WHOLE frame letterboxed on black (`object-fit: contain` in an
+absolutely-sized box above a black caption bar holding "PICK X — TEAM Y"; as a grid
+item with `height:100%` the video grew to its own aspect ratio, so square/vertical
+clips were cropped top and bottom — fixed Nov 2026); a live watchdog needs frames within 1.2s and steady progress, else it
 falls back to the card, which holds until the slam (never a black screen or a stuck
 board). Sound: browsers need one click on the page, so the board shows "Click to
 turn on sound for the reveal videos" while any remaining player has a video and
