@@ -751,6 +751,21 @@ file, a deleted (404) file, a player without a video, the 30s cap, a board opene
 mid-reveal. (This is the one sound on the board; the old synthesised effects stay
 removed.)
 
+**Captain intros (Nov 2026):** `captain-<player-id>.mp4` in the same folder (same
+scan, same rules, 30s cap; `captainVideoFor()` in draft-videos.js). START schedules
+`doc.intro` server-side (`introSchedule()` in draft-shared.js: "YOUR CAPTAINS" 3s, then
+per captain in DRAFT order — the first picker first — an intro card 3.5s, their video
+if any, a card slam 3s) and sets pick 1's `clock.startsAt = intro.endsAt`, so no clock
+runs underneath it and picks are refused ('intro' phase, `introStepAt()`). The board
+hides each captain from the rosters until their slam, plays intro videos through the
+same engine as reveals (preloaded first, frame-checked, watchdog → falls back to the
+card and carries on). Console: **SKIP INTROS** (`skip-intros`: ends it now, pick 1's
+2:00 starts immediately) and **REPLAY CAPTAIN INTROS** (`replay-intros`: before pick 1
+only — it restarts pick 1's 2:00 after; during setup it's a PREVIEW with no clock).
+PAUSE/RESUME shift the intro. RESET clears it. Mock = real. Tested in mock: both
+captains with videos, one without, a corrupt captain video, skip mid-video, replay
+before/after pick 1, setup preview, pause mid-intro.
+
 **Rules (owner's decisions, Sept 2026):** captains are on their own teams
 automatically; snake order A,B,B,A… from whoever picks first; 2:00 a pick; **no
 auto-pick** (overtime just counts up). ~8s between picks (5s reveal + 3s slam).

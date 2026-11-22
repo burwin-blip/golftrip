@@ -70,7 +70,8 @@ for (const f of files.sort()) {
   const ms = mp4DurationMs(buf);
   if (!ms) { console.warn(`[reveal-videos] skipped "${f}": not a readable MP4 (that player gets the normal reveal)`); continue; }
   if (videos[id]) { console.warn(`[reveal-videos] "${f}": ${id} already has ${videos[id].file}; keeping that one`); continue; }
-  if (!known.has(id)) console.warn(`[reveal-videos] "${f}": no player with id "${id}" (yet) — kept, but check the spelling`);
+  const pid = id.replace(/^captain-/, '');   // captain-<player-id>.mp4 = that captain's intro video
+  if (!known.has(pid)) console.warn(`[reveal-videos] "${f}": no player with id "${pid}" (yet) — kept, but check the spelling`);
   const v = crypto.createHash('sha1').update(buf).digest('hex').slice(0, 10);
   videos[id] = { file: f, url: `/videos/draft-reveals/${encodeURIComponent(f)}?v=${v}`, durationMs: ms, bytes: buf.length };
 }

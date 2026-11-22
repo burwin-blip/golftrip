@@ -87,6 +87,14 @@ const data = { ...draftRoomData(), videos };
   .db-ann-sub { margin: 0; font-size: clamp(.75rem, .5rem + .5vw, 1rem); font-weight: 800; letter-spacing: .3em; text-transform: uppercase; color: rgba(231,236,242,.6); }
   @keyframes db-ann { from { transform: translateY(-30px); opacity: 0; letter-spacing: .4em; } to { transform: none; opacity: 1; } }
 
+  /* captains' intro */
+  .db-intro-title { font-family: var(--serif); font-weight: 800; text-transform: uppercase; color: #fff; font-size: clamp(3rem, 1.6rem + 6vw, 9rem); line-height: .92; animation: db-introt 3s ease-in-out both; }
+  .db-intro-title small { display: block; font-family: var(--sans); font-weight: 900; letter-spacing: .4em; font-size: .18em; color: #FCD79A; margin-bottom: .6em; }
+  @keyframes db-introt { 0% { opacity: 0; transform: scale(.85); letter-spacing: .2em; } 20%, 80% { opacity: 1; transform: none; letter-spacing: 0; } 100% { opacity: 0; transform: scale(1.08); } }
+  .db-cap-k { font-weight: 900; letter-spacing: .35em; text-transform: uppercase; font-size: clamp(.9rem, .6rem + .9vw, 1.6rem); color: #FCD79A; animation: db-ann .6s ease-out both; }
+  .db-cap-name { font-family: var(--serif); font-weight: 800; color: #fff; font-size: clamp(2.4rem, 1.2rem + 4vw, 6rem); line-height: .95; animation: db-ann .8s .25s ease-out both; }
+  .db-team__name.is-slam { animation: db-slam .7s cubic-bezier(.2, 1.6, .4, 1) both; }
+
   /* reveal video: full-screen over the board (the MOCK watermark stays on top) */
   /* The whole frame, never cropped, on ANY screen: the overlay is the visible
      viewport (fixed, inset 0 — it follows the window as toolbars come and go), laid
@@ -165,6 +173,9 @@ const data = { ...draftRoomData(), videos };
   // Ryder Cup announcer style: "PICK 3 — TEAM PEDLER"
   const announce = (n, s, slam = false) => `<p class="db-ann${slam ? ' db-ann--slam' : ''}"><span class="db-ann__n">Pick ${n}</span><span class="db-ann__dash">—</span><span class="db-ann__t">${esc(teamName(s))}</span></p>`;
 
+  // "CAPTAIN — TEAM PEDLER"
+  const announceCap = (s, slam = false) => `<p class="db-ann${slam ? ' db-ann--slam' : ''}"><span class="db-ann__n">Captain</span><span class="db-ann__dash">—</span><span class="db-ann__t">${esc(teamName(s))}</span></p>`;
+
   function render() {
     if (!doc) return;
     const t = now();
@@ -182,19 +193,28 @@ const data = { ...draftRoomData(), videos };
     const hidden = ph.phase === 'pick-is-in' || ph.phase === 'video' ? ph.reveal.pickNo : null;
     const visible = { ...doc, picks: doc.picks.filter((p) => p.n !== hidden) };
     const r = rosters(visible);
+    // during the captains' intro, a captain's card only appears once they've been introduced (it slams in)
+    const it = ph.phase === 'intro' ? ph.intro : null;
+    if (it) {
+      const shown = new Set(doc.intro.captains.filter((c, i) => i < it.index || (i === it.index && it.step === 'slam')).map((c) => c.playerId));
+      for (const s of ['A', 'B']) r[s] = r[s].filter((id) => id !== doc.captains[s] || shown.has(id));
+    }
+    const capSlam = it?.step === 'slam' ? it.captain.playerId : null;
     const per = { A: 1 + doc.order.filter((x) => x === 'A').length, B: 1 + doc.order.filter((x) => x === 'B').length };
     // redraw the rosters only when they change, so a card's slam plays once
-    const rosterSig = JSON.stringify([r, per, ph.phase === 'slam' ? ph.reveal?.playerId : null, doc.teams]);
+    const rosterSig = JSON.stringify([r, per, ph.phase === 'slam' ? ph.reveal?.playerId : null, capSlam, doc.teams]);
     const rostersChanged = rosterSig !== lastRosters;
     lastRosters = rosterSig;
     for (const s of ['A', 'B']) {
       if (!rostersChanged) break;
       $(`db-name-${s}`).textContent = teamName(s);
+      $(`db-name-${s}`).classList.toggle('is-slam', capSlam != null && capSlam === doc.captains[s] && !slammed.has(capSlam));
       const cells = [];
       for (let i = 0; i < Math.max(per[s], r[s].length, 1); i++) {
         const id = r[s][i];
         const isCap = id && id === doc.captains[s];
-        cells.push(cardHtml(id ? P[id] || { name: id, initials: '?' } : null, { size: 'sm', badge: isCap ? '<span class="dc__cap">C</span>' : '' }).replace('class="dc ', `class="dc ${id && !slammed.has(id) && ph.phase === 'slam' && ph.reveal?.playerId === id ? 'is-slam ' : ''}`));
+        const slamNow = id && !slammed.has(id) && ((ph.phase === 'slam' && ph.reveal?.playerId === id) || capSlam === id);
+        cells.push(cardHtml(id ? P[id] || { name: id, initials: '?' } : null, { size: 'sm', badge: isCap ? '<span class="dc__cap">C</span>' : '' }).replace('class="dc ', `class="dc ${slamNow ? 'is-slam ' : ''}`));
       }
       // up to 9 a side → 3 across (bigger cards that fill the TV); more → 4 across
       $(`db-roster-${s}`).style.setProperty('--cols', cells.length <= 9 ? 3 : 4);
@@ -202,6 +222,9 @@ const data = { ...draftRoomData(), videos };
     }
     if (ph.phase === 'slam' && ph.reveal) setTimeout(() => slammed.add(ph.reveal.playerId), 700);
     else if (ph.phase !== 'slam') for (const p of doc.picks) slammed.add(p.playerId);
+    if (capSlam) setTimeout(() => slammed.add(capSlam), 700);
+    // a replayed intro slams the captains in again
+    if (it && it.step !== 'slam') for (const c of doc.intro.captains.slice(it.index)) slammed.delete(c.playerId);
 
     // pick order strip
     $('db-order').innerHTML = doc.order.map((s, i) => {
@@ -216,6 +239,14 @@ const data = { ...draftRoomData(), videos };
     const captain = side ? doc.captains[side] : null;
     let html = '';
     switch (ph.phase) {
+      case 'intro': {
+        const c = it.captain;
+        if (it.step === 'title') html = `<p class="db-intro-title"><small>The Annual · 2027 draft</small>Your<br>captains</p>`;
+        else if (it.step === 'card') html = `${announceCap(c.side)}<p class="db-cap-k">Introducing</p><p class="db-cap-name">${esc(P[c.playerId]?.name || c.playerId)}</p>`;
+        else html = `${announceCap(c.side, true)}<p class="db-ann-sub">Captain · ${esc(teamName(c.side))}</p><div class="db-reveal">${cardHtml(P[c.playerId] || { name: c.playerId, initials: '?' }, { size: 'lg', badge: '<span class="dc__cap">C</span>' })}</div>`;
+        $('db-stage').style.setProperty('--c', `var(--${(c?.side || 'a').toLowerCase()})`);
+        break;
+      }
       case 'setup': html = `<p class="db-k">Draft night</p><p class="db-big">The Annual<br>2027</p><p class="db-sub">Starting soon</p>`; break;
       case 'waiting':
       case 'clock': {
@@ -237,7 +268,7 @@ const data = { ...draftRoomData(), videos };
     $('db-sound').hidden = audioOk || finale || !(videoPlayingMuted || upcomingVideos().length);
     $('db-video-snd').hidden = !(playing && vid.muted);
     // only rebuild the stage when it changes (keeps the animations from restarting every tick)
-    const sig = `${ph.phase}|${ph.pickNo}|${ph.countdown}|${ph.reveal?.pickNo}|${Math.floor((ph.remainingMs ?? ph.overMs ?? 0) / 1000)}|${doc.rev}`;
+    const sig = `${ph.phase}|${it ? it.step + it.index : ''}|${ph.pickNo}|${ph.countdown}|${ph.reveal?.pickNo}|${Math.floor((ph.remainingMs ?? ph.overMs ?? 0) / 1000)}|${doc.rev}`;
     if (sig !== lastShown) { $('db-stage').innerHTML = html; lastShown = sig; }
   }
 
@@ -278,10 +309,13 @@ const data = { ...draftRoomData(), videos };
   let loading = false;
   let audioOk = navigator.userActivation?.hasBeenActive ?? false;
   let videoPlayingMuted = false;
+  // what still might play, captain intros first (they come first): keys into VIDEOS
+  // (a player id for a reveal, captain-<id> for an intro)
   const upcomingVideos = () => {
     if (!doc?.participants?.length || ['complete', 'finalised'].includes(doc.status)) return [];
     const taken = new Set([...(doc.picks || []).map((p) => p.playerId), doc.captains?.A, doc.captains?.B]);
-    return doc.participants.filter((id) => VIDEOS[id] && !taken.has(id));
+    const caps = !(doc.picks || []).length ? [doc.captains?.A, doc.captains?.B].filter(Boolean).map((id) => `captain-${id}`).filter((k) => VIDEOS[k]) : [];
+    return [...caps, ...doc.participants.filter((id) => VIDEOS[id] && !taken.has(id))];
   };
   // Counts frames the browser actually DRAWS (not just "loaded"/"playing": a file
   // with an intact header and broken picture data reports both and shows black).
@@ -347,22 +381,37 @@ const data = { ...draftRoomData(), videos };
     console.warn('[board] reveal video fell back to the card:', why);
     failed.add(key); stopVideo();
   };
+  // What should be on the video overlay right now: a pick's reveal video, or a
+  // captain's intro video. null = nothing.
+  function videoNow(ph, side) {
+    if (ph.phase === 'video' && ph.reveal?.video) {
+      const r = ph.reveal;
+      return { key: `${doc.rev}:${r.pickNo}:${r.playerId}:${r.revealAt}`, cacheKey: r.playerId, url: r.video.url, atMs: ph.videoAtMs || 0, caption: announce(r.pickNo, side, true) };
+    }
+    const it = ph.phase === 'intro' ? ph.intro : null;
+    if (it?.step === 'video' && it.captain.video) {
+      const c = it.captain;
+      return { key: `intro:${doc.intro.startsAt}:${c.playerId}`, cacheKey: `captain-${c.playerId}`, url: c.video.url, atMs: it.atMs || 0, caption: announceCap(c.side, true) };
+    }
+    return null;
+  }
   function video(ph, side) {
-    const r = ph.reveal;
-    if (ph.phase !== 'video' || !r?.video) { if (playing) stopVideo(); return; }
-    const key = `${doc.rev}:${r.pickNo}:${r.playerId}:${r.revealAt}`;
+    const w = videoNow(ph, side);
+    if (!w) { if (playing) stopVideo(); return; }
+    const key = w.key;
     if (failed.has(key) || playing === key) return;
-    const c = cache.get(r.playerId);
+    if (playing) stopVideo();
+    const c = cache.get(w.cacheKey);
     if (c?.state === 'failed') return fallBack(key, 'preload failed');
     // not preloaded yet (e.g. the board was opened mid-draft): try the file directly,
     // but only for as long as the watchdog allows
-    const src = c?.state === 'ready' ? c.url : r.video.url;
+    const src = c?.state === 'ready' ? c.url : w.url;
     playing = key;
     vid.src = src;
     vid.muted = !audioOk;
-    const at = (ph.videoAtMs || 0) / 1000;
+    const at = (w.atMs || 0) / 1000;
     if (at > 0.3) { try { vid.currentTime = at; } catch {} }   // a refreshed board joins mid-video
-    $('db-video-lt').innerHTML = announce(r.pickNo, side, true);
+    $('db-video-lt').innerHTML = w.caption;
     box.hidden = false;
     vid.onerror = () => fallBack(key, 'error');
     vid.onwaiting = () => { clearTimeout(stallTimer); stallTimer = setTimeout(() => { if (playing === key && (vid.readyState < 3 || vid.paused)) fallBack(key, 'stalled'); }, 1500); };

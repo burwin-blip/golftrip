@@ -19,8 +19,16 @@ import * as store from './draft-store.js';
 import { loadLineups, saveLineups } from './lineup-store.js';
 import { emptyLineups } from './matchcentre-shared.js';
 import { draftRoomData } from './draft-data.js';
-import { revealVideoFor } from './draft-videos.js';
-import { MODES, PICK_MS, REVEAL_MS, SLAM_MS, TEAM_COLOURS, emptyDraft, snakeOrder, picksFor, rosters, available, phaseAt } from './draft-shared.js';
+import { revealVideoFor, captainVideoFor } from './draft-videos.js';
+import { MODES, PICK_MS, REVEAL_MS, SLAM_MS, TEAM_COLOURS, emptyDraft, snakeOrder, picksFor, rosters, available, phaseAt, introSchedule } from './draft-shared.js';
+
+// The captains' intro for a draft document starting at `at`: the captain picking
+// first is introduced first; each gets their captain-<id>.mp4 if there is one.
+const introFor = (doc, at) => {
+  const first = doc.firstPick === 'B' ? 'B' : 'A', second = first === 'A' ? 'B' : 'A';
+  return introSchedule(at, [first, second].filter((s) => doc.captains?.[s])
+    .map((side) => ({ side, playerId: doc.captains[side], video: captainVideoFor(doc.captains[side]) })));
+};
 
 export class DraftError extends Error {
   constructor(message, status = 400) { super(message); this.status = status; }
@@ -166,7 +174,9 @@ export async function adminAction(key, body, { env = process.env } = {}) {
         const keys = await store.loadKeys(mode, env);
         if (!keys.A || !keys.B) throw new DraftError('Generate the captain links first.');
         const order = snakeOrder(picksFor(n), doc.firstPick);
-        return save({ ...doc, status: 'running', order, picks: [], reveal: null, pickMs: pickMsFor(env), startedAt: now, clock: { pickNo: 1, startsAt: now } });
+        // the captains' intro runs first; pick 1's 2:00 starts only when it ends (or is skipped)
+        const intro = introFor(doc, now);
+        return save({ ...doc, status: 'running', order, picks: [], reveal: null, pickMs: pickMsFor(env), startedAt: now, intro, clock: { pickNo: 1, startsAt: intro.endsAt } });
       }
       case 'pause': {
         if (doc.status !== 'running') throw new DraftError('Only a running draft can be paused.', 409);
@@ -181,7 +191,14 @@ export async function adminAction(key, body, { env = process.env } = {}) {
         const reveal = doc.reveal ? { ...doc.reveal, revealAt: doc.reveal.revealAt + d, doneAt: doc.reveal.doneAt + d,
           ...(doc.reveal.slamAt != null ? { slamAt: doc.reveal.slamAt + d } : {}) } : null;
         const finaleAt = doc.finaleAt != null && doc.finaleAt > (doc.pausedAt ?? now) ? doc.finaleAt + d : doc.finaleAt;
-        return save({ ...doc, status: doc.picks.length === doc.order.length ? 'complete' : 'running', pausedAt: null, clock, reveal, finaleAt });
+        // an intro paused part-way picks up where it stopped
+        const shiftIntro = (x) => {
+          if (!x || x.endsAt <= (doc.pausedAt ?? now)) return x;
+          const sh = (v) => v + d;
+          return { ...x, startsAt: sh(x.startsAt), titleEndsAt: sh(x.titleEndsAt), endsAt: sh(x.endsAt),
+            captains: x.captains.map((c) => ({ ...c, cardAt: sh(c.cardAt), videoAt: sh(c.videoAt), slamAt: sh(c.slamAt), doneAt: sh(c.doneAt) })) };
+        };
+        return save({ ...doc, status: doc.picks.length === doc.order.length ? 'complete' : 'running', pausedAt: null, clock, reveal, finaleAt, intro: shiftIntro(doc.intro) });
       }
       case 'undo': {
         if (!['running', 'paused', 'complete'].includes(doc.status) || !doc.picks.length) throw new DraftError('Nothing to undo.', 409);
@@ -195,7 +212,25 @@ export async function adminAction(key, body, { env = process.env } = {}) {
         if (String(body.confirm || '').trim().toUpperCase() !== 'RESET') throw new DraftError('Type RESET to confirm.');
         if (doc.status === 'finalised' && mode === 'real' && body.unfinalise !== true) throw new DraftError('This draft is finalised. Resetting it won’t undo the rosters already written — tick “I understand” to reset anyway.', 409);
         // Keep the setup (players, captains, who picks first) so a rehearsal can go again.
-        return save({ ...emptyDraft(mode), participants: doc.participants, captains: doc.captains, firstPick: doc.firstPick });
+        return save({ ...emptyDraft(mode), participants: doc.participants, captains: doc.captains, firstPick: doc.firstPick, intro: null });
+      }
+      case 'skip-intros': {   // end the captains' intro now; pick 1's clock starts immediately
+        if (!doc.intro || now >= doc.intro.endsAt) throw new DraftError('The captain intros aren’t playing.', 409);
+        if (doc.status === 'paused') throw new DraftError('Resume first, then skip.', 409);
+        const intro = { ...doc.intro, endsAt: now, skippedAt: now };
+        const clock = doc.status === 'running' && doc.clock && !doc.picks.length ? { ...doc.clock, startsAt: now } : doc.clock;
+        return save({ ...doc, intro, clock });
+      }
+      case 'replay-intros': {   // run the captains' intro again on the board
+        // Before START it's a preview (no clock follows). Once the draft is running it
+        // can only replay before the first pick, and pick 1's 2:00 restarts after it,
+        // so nobody's clock ever runs underneath it.
+        if (!doc.captains?.A || !doc.captains?.B) throw new DraftError('Set both captains first.', 409);
+        if (doc.status === 'setup') return save({ ...doc, intro: introFor(doc, now) });
+        if (doc.status !== 'running' || doc.picks.length) throw new DraftError('Captain intros can replay before START or before the first pick only.', 409);
+        if (doc.reveal && now < doc.reveal.doneAt) throw new DraftError('Wait for the reveal to finish.', 409);
+        const intro = introFor(doc, now);
+        return save({ ...doc, intro, clock: { ...doc.clock, startsAt: intro.endsAt } });
       }
       case 'finale': {   // replay the finale on the board, on demand
         if (!['complete', 'finalised'].includes(doc.status)) throw new DraftError('The finale plays once every pick is in.', 409);

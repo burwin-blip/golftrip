@@ -260,6 +260,7 @@ const data = draftRoomData();
 
     let t = '', c = '';
     switch (ph.phase) {
+      case 'intro': t = doc.status === 'setup' ? 'Captain intros on the board (preview)' : 'Captain intros on the board · the clock starts after'; c = doc.status === 'setup' ? '' : clockText(doc.pickMs); break;
       case 'setup': t = 'The draft hasn’t started'; break;
       case 'waiting': t = mine ? 'You’re up next' : `${teamName(ph.side)} up next`; c = clockText(ph.remainingMs); break;
       case 'clock': t = mine ? 'You’re on the clock' : `${teamName(ph.side)} is picking`; c = clockText(ph.remainingMs); break;

@@ -16,3 +16,8 @@ export function revealVideoFor(playerId) {
   const v = REVEAL_VIDEOS[playerId];
   return v ? { url: v.url, ms: Math.min(v.durationMs, VIDEO_CAP_MS) } : null;
 }
+
+/** A captain's intro video (captain-<player-id>.mp4) as the board plays it, or null. */
+export function captainVideoFor(playerId) {
+  return revealVideoFor(`captain-${playerId}`);
+}

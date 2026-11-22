@@ -13,7 +13,36 @@ export const DRAFT_TID = 'duel-in-the-desert-2027';
 export const PICK_MS = 120_000;   // 2:00 per pick (a local test run may shorten it; see draft-api.js)
 export const REVEAL_MS = 5_000;   // "THE PICK IS IN" + 5-second countdown
 export const SLAM_MS = 3_000;     // the card slams onto the roster, then the next clock starts
-export const VIDEO_CAP_MS = 30_000;   // a player's reveal video (if they have one) plays between the two, capped at 30s
+export const VIDEO_CAP_MS = 30_000;
+// The captains' introduction (runs when the draft starts, before pick 1's clock):
+// "YOUR CAPTAINS", then per captain (draft order): an intro card, their intro video
+// (if any, capped at 30s), their card slamming onto the team.
+export const INTRO = { titleMs: 3_000, cardMs: 3_500, slamMs: 3_000 };
+
+/**
+ * The intro schedule from `startsAt` (server ms). captains = [{ side, playerId, video: {url, ms} | null }]
+ * in the order they're introduced. Returns { startsAt, titleEndsAt, captains: [{ ...c, cardAt, videoAt, slamAt, doneAt }], endsAt }.
+ */
+export function introSchedule(startsAt, captains) {
+  let t = startsAt + INTRO.titleMs;
+  const out = captains.map((c) => {
+    const cardAt = t, videoAt = cardAt + INTRO.cardMs, slamAt = videoAt + (c.video?.ms ?? 0), doneAt = slamAt + INTRO.slamMs;
+    t = doneAt;
+    return { ...c, cardAt, videoAt, slamAt, doneAt };
+  });
+  return { startsAt, titleEndsAt: startsAt + INTRO.titleMs, captains: out, endsAt: t };
+}
+
+/** Where the captains' intro is at `now`: { step: 'title'|'card'|'video'|'slam', captain, index, atMs } or null when not running. */
+export function introStepAt(intro, now) {
+  if (!intro || now < intro.startsAt || now >= intro.endsAt) return null;
+  if (now < intro.titleEndsAt) return { step: 'title', captain: null, index: -1, atMs: now - intro.startsAt };
+  const i = intro.captains.findIndex((c) => now < c.doneAt);
+  const c = intro.captains[i];
+  if (!c) return null;
+  const step = now < c.videoAt ? 'card' : now < c.slamAt ? 'video' : 'slam';
+  return { step, captain: c, index: i, atMs: step === 'video' ? now - c.videoAt : null };
+}   // a player's reveal video (if they have one) plays between the two, capped at 30s
 export const MODES = ['real', 'mock'];
 
 // Team colours for the drafted teams — a preset palette that deliberately leaves
@@ -61,6 +90,7 @@ export function available(doc) {
 /**
  * What is happening at `now` (server ms):
  *   phase: setup | waiting (next clock not started yet) | clock | overtime |
+ *          intro (the captains' introduction, before pick 1's clock) |
  *          pick-is-in | video (the player's reveal video, when they have one) |
  *          slam | paused | complete | finalised
  * plus the side on the clock, ms left (clock) or over (overtime), the reveal
@@ -69,6 +99,10 @@ export function available(doc) {
 export function phaseAt(doc, now) {
   const total = doc.order?.length || 0;
   const base = { total, made: doc.picks?.length || 0, pickNo: null, side: null, remainingMs: null, overMs: null, reveal: null, countdown: null };
+  // the captains' intro (at START, or a replay — also previewable during setup);
+  // a paused draft shows "paused" and the intro resumes where it stopped
+  const intro = doc && doc.status !== 'paused' ? introStepAt(doc.intro, now) : null;
+  if (intro) return { ...base, phase: 'intro', intro, pickNo: doc.clock?.pickNo ?? null, side: intro.captain?.side ?? null, remainingMs: doc.pickMs ?? null };
   if (!doc || doc.status === 'setup') return { ...base, phase: 'setup' };
   if (doc.status === 'finalised') return { ...base, phase: 'finalised' };
   if (doc.status === 'paused') {

@@ -9,6 +9,12 @@ When that player is picked, the Big Board plays the video full-screen after the
 "THE PICK IS IN" countdown, then slams their card onto the roster. No file → the
 normal reveal. Playback is capped at 30 seconds.
 
+Captain intros: `captain-<player-id>.mp4` (e.g. `captain-rupert-pedler.mp4`). When
+the draft STARTs, the board runs "YOUR CAPTAINS", then each captain (whoever picks
+first, first): an intro card → their intro video → their card slams onto the team.
+Pick 1's 2:00 clock starts only after that. No file → just the card beat. The
+commissioner console has SKIP INTROS and REPLAY CAPTAIN INTROS (before pick 1).
+
 - Format: MP4 (H.264 video + AAC audio), 720p, ideally under ~15 MB.
 - Shrink one on a Mac:
   `ffmpeg -i in.mov -vf "scale=-2:720" -c:v libx264 -preset slow -crf 26 -c:a aac -b:a 128k -movflags +faststart out.mp4`

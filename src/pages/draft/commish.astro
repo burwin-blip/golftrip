@@ -39,6 +39,8 @@ const data = draftRoomData();
           <button type="button" class="cm-btn" id="cm-pause">PAUSE</button>
           <button type="button" class="cm-btn cm-btn--go" id="cm-resume">RESUME</button>
           <button type="button" class="cm-btn cm-btn--warn" id="cm-undo">UNDO last pick</button>
+          <button type="button" class="cm-btn cm-btn--warn" id="cm-skipintro" hidden>SKIP INTROS</button>
+          <button type="button" class="cm-btn" id="cm-replayintro" hidden>REPLAY CAPTAIN INTROS</button>
           <button type="button" class="cm-btn" id="cm-finale" hidden>REPLAY FINALE</button>
         </div>
         <p class="cm-note" id="cm-startnote"></p>
@@ -303,6 +305,14 @@ const data = draftRoomData();
     let t = '', c = '', over = false;
     const who = ph.side ? teamName(ph.side) : '';
     switch (ph.phase) {
+      case 'intro': {
+        const it = ph.intro, end = doc.intro.endsAt - now();
+        t = it.step === 'title' ? 'Captain intros on the board: “Your captains”'
+          : `Captain intros: ${name(it.captain.playerId)} (${teamName(it.captain.side)}) · ${{ card: 'intro card', video: 'intro video playing', slam: 'card slam' }[it.step]}`;
+        t += doc.status === 'setup' ? ' · preview (no clock after)' : ' · pick 1’s clock starts after';
+        c = clockText(Math.max(0, end));
+        break;
+      }
       case 'setup': t = 'Not started'; break;
       case 'waiting': t = `Next up: ${who} · pick ${ph.pickNo} of ${ph.total}`; c = clockText(ph.remainingMs); break;
       case 'clock': t = `On the clock: ${who} · pick ${ph.pickNo} of ${ph.total}`; c = clockText(ph.remainingMs); break;
@@ -321,6 +331,9 @@ const data = draftRoomData();
     $('cm-resume').hidden = s !== 'paused';
     $('cm-undo').hidden = !['running', 'paused', 'complete'].includes(s);
     $('cm-finale').hidden = !['complete', 'finalised'].includes(s);
+    $('cm-skipintro').hidden = ph.phase !== 'intro';
+    $('cm-replayintro').hidden = ph.phase === 'intro' || !doc.captains.A || !doc.captains.B || !(s === 'setup' || (s === 'running' && !doc.picks.length));
+    $('cm-replayintro').textContent = s === 'setup' ? 'PREVIEW CAPTAIN INTROS' : 'REPLAY CAPTAIN INTROS';
     $('cm-undo').disabled = !doc.picks.length || busy;
     const n = doc.participants.length;
     const problems = [];
@@ -422,6 +435,8 @@ const data = draftRoomData();
   });
 
   $('cm-finale').addEventListener('click', () => act('finale'));
+  $('cm-skipintro').addEventListener('click', () => act('skip-intros'));
+  $('cm-replayintro').addEventListener('click', () => act('replay-intros'));
   $('cm-start').addEventListener('click', () => act('start'));
   $('cm-pause').addEventListener('click', () => act('pause'));
   $('cm-resume').addEventListener('click', () => act('resume'));
